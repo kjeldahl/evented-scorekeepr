@@ -1,0 +1,55 @@
+<% content_for :title, "Register match — #{@league.name} — Scorekeepr" %>
+
+<div class="card match-form">
+  <h1><%= @league.name %></h1>
+  <p class="muted">Register a match result — pick the players, enter the score, done.</p>
+
+  <%= form_with url: account_league_matches_path(params[:account_id], params[:league_id]) do |form| %>
+    <% player_options = members.map { |member| [ member.name, member.user_id ] } %>
+
+    <div class="sides">
+      <fieldset>
+        <legend>Home</legend>
+        <%= form.label :home_player_1_id, "Home player 1" %>
+        <%= form.select :home_player_1_id, options_for_select(player_options, params[:home_player_1_id]),
+                        { include_blank: "Select player" }, required: true, autofocus: true %>
+        <%= form.label :home_player_2_id, "Home player 2" %>
+        <%= form.select :home_player_2_id, options_for_select(player_options, params[:home_player_2_id]),
+                        include_blank: "—" %>
+      </fieldset>
+
+      <fieldset>
+        <legend>Away</legend>
+        <%= form.label :away_player_1_id, "Away player 1" %>
+        <%= form.select :away_player_1_id, options_for_select(player_options, params[:away_player_1_id]),
+                        { include_blank: "Select player" }, required: true %>
+        <%= form.label :away_player_2_id, "Away player 2" %>
+        <%= form.select :away_player_2_id, options_for_select(player_options, params[:away_player_2_id]),
+                        include_blank: "—" %>
+      </fieldset>
+    </div>
+
+    <div class="score-entry">
+      <div>
+        <%= form.label :home_score, "Home score" %>
+        <%= form.number_field :home_score, value: params[:home_score], min: 0, step: 1, required: true,
+                              placeholder: "21" %>
+      </div>
+      <span class="score-entry__dash" aria-hidden="true">–</span>
+      <div>
+        <%= form.label :away_score, "Away score" %>
+        <%= form.number_field :away_score, value: params[:away_score], min: 0, step: 1, required: true,
+                              placeholder: "8" %>
+      </div>
+    </div>
+
+    <div class="actions">
+      <%= form.submit "Register match" %>
+    </div>
+  <% end %>
+
+  <p class="muted">
+    <%= link_to "Back to scoreboard",
+                account_league_scoreboard_path(params[:account_id], params[:league_id]) %>
+  </p>
+</div>
