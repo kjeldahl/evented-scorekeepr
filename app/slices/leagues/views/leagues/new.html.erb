@@ -1,0 +1,31 @@
+<% content_for :title, "New league — Scorekeepr" %>
+
+<div class="card">
+  <h1>New league</h1>
+
+  <%= form_with url: account_leagues_path(params[:account_id]) do |form| %>
+    <%= form.label :name, "Name" %>
+    <%= form.text_field :name, value: params[:name] %>
+
+    <%= form.label :game_type, "Game type" %>
+    <%= form.text_field :game_type, value: params[:game_type], list: "game-type-suggestions" %>
+    <datalist id="game-type-suggestions">
+      <option value="Foosball"></option>
+      <option value="Table Tennis"></option>
+      <option value="Pool"></option>
+      <option value="Darts"></option>
+    </datalist>
+
+    <%= form.label :starting_points, "Starting points" %>
+    <%= form.number_field :starting_points, value: params.fetch(:starting_points, 1000), min: 1 %>
+
+    <%= form.label :stake_percentage, "Stake percentage" %>
+    <%= form.number_field :stake_percentage, value: params.fetch(:stake_percentage, 10), min: 1, max: 99 %>
+
+    <div class="actions">
+      <%= form.submit "Create league" %>
+    </div>
+  <% end %>
+
+  <p class="muted"><%= link_to "Back to account", account_path(params[:account_id]) %></p>
+</div>
