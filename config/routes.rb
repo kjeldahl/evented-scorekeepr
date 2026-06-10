@@ -1,14 +1,48 @@
+# The full route map for Scorekeepr. Every route points at a slice
+# controller ("identity/sessions" resolves to Identity::SessionsController).
+# The table is documented in docs/ARCHITECTURE.md — keep both in sync.
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  # Identity slice: sign up, sign in / out.
+  get    "signup", to: "identity/registrations#new"
+  post   "signup", to: "identity/registrations#create"
+  get    "login",  to: "identity/sessions#new"
+  post   "login",  to: "identity/sessions#create"
+  delete "logout", to: "identity/sessions#destroy"
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+  # Accounts slice: dashboard, accounts, invitations, membership.
+  root "accounts/dashboard#show"
+
+  scope module: :accounts do
+    resources :accounts, only: %i[new create show] do
+      resources :invitations, only: %i[new create]
+    end
+
+    get  "invitations", to: "pending_invitations#index", as: :pending_invitations
+    post "invitations/:invitation_id/accept", to: "invitation_acceptances#create", as: :accept_invitation
+  end
+
+  # Leagues slice: create and close leagues.
+  scope module: :leagues do
+    resources :accounts, only: [] do
+      resources :leagues, only: %i[new create] do
+        post :close, on: :member
+      end
+    end
+  end
+
+  # Scoreboards slice: the league page (standings + recent matches).
+  get "accounts/:account_id/leagues/:league_id/scoreboard",
+      to: "scoreboards/scoreboards#show", as: :account_league_scoreboard
+
+  # Matches slice: register match results.
+  scope module: :matches do
+    resources :accounts, only: [] do
+      resources :leagues, only: [] do
+        resources :matches, only: %i[new create]
+      end
+    end
+  end
 end

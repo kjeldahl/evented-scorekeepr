@@ -1,10 +1,110 @@
-/*
- * This is a manifest file that'll be compiled into application.css.
- *
- * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
- * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
- * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
- * depending on specificity.
- *
- * Consider organizing styles into separate files for maintainability.
- */
+/* Scorekeepr — hand-written application styles (no framework). */
+
+:root {
+  --ink: #1f2a33;
+  --muted: #6b7a87;
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --line: #dde4e9;
+  --accent: #1f6f54;
+  --accent-dark: #175743;
+  --notice-bg: #e6f4ee;
+  --alert-bg: #fdeceb;
+  --alert-ink: #8f2c24;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.container { max-width: 56rem; margin: 0 auto; padding: 0 1rem; }
+
+main.container { padding-top: 1.5rem; padding-bottom: 3rem; }
+
+a { color: var(--accent); }
+a:hover { color: var(--accent-dark); }
+
+h1, h2, h3 { line-height: 1.2; }
+h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; margin: 1.5rem 0 0.75rem; }
+
+/* Header */
+.site-header { background: var(--surface); border-bottom: 1px solid var(--line); }
+.site-header__inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 0.75rem; padding-bottom: 0.75rem;
+}
+.brand { font-weight: 700; font-size: 1.15rem; color: var(--ink); text-decoration: none; }
+.brand:hover { color: var(--accent); }
+.site-nav { display: flex; align-items: center; gap: 1rem; }
+.site-nav a { text-decoration: none; font-weight: 500; }
+.site-nav form { display: inline; }
+
+/* Flash messages */
+.flash { padding: 0.6rem 0.9rem; border-radius: 6px; margin: 0 0 1rem; }
+.flash--notice { background: var(--notice-bg); color: var(--accent-dark); border: 1px solid #bfe3d4; }
+.flash--alert { background: var(--alert-bg); color: var(--alert-ink); border: 1px solid #f2c6c2; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Tables (scoreboards etc.) */
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--line); }
+thead th {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); border-bottom: 2px solid var(--line);
+}
+tbody tr:nth-child(odd) { background: #fbfcfd; }
+tbody tr:hover { background: #f0f5f3; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Forms */
+form label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0.9rem 0 0.25rem; }
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], select {
+  display: block; width: 100%;
+  padding: 0.5rem 0.65rem;
+  font: inherit; color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px;
+}
+input:focus, select:focus {
+  outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+}
+
+button, input[type="submit"] {
+  margin-top: 1rem;
+  padding: 0.55rem 1.1rem;
+  font: inherit; font-weight: 600;
+  color: #fff; background: var(--accent);
+  border: 0; border-radius: 6px;
+  cursor: pointer;
+}
+button:hover, input[type="submit"]:hover { background: var(--accent-dark); }
+
+.nav-button {
+  margin-top: 0; padding: 0.3rem 0.75rem;
+  font-weight: 500; font-size: 0.9rem;
+  color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 6px;
+}
+.nav-button:hover { background: var(--bg); color: var(--ink); }
+
+/* Utilities */
+.muted { color: var(--muted); }
+.actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1rem; }
+.actions form { display: inline; }
+.actions button { margin-top: 0; }
