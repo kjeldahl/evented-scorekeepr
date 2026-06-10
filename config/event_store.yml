@@ -1,0 +1,17 @@
+default: &default
+  host: <%= ENV.fetch("EVENT_STORE_HOST", "localhost") %>
+  port: <%= ENV.fetch("EVENT_STORE_PORT", 5432) %>
+  username: <%= ENV.fetch("EVENT_STORE_USER", "scorekeepr") %>
+  password: <%= ENV.fetch("EVENT_STORE_PASSWORD", "scorekeepr") %>
+
+development:
+  <<: *default
+  database: scorekeepr_development
+
+test:
+  <<: *default
+  database: scorekeepr_test
+
+production:
+  <<: *default
+  database: <%= ENV.fetch("EVENT_STORE_DATABASE", "scorekeepr_production") %>
