@@ -12,17 +12,17 @@ module Leagues
       failure = rejection(decision.states)
       return failure if failure
 
-      EventStore.append([ Events.league_closed(league_id:, account_id:) ], decision.append_condition)
+      EventStore.append(Events.league_closed(league_id:, account_id:), decision.append_condition)
       Result.success(league_id)
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the league is closed")
     end
 
     def self.rejection(states)
-      return Result.failure("only members can close leagues") unless states[:member]
-      return Result.failure("the league was not found") if states[:league] == :none
+      return Result.failure("only members can close leagues") unless states.fetch(:member)
+      return Result.failure("the league was not found") if states.fetch(:league) == :none
 
-      Result.failure("the league is closed") if states[:league] == :closed
+      Result.failure("the league is closed") if states.fetch(:league) == :closed
     end
     private_class_method :rejection
   end

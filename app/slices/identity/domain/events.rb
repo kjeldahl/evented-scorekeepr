@@ -2,7 +2,7 @@
 # events the slice owns, and only this slice appends them (docs/DOMAIN.md).
 module Identity
   module Events
-    module_function
+    extend self
 
     def user_registered(user_id:, name:, email:, password_digest:)
       email = email.strip.downcase

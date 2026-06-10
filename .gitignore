@@ -25,3 +25,6 @@
 # Test artefacts.
 /coverage
 /.crap4r_simplecov_setup.rb
+
+# Mutant session cache
+/.mutant/

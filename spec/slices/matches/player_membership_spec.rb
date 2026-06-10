@@ -29,6 +29,10 @@ RSpec.describe Matches::PlayerMembership do
       expect(projection.fold(events)).to eq(%w[user-1 user-2])
     end
 
+    it "keeps already-folded members when AccountCreated arrives later (handlers accumulate)" do
+      expect(projection.fold([ invitation_accepted, account_created ])).to eq(%w[user-2 user-1])
+    end
+
     it "builds one narrow query item per player" do
       expect(projection.query.items.map(&:tags)).to eq([
         [ "account:acc-1", "user:user-1" ],

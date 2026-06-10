@@ -3,7 +3,7 @@
 # (InvitationAccepted), folded by the user:{id} tag.
 module Accounts
   module MyAccounts
-    module_function
+    extend self
 
     def for_user(user_id)
       EventStore.project(account_ids_projection(user_id)).filter_map { |account_id| Account.find(account_id) }
@@ -13,15 +13,15 @@ module Accounts
       DcbEventStore::Projection.new(
         initial_state: [],
         handlers: {
-          "AccountCreated" => ->(state, event) { state | [ event.data[:account_id] ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data[:account_id] ] }
+          "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:account_id) ] },
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:account_id) ] }
         },
-        query: DcbEventStore::Query.new([
+        query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
             event_types: %w[AccountCreated InvitationAccepted],
-            tags: [ "user:#{user_id}" ]
+            tags: "user:#{user_id}"
           )
-        ])
+        )
       )
     end
   end

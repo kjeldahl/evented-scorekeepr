@@ -42,6 +42,12 @@ RSpec.describe Accounts::AcceptInvitation do
       invitation_id = invite(create_account)
       expect(call(invitation_id:, user_email: " BOB@Example.com ")).to be_success
     end
+
+    it "rejects a user without an email instead of raising" do
+      invitation_id = invite(create_account)
+      result = call(invitation_id:, user_email: nil)
+      expect(result).to eq(Result.failure("the invitation was not sent to this user's email"))
+    end
   end
 
   describe "successful acceptance", :event_store do
@@ -88,6 +94,16 @@ RSpec.describe Accounts::AcceptInvitation do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       result = call(invitation_id:)
       expect(result).to eq(Result.failure("the invitation has already been accepted"))
+    end
+
+    it "loses the race against an accept that lands after the decision was read" do
+      invitation_id = invite(create_account)
+      stale_decision = EventStore.decide(invitation: Accounts::InvitationState.projection(invitation_id))
+      call(invitation_id:) # the concurrent accept wins the race after the stale decision was read
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      result = call(invitation_id:, user_id: "user-3")
+      expect(result).to eq(Result.failure("the invitation has already been accepted"))
+      expect(accepted_events.count).to eq(1)
     end
   end
 end

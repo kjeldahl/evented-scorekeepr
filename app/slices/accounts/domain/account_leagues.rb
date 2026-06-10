@@ -8,7 +8,7 @@ module Accounts
       def open? = open
     end
 
-    module_function
+    extend self
 
     def for_account(account_id)
       EventStore.project(projection(account_id)).values
@@ -21,22 +21,22 @@ module Accounts
           "LeagueCreated" => ->(state, event) { state.merge(created_league(event)) },
           "LeagueClosed" => ->(state, event) { close_league(state, event) }
         },
-        query: DcbEventStore::Query.new([
+        query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
             event_types: %w[LeagueCreated LeagueClosed],
-            tags: [ "account:#{account_id}" ]
+            tags: "account:#{account_id}"
           )
-        ])
+        )
       )
     end
 
     def created_league(event)
-      league_id = event.data[:league_id]
-      { league_id => League.new(league_id:, name: event.data[:name], open: true) }
+      league_id = event.data.fetch(:league_id)
+      { league_id => League.new(league_id:, name: event.data.fetch(:name), open: true) }
     end
 
     def close_league(state, event)
-      league_id = event.data[:league_id]
+      league_id = event.data.fetch(:league_id)
       league = state[league_id]
       league ? state.merge(league_id => league.with(open: false)) : state
     end

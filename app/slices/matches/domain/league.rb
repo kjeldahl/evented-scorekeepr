@@ -11,7 +11,7 @@ module Matches
       def closed? = status == :closed
     end
 
-    module_function
+    extend self
 
     def find(league_id:, account_id:)
       EventStore.project(projection(league_id:, account_id:))
@@ -21,15 +21,15 @@ module Matches
       DcbEventStore::Projection.new(
         initial_state: nil,
         handlers: {
-          "LeagueCreated" => ->(_state, event) { Summary.new(name: event.data[:name], status: :open) },
+          "LeagueCreated" => ->(_state, event) { Summary.new(name: event.data.fetch(:name), status: :open) },
           "LeagueClosed" => ->(state, _event) { state&.with(status: :closed) }
         },
-        query: DcbEventStore::Query.new([
+        query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
             event_types: %w[LeagueCreated LeagueClosed],
             tags: [ "league:#{league_id}", "account:#{account_id}" ]
           )
-        ])
+        )
       )
     end
   end

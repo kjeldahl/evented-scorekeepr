@@ -3,15 +3,15 @@
 # append condition built from its query makes registration race-free.
 module Identity
   module EmailRegistration
-    module_function
+    extend self
 
     def projection(email)
       DcbEventStore::Projection.new(
         initial_state: false,
         handlers: { "UserRegistered" => ->(_state, _event) { true } },
-        query: DcbEventStore::Query.new([
-          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered], tags: [ "user_email:#{email}" ])
-        ])
+        query: DcbEventStore::Query.new(
+          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user_email:#{email}")
+        )
       )
     end
   end

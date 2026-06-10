@@ -34,6 +34,12 @@ RSpec.describe Accounts::AccountLeagues do
       expect(league).to be_open
     end
 
+    it "keeps earlier leagues when another league is created" do
+      state = projection.fold([ league_created(league_id: "lg-1", name: "Office Foosball"),
+                                league_created(league_id: "lg-2", name: "Office Darts") ])
+      expect(state.keys).to eq(%w[lg-1 lg-2])
+    end
+
     it "marks a closed league as not open" do
       events = [ league_created(league_id: "lg-1", name: "Office Foosball"), league_closed(league_id: "lg-1") ]
       expect(projection.fold(events).fetch("lg-1")).not_to be_open

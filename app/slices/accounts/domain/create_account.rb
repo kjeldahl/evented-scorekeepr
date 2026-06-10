@@ -9,7 +9,7 @@ module Accounts
       return Result.failure("name is required") if name.empty?
 
       account_id = SecureRandom.uuid
-      EventStore.append([ Events.account_created(account_id:, name:, owner_user_id:) ])
+      EventStore.append(Events.account_created(account_id:, name:, owner_user_id:))
       Result.success(account_id)
     end
   end

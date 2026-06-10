@@ -1,0 +1,40 @@
+---
+usage: opensource
+integration:
+  name: rspec
+requires:
+  - ./config/environment
+# Zeitwerk lazy-loads in test; mutant needs the domain constants defined to
+# match subjects. config/environments/test.rb eager-loads when CI is set.
+environment_variables:
+  RAILS_ENV: test # mutant requires config/environment itself, before rails_helper sets this
+  CI: "1"
+# The whole test suite shares ONE Postgres event store and resets it
+# (drop/recreate the events table) in before(:suite) / per-example hooks.
+# Parallel mutant workers would corrupt each other's store — keep jobs at 1.
+jobs: 1
+matcher:
+  subjects:
+    - Identity*
+    - Accounts*
+    - Leagues*
+    - Matches*
+    - Scoreboards*
+  ignore:
+    # Mutant covers slice DOMAIN code only. Controllers (app/slices/*/web)
+    # are exercised through Cucumber, not the rspec suite mutant runs, so
+    # mutating them is not wired to a kill signal — exclude every controller.
+    - Identity::RegistrationsController*
+    - Identity::SessionsController*
+    - Accounts::AccountsController*
+    - Accounts::BaseController*
+    - Accounts::DashboardController*
+    - Accounts::InvitationAcceptancesController*
+    - Accounts::InvitationsController*
+    - Accounts::PendingInvitationsController*
+    - Leagues::BaseController*
+    - Leagues::LeaguesController*
+    - Matches::BaseController*
+    - Matches::MatchesController*
+    - Scoreboards::BaseController*
+    - Scoreboards::ScoreboardsController*

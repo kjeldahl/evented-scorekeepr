@@ -2,7 +2,7 @@
 # events the slice owns, and only this slice appends them (docs/DOMAIN.md).
 module Accounts
   module Events
-    module_function
+    extend self
 
     def account_created(account_id:, name:, owner_user_id:)
       DcbEventStore::Event.new(

@@ -61,6 +61,16 @@ RSpec.describe Matches::RegisterMatch do
       expect(call(home: [ "alice", "" ], away: [ "bob", nil ])).to be_success
     end
 
+    it "treats a missing side (no param at all) as empty" do
+      expect(call(home: nil)).to eq(Result.failure("each side must have 1 or 2 players"))
+    end
+
+    it "trims padded player ids so they match the members' ids" do
+      result = call(home: [ " alice " ], away: [ "bob" ])
+      expect(result).to be_success
+      expect(match_events.sole.data[:home_player_ids]).to eq([ "alice" ])
+    end
+
     it "rejects a player on both sides of a 2v2 match" do
       expect(call(home: %w[alice bob], away: %w[bob carol])).to eq(
         Result.failure("a player cannot be on both sides")
@@ -103,6 +113,14 @@ RSpec.describe Matches::RegisterMatch do
 
     it "rejects a fractional score" do
       expect(call(home_score: "1.5")).to eq(Result.failure("scores must be non-negative integers"))
+    end
+
+    it "rejects a fractional score even as a number" do
+      expect(call(home_score: 1.5)).to eq(Result.failure("scores must be non-negative integers"))
+    end
+
+    it "accepts a score padded with whitespace (form input)" do
+      expect(call(home_score: " 21 ", away_score: 8)).to be_success
     end
 
     it "rejects a draw" do
@@ -205,6 +223,20 @@ RSpec.describe Matches::RegisterMatch do
       expect(call).to eq(
         Result.failure("the league changed while you were working — please retry")
       )
+    end
+
+    it "loses the race against a league close that lands after the decision was read" do
+      stale_decision = EventStore.decide(
+        member: Matches::Membership.projection(account_id: "acc-1", user_id: "alice"),
+        league: Matches::League.projection(league_id: "league-1", account_id: "acc-1"),
+        players: Matches::PlayerMembership.projection(account_id: "acc-1", player_ids: %w[alice bob])
+      )
+      close_league # the close wins the race after the stale decision was read
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      expect(call).to eq(
+        Result.failure("the league changed while you were working — please retry")
+      )
+      expect(match_events).to be_empty
     end
   end
 end

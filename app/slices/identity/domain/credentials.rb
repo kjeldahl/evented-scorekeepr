@@ -2,7 +2,7 @@
 # (user_id + password_digest), or nil when the email is unknown.
 module Identity
   module Credentials
-    module_function
+    extend self
 
     def find_by_email(email)
       EventStore.project(projection(email))
@@ -13,12 +13,12 @@ module Identity
         initial_state: nil,
         handlers: {
           "UserRegistered" => ->(_state, event) {
-            { user_id: event.data[:user_id], password_digest: event.data[:password_digest] }
+            { user_id: event.data.fetch(:user_id), password_digest: event.data.fetch(:password_digest) }
           }
         },
-        query: DcbEventStore::Query.new([
-          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered], tags: [ "user_email:#{email}" ])
-        ])
+        query: DcbEventStore::Query.new(
+          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user_email:#{email}")
+        )
       )
     end
   end

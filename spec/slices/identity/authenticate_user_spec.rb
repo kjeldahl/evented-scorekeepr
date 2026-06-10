@@ -25,5 +25,15 @@ RSpec.describe Identity::AuthenticateUser do
       result = described_class.call(email: "nobody@example.com", password: "secret123")
       expect(result).to eq(Result.failure("invalid credentials"))
     end
+
+    it "fails with invalid credentials for a missing email instead of raising" do
+      result = described_class.call(email: nil, password: "secret123")
+      expect(result).to eq(Result.failure("invalid credentials"))
+    end
+
+    it "fails with invalid credentials for a missing password instead of raising" do
+      result = described_class.call(email: "alice@example.com", password: nil)
+      expect(result).to eq(Result.failure("invalid credentials"))
+    end
   end
 end

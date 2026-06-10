@@ -45,5 +45,12 @@ RSpec.describe Accounts::MyAccounts do
       Accounts::CreateAccount.call(name: "Office", owner_user_id: "owner-1")
       expect(described_class.for_user("user-2")).to eq([])
     end
+
+    it "skips a membership whose account events are missing instead of listing a hole" do
+      EventStore.append([ Accounts::Events.invitation_accepted(
+        invitation_id: "inv-1", account_id: "acc-gone", user_id: "user-2"
+      ) ])
+      expect(described_class.for_user("user-2")).to eq([])
+    end
   end
 end

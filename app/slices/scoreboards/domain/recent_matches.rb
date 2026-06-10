@@ -3,7 +3,7 @@
 # for two, winner's score first — newest match first.
 module Scoreboards
   module RecentMatches
-    module_function
+    extend self
 
     def lines(league_id)
       matches = LeagueMatches.for_league(league_id)

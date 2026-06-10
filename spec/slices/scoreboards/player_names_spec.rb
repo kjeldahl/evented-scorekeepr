@@ -30,6 +30,8 @@ RSpec.describe Scoreboards::PlayerNames do
 
   describe ".for", :event_store do
     it "returns an empty map for no ids without touching the store" do
+      EventStore.append([ user_registered(user_id: "u-1", name: "Alice") ])
+      expect(EventStore).not_to receive(:project)
       expect(described_class.for([])).to eq({})
     end
 
@@ -42,6 +44,13 @@ RSpec.describe Scoreboards::PlayerNames do
     it "deduplicates the requested ids" do
       EventStore.append([ user_registered(user_id: "u-1", name: "Alice") ])
       expect(described_class.for(%w[u-1 u-1])).to eq({ "u-1" => "Alice" })
+    end
+
+    it "queries each requested id once, even when repeated" do
+      items = nil
+      allow(EventStore).to receive(:project) { |projection| items = projection.query.items and {} }
+      described_class.for(%w[u-1 u-1])
+      expect(items).to eq(described_class.projection(%w[u-1]).query.items)
     end
   end
 end

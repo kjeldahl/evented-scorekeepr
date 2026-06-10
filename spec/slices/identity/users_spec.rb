@@ -17,10 +17,18 @@ RSpec.describe Identity::Users do
     end
 
     it "returns only the requested user when several are registered" do
-      Identity::RegisterUser.call(name: "Alice", email: "alice@example.com", password: "secret123")
-      bob_id = Identity::RegisterUser.call(name: "Bob", email: "bob@example.com", password: "secret123").value
+      alice_id = Identity::RegisterUser.call(name: "Alice", email: "alice@example.com", password: "secret123").value
+      Identity::RegisterUser.call(name: "Bob", email: "bob@example.com", password: "secret123")
 
-      expect(described_class.find(bob_id).name).to eq("Bob")
+      expect(described_class.find(alice_id).name).to eq("Alice")
+    end
+  end
+
+  describe ".projection" do
+    it "queries UserRegistered events tagged with the user" do
+      item = described_class.projection("user-1").query.items.sole
+      expect(item.event_types).to eq([ "UserRegistered" ])
+      expect(item.tags).to eq([ "user:user-1" ])
     end
   end
 end

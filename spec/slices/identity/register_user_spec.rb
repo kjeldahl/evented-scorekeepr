@@ -92,5 +92,15 @@ RSpec.describe Identity::RegisterUser do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call).to eq(Result.failure("email is already registered"))
     end
+
+    it "loses the race against a registration that lands after the decision was read" do
+      stale_decision = EventStore.decide(
+        registered: Identity::EmailRegistration.projection("alice@example.com")
+      )
+      call # the concurrent registration wins the race after the stale decision was read
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      expect(call(name: "Other Alice")).to eq(Result.failure("email is already registered"))
+      expect(stored_events.count).to eq(1)
+    end
   end
 end

@@ -3,7 +3,7 @@
 # docs/ARCHITECTURE.md). One narrow query item per user keeps the read tight.
 module Scoreboards
   module PlayerNames
-    module_function
+    extend self
 
     # => { user_id => name } for every id that has a UserRegistered event.
     def for(user_ids)
@@ -17,14 +17,14 @@ module Scoreboards
       DcbEventStore::Projection.new(
         initial_state: {},
         handlers: {
-          "UserRegistered" => ->(state, event) { state.merge(event.data[:user_id] => event.data[:name]) }
+          "UserRegistered" => ->(state, event) { state.merge(event.data.fetch(:user_id) => event.data.fetch(:name)) }
         },
         query: DcbEventStore::Query.new(user_ids.map { |user_id| query_item(user_id) })
       )
     end
 
     def query_item(user_id)
-      DcbEventStore::QueryItem.new(event_types: %w[UserRegistered], tags: [ "user:#{user_id}" ])
+      DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user:#{user_id}")
     end
   end
 end

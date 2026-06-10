@@ -45,6 +45,10 @@ RSpec.describe Leagues::CreateLeague do
       expect(call(starting_points: "12.5")).to eq(Result.failure("starting points must be positive"))
     end
 
+    it "rejects fractional starting points even as a number" do
+      expect(call(starting_points: 12.5)).to eq(Result.failure("starting points must be positive"))
+    end
+
     it "accepts starting points of 1 (the lower bound)" do
       make_member
       expect(call(starting_points: 1)).to be_success
@@ -147,6 +151,18 @@ RSpec.describe Leagues::CreateLeague do
 
     it "generates a distinct league id per creation" do
       expect(call.value).not_to eq(call.value)
+    end
+
+    it "stores a missing game type as blank rather than failing" do
+      call(game_type: nil)
+      expect(league_events.sole.data[:game_type]).to eq("")
+    end
+
+    it "appends with the decision model's append condition (concurrency guard)" do
+      condition = nil
+      allow(EventStore).to receive(:append) { |_event, append_condition| condition = append_condition }
+      call
+      expect(condition).to be_a(DcbEventStore::AppendCondition)
     end
 
     it "allows several leagues in the account, also for the same game type" do

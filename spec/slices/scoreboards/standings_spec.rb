@@ -193,11 +193,17 @@ RSpec.describe Scoreboards::Standings do
         .to eq([ [ 1, "Alice" ], [ 2, "Carol" ], [ 3, "Bob" ], [ 4, "Dave" ] ])
     end
 
-    it "breaks ties by name even when ids sort the other way" do
-      names = { "z-id" => "Anna", "a-id" => "Zoe" }
-      rows = standings.table([ match([ "z-id" ], [ "x" ], 21, 8), match([ "a-id" ], [ "y" ], 21, 8) ],
+    it "breaks ties by name even when ids and arrival order sort the other way" do
+      names = { "a-id" => "Zoe", "z-id" => "Anna" }
+      rows = standings.table([ match([ "a-id" ], [ "x" ], 21, 8), match([ "z-id" ], [ "y" ], 21, 8) ],
                              names: names.merge("x" => "Xav", "y" => "Yan"))
       expect(rows.first(2).map(&:name)).to eq(%w[Anna Zoe])
+    end
+
+    it "breaks ties between unknown players by their id" do
+      rows = standings.table([ match([ "b-id" ], [ "y" ], 21, 8), match([ "a-id" ], [ "x" ], 21, 8) ],
+                             names: {})
+      expect(rows.map(&:name)).to eq(%w[a-id b-id x y])
     end
 
     it "falls back to the player id when no name is known" do

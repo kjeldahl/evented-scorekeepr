@@ -5,7 +5,7 @@ module Identity
   module Users
     User = Data.define(:id, :name, :email)
 
-    module_function
+    extend self
 
     def find(user_id)
       EventStore.project(projection(user_id))
@@ -16,12 +16,12 @@ module Identity
         initial_state: nil,
         handlers: {
           "UserRegistered" => ->(_state, event) {
-            User.new(id: event.data[:user_id], name: event.data[:name], email: event.data[:email])
+            User.new(id: event.data.fetch(:user_id), name: event.data.fetch(:name), email: event.data.fetch(:email))
           }
         },
-        query: DcbEventStore::Query.new([
-          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered], tags: [ "user:#{user_id}" ])
-        ])
+        query: DcbEventStore::Query.new(
+          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user:#{user_id}")
+        )
       )
     end
   end

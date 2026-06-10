@@ -2,7 +2,7 @@
 # events the slice owns, and only this slice appends them (docs/DOMAIN.md).
 module Leagues
   module Events
-    module_function
+    extend self
 
     def league_created(league_id:, account_id:, name:, game_type:, starting_points:, stake_percentage:)
       DcbEventStore::Event.new(

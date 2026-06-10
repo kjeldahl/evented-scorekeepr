@@ -14,6 +14,12 @@ RSpec.describe Accounts::Members do
       expect(projection.fold([ created, accepted, accepted ])).to eq(%w[user-1 user-2])
     end
 
+    it "keeps already-folded members when AccountCreated arrives later (handlers accumulate)" do
+      created = Accounts::Events.account_created(account_id: "acc-1", name: "Office", owner_user_id: "user-1")
+      accepted = Accounts::Events.invitation_accepted(invitation_id: "inv-1", account_id: "acc-1", user_id: "user-2")
+      expect(projection.fold([ accepted, created ])).to eq(%w[user-2 user-1])
+    end
+
     it "queries both membership event types tagged with the account" do
       item = projection.query.items.sole
       expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted])

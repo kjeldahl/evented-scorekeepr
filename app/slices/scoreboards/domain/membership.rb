@@ -5,7 +5,7 @@
 # because events are the only cross-slice contract (docs/ARCHITECTURE.md).
 module Scoreboards
   module Membership
-    module_function
+    extend self
 
     def member?(account_id:, user_id:)
       EventStore.project(projection(account_id:, user_id:))
@@ -18,12 +18,12 @@ module Scoreboards
           "AccountCreated" => ->(_state, _event) { true },
           "InvitationAccepted" => ->(_state, _event) { true }
         },
-        query: DcbEventStore::Query.new([
+        query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
             event_types: %w[AccountCreated InvitationAccepted],
             tags: [ "account:#{account_id}", "user:#{user_id}" ]
           )
-        ])
+        )
       )
     end
   end

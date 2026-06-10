@@ -33,9 +33,21 @@ RSpec.describe Accounts::PendingInvitations do
     end
   end
 
+  describe ".accepted_projection" do
+    it "queries only InvitationAccepted events tagged with the invitation" do
+      item = described_class.accepted_projection("inv-1").query.items.sole
+      expect(item.event_types).to eq([ "InvitationAccepted" ])
+      expect(item.tags).to eq([ "invitation:inv-1" ])
+    end
+  end
+
   describe ".for_email", :event_store do
     it "is empty when nobody invited that email" do
       expect(described_class.for_email("bob@example.com")).to eq([])
+    end
+
+    it "is empty for a missing email instead of raising" do
+      expect(described_class.for_email(nil)).to eq([])
     end
 
     it "lists an open invitation with the account's name" do
@@ -69,6 +81,17 @@ RSpec.describe Accounts::PendingInvitations do
     it "does not list invitations sent to other emails" do
       invite(create_account, email: "carol@example.com")
       expect(described_class.for_email("bob@example.com")).to eq([])
+    end
+
+    it "shows an invitation without an account name when the account events are missing" do
+      EventStore.append([ Accounts::Events.player_invited(
+        invitation_id: "inv-orphan", account_id: "acc-gone", email: "bob@example.com", invited_by_user_id: "u1"
+      ) ])
+      expect(described_class.for_email("bob@example.com")).to eq([
+        described_class::PendingInvitation.new(
+          invitation_id: "inv-orphan", account_id: "acc-gone", account_name: nil, email: "bob@example.com"
+        )
+      ])
     end
   end
 end

@@ -5,7 +5,7 @@
 # from it makes closing race-free.
 module Leagues
   module LeagueState
-    module_function
+    extend self
 
     def projection(league_id:, account_id:)
       DcbEventStore::Projection.new(
@@ -14,12 +14,12 @@ module Leagues
           "LeagueCreated" => ->(_state, _event) { :open },
           "LeagueClosed" => ->(_state, _event) { :closed }
         },
-        query: DcbEventStore::Query.new([
+        query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
             event_types: %w[LeagueCreated LeagueClosed],
             tags: [ "league:#{league_id}", "account:#{account_id}" ]
           )
-        ])
+        )
       )
     end
   end

@@ -3,7 +3,7 @@
 # so the controller stays free of domain orchestration.
 module Scoreboards
   module Scoreboard
-    module_function
+    extend self
 
     def rows(league)
       matches = LeagueMatches.for_league(league.league_id)

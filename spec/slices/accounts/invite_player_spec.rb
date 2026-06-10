@@ -59,6 +59,14 @@ RSpec.describe Accounts::InvitePlayer do
       expect(result.value).to be_a(String)
     end
 
+    it "appends with the decision model's append condition (concurrency guard)" do
+      account_id = create_account
+      condition = nil
+      allow(EventStore).to receive(:append) { |_event, append_condition| condition = append_condition }
+      call(account_id:)
+      expect(condition).to be_a(DcbEventStore::AppendCondition)
+    end
+
     it "appends a PlayerInvited event with the normalised email" do
       account_id = create_account
       result = call(account_id:, email: " BOB@Example.com ")

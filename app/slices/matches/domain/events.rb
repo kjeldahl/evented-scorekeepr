@@ -4,7 +4,7 @@
 # one player tag per participant, so scoreboards can fold per-player.
 module Matches
   module Events
-    module_function
+    extend self
 
     def match_registered(match_id:, league_id:, account_id:, home_player_ids:, away_player_ids:,
                          home_score:, away_score:, registered_by_user_id:)

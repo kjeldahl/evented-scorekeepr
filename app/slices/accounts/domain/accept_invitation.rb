@@ -7,12 +7,12 @@ module Accounts
   class AcceptInvitation
     def self.call(invitation_id:, user_id:, user_email:)
       decision = EventStore.decide(invitation: InvitationState.projection(invitation_id))
-      invitation = decision.states[:invitation]
+      invitation = decision.states.fetch(:invitation)
       failure = rejection(invitation, user_email)
       return failure if failure
 
       event = Events.invitation_accepted(invitation_id:, account_id: invitation.account_id, user_id:)
-      EventStore.append([ event ], decision.append_condition)
+      EventStore.append(event, decision.append_condition)
       Result.success(invitation.account_id)
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the invitation has already been accepted")

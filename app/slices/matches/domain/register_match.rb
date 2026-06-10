@@ -30,7 +30,7 @@ module Matches
     private_class_method :side
 
     def self.score(value)
-      Integer(value.to_s.strip, exception: false)
+      Integer(value.to_s, exception: false) # Kernel#Integer ignores surrounding whitespace
     end
     private_class_method :score
 
@@ -68,11 +68,11 @@ module Matches
     private_class_method :decision_for
 
     def self.rejection(states, players)
-      return Result.failure("only members can register matches") unless states[:member]
-      return Result.failure("the league was not found") if states[:league].nil?
-      return Result.failure("the league is closed") if states[:league].closed?
+      return Result.failure("only members can register matches") unless states.fetch(:member)
+      return Result.failure("the league was not found") if states.fetch(:league).nil?
+      return Result.failure("the league is closed") if states.fetch(:league).closed?
 
-      Result.failure("all players must be members of the account") unless (players - states[:players]).empty?
+      Result.failure("all players must be members of the account") unless (players - states.fetch(:players)).empty?
     end
     private_class_method :rejection
 
@@ -82,7 +82,7 @@ module Matches
         match_id:, league_id:, account_id:, home_player_ids: home, away_player_ids: away,
         home_score:, away_score:, registered_by_user_id: user_id
       )
-      EventStore.append([ event ], decision.append_condition)
+      EventStore.append(event, decision.append_condition)
       Result.success(match_id)
     end
     private_class_method :append_match

@@ -12,11 +12,12 @@ module Identity
       return Result.failure(INVALID_CREDENTIALS) unless credentials
       return Result.failure(INVALID_CREDENTIALS) unless password_matches?(credentials, password)
 
-      Result.success(credentials[:user_id])
+      Result.success(credentials.fetch(:user_id))
     end
 
     def self.password_matches?(credentials, password)
-      BCrypt::Password.new(credentials[:password_digest]) == password.to_s
+      # BCrypt::Password#== hashes the candidate itself and is nil-safe (== nil is false).
+      BCrypt::Password.new(credentials.fetch(:password_digest)) == password
     end
     private_class_method :password_matches?
   end

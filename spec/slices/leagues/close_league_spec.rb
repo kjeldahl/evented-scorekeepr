@@ -98,5 +98,18 @@ RSpec.describe Leagues::CloseLeague do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call).to eq(Result.failure("the league is closed"))
     end
+
+    it "loses the race against a close that lands after the decision was read" do
+      make_member
+      create_league
+      stale_decision = EventStore.decide(
+        league: Leagues::LeagueState.projection(league_id: "league-1", account_id: "acc-1"),
+        member: Leagues::Membership.projection(account_id: "acc-1", user_id: "owner-1")
+      )
+      call # the concurrent close wins the race after the stale decision was read
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      expect(call).to eq(Result.failure("the league is closed"))
+      expect(closed_events.count).to eq(1)
+    end
   end
 end

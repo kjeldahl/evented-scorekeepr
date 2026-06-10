@@ -4,14 +4,14 @@
 # player (account + user tags) keeps the append condition tight.
 module Matches
   module PlayerMembership
-    module_function
+    extend self
 
     def projection(account_id:, player_ids:)
       DcbEventStore::Projection.new(
         initial_state: [],
         handlers: {
-          "AccountCreated" => ->(state, event) { state | [ event.data[:owner_user_id] ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data[:user_id] ] }
+          "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:owner_user_id) ] },
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] }
         },
         query: DcbEventStore::Query.new(player_ids.map { |player_id| query_item(account_id, player_id) })
       )
