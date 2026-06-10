@@ -1,0 +1,19 @@
+<% content_for :title, "Sign in — Scorekeepr" %>
+
+<div class="card">
+  <h1>Sign in</h1>
+
+  <%= form_with url: login_path do |form| %>
+    <%= form.label :email, "Email" %>
+    <%= form.email_field :email, value: params[:email] %>
+
+    <%= form.label :password, "Password" %>
+    <%= form.password_field :password %>
+
+    <div class="actions">
+      <%= form.submit "Sign in" %>
+    </div>
+  <% end %>
+
+  <p class="muted">New here? <%= link_to "Sign up", signup_path %></p>
+</div>
