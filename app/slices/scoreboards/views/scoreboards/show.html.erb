@@ -1,0 +1,75 @@
+<% content_for :title, "#{@league.name} — Scorekeepr" %>
+
+<div class="card league-header">
+  <h1><%= @league.name %></h1>
+  <p class="muted">
+    <%= @league.game_type %>
+    <% if @league.open? %>
+      <span class="badge badge--open">Open</span>
+    <% else %>
+      <span class="badge badge--closed">Closed</span>
+    <% end %>
+  </p>
+
+  <% if @league.open? %>
+    <div class="actions">
+      <%= link_to "Register match",
+                  new_account_league_match_path(@league.account_id, @league.league_id) %>
+      <%= button_to "Close league",
+                    close_account_league_path(@league.account_id, @league.league_id) %>
+    </div>
+  <% end %>
+</div>
+
+<div class="card">
+  <h2>Standings</h2>
+  <% if @rows.empty? %>
+    <p class="muted empty-state">No matches yet — register the first one.</p>
+  <% else %>
+    <table class="scoreboard">
+      <thead>
+        <tr>
+          <th class="num">Rank</th>
+          <th>Player</th>
+          <th class="num">Points</th>
+          <th class="num">Played</th>
+          <th class="num">Won</th>
+          <th class="num">Lost</th>
+          <th class="num">Win %</th>
+          <th class="num">Points for</th>
+          <th class="num">Points against</th>
+          <th>Streak</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each do |row| %>
+          <tr>
+            <td class="num"><%= row.rank %></td>
+            <td><%= row.name %></td>
+            <td class="num"><%= row.points %></td>
+            <td class="num"><%= row.played %></td>
+            <td class="num"><%= row.wins %></td>
+            <td class="num"><%= row.losses %></td>
+            <td class="num"><%= row.win_percentage %></td>
+            <td class="num"><%= row.points_for %></td>
+            <td class="num"><%= row.points_against %></td>
+            <td><%= row.streak %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>
+
+<div class="card">
+  <h2>Recent matches</h2>
+  <% if @recent_matches.empty? %>
+    <p class="muted empty-state">No matches yet — register the first one.</p>
+  <% else %>
+    <ol class="recent-matches">
+      <% @recent_matches.each do |line| %>
+        <li><%= line %></li>
+      <% end %>
+    </ol>
+  <% end %>
+</div>

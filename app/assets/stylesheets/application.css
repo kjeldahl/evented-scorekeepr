@@ -112,6 +112,17 @@ button:hover, input[type="submit"]:hover { background: var(--accent-dark); }
 .score-entry input[type="number"] { font-size: 1.3rem; text-align: center; font-variant-numeric: tabular-nums; }
 .score-entry__dash { font-size: 1.3rem; color: var(--muted); padding-bottom: 0.4rem; }
 
+/* League page (scoreboards slice): open/closed badge and recent matches. */
+.badge {
+  display: inline-block; margin-left: 0.4rem; padding: 0.1rem 0.55rem;
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; border-radius: 999px;
+}
+.badge--open { color: var(--accent-dark); background: var(--notice-bg); border: 1px solid #bfe3d4; }
+.badge--closed { color: var(--alert-ink); background: var(--alert-bg); border: 1px solid #f2c6c2; }
+.recent-matches { margin: 0; padding-left: 1.25rem; }
+.recent-matches li { padding: 0.15rem 0; }
+
 /* Utilities */
 .muted { color: var(--muted); }
 .actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1rem; }
