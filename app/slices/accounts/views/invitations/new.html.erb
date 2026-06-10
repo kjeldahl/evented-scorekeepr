@@ -1,0 +1,16 @@
+<% content_for :title, "Invite player — Scorekeepr" %>
+
+<div class="card">
+  <h1>Invite a player to <%= @account.name %></h1>
+
+  <%= form_with url: account_invitations_path(@account.id) do |form| %>
+    <%= form.label :email, "Email" %>
+    <%= form.email_field :email, value: params[:email] %>
+
+    <div class="actions">
+      <%= form.submit "Send invitation" %>
+    </div>
+  <% end %>
+
+  <p class="muted"><%= link_to "Back to #{@account.name}", account_path(@account.id) %></p>
+</div>

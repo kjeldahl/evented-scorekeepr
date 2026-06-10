@@ -1,0 +1,12 @@
+<% if pending_invitations.any? %>
+  <ul class="invitation-list">
+    <% pending_invitations.each do |invitation| %>
+      <li>
+        You are invited to join <strong><%= invitation.account_name %></strong>
+        <%= button_to "Accept", accept_invitation_path(invitation.invitation_id) %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p class="muted">No pending invitations.</p>
+<% end %>

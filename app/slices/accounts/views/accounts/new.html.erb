@@ -1,0 +1,14 @@
+<% content_for :title, "New account — Scorekeepr" %>
+
+<div class="card">
+  <h1>New account</h1>
+
+  <%= form_with url: accounts_path do |form| %>
+    <%= form.label :name, "Name" %>
+    <%= form.text_field :name, value: params[:name] %>
+
+    <div class="actions">
+      <%= form.submit "Create account" %>
+    </div>
+  <% end %>
+</div>

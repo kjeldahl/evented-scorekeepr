@@ -1,0 +1,42 @@
+<% content_for :title, "#{@account.name} — Scorekeepr" %>
+
+<h1><%= @account.name %></h1>
+
+<div class="card">
+  <h2>Leagues</h2>
+  <%# Leagues are owned by the leagues slice; this section folds its
+      LeagueCreated/LeagueClosed events (the cross-slice contract) and links
+      each league to its scoreboard page per the routing table. %>
+  <% if @leagues.any? %>
+    <ul class="league-list">
+      <% @leagues.each do |league| %>
+        <li>
+          <%= link_to league.name, account_league_scoreboard_path(@account.id, league.league_id) %>
+          <% unless league.open? %><span class="muted">(closed)</span><% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="muted">No leagues yet.</p>
+  <% end %>
+  <div class="actions">
+    <%= link_to "New league", new_account_league_path(@account.id) %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Members</h2>
+  <table>
+    <thead>
+      <tr><th>Name</th></tr>
+    </thead>
+    <tbody>
+      <% @members.each do |member| %>
+        <tr><td><%= member.name %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+  <div class="actions">
+    <%= link_to "Invite player", new_account_invitation_path(@account.id) %>
+  </div>
+</div>
