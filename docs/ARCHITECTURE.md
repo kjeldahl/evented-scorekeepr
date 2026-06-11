@@ -51,6 +51,7 @@ unique across slices**. The reserved names per the routing table below:
 - leagues: `views/leagues/`
 - matches: `views/matches/`
 - scoreboards: `views/scoreboards/`
+- statistics: `views/players/`
 
 `domain/` is **pure Ruby**: no Rails controller/view/helper code, no
 references to `params`, `session` or routes. It may use `EventStore`,

@@ -45,7 +45,7 @@
         <% @rows.each do |row| %>
           <tr>
             <td class="num"><%= row.rank %></td>
-            <td><%= row.name %></td>
+            <td><%= link_to row.name, account_league_player_path(@league.account_id, @league.league_id, row.player_id) %></td>
             <td class="num"><%= row.points %></td>
             <td class="num"><%= row.played %></td>
             <td class="num"><%= row.wins %></td>

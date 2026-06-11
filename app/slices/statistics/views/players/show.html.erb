@@ -1,0 +1,54 @@
+<% content_for :title, "#{@page.name} — #{@league.name} — Scorekeepr" %>
+
+<div class="card player-header">
+  <h1><%= @page.name %></h1>
+  <p class="muted">
+    <%= link_to @league.name, account_league_scoreboard_path(@league.account_id, @league.league_id) %>
+  </p>
+  <p class="player-summary"><%= @page.points %> points · rank <%= @page.rank %> · <%= @page.played %> matches played</p>
+  <p class="player-form muted">Form: <span class="form-results"><%= @page.form %></span></p>
+</div>
+
+<div class="card">
+  <h2>Head-to-head</h2>
+  <table class="head-to-head">
+    <thead>
+      <tr>
+        <th>Opponent</th>
+        <th class="num">Played</th>
+        <th class="num">Won</th>
+        <th class="num">Lost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @page.head_to_head.each do |row| %>
+        <tr>
+          <td><%= row.opponent %></td>
+          <td class="num"><%= row.played %></td>
+          <td class="num"><%= row.won %></td>
+          <td class="num"><%= row.lost %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Match history</h2>
+  <table class="match-history">
+    <thead>
+      <tr>
+        <th>Match</th>
+        <th class="num">Points after</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @page.history.each do |row| %>
+        <tr>
+          <td><%= row.line %></td>
+          <td class="num"><%= row.points_after %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
