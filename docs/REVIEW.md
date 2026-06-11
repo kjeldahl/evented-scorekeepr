@@ -76,6 +76,8 @@ No application code was changed.
 1. Create `app/slices/<slice>/{domain,web,views}` **with `.keep` files** —
    the views dir must exist at boot (view paths are wired in
    `config/application.rb`; `domain/` and `web/` are collapsed namespaces).
+   Copy a `package.yml` from an existing slice (packwerk boundary
+   enforcement; only dependency is the root package `"."`).
 2. Pick `views/<resource>/` names that are **unique across all slices**
    (one shared lookup path) and add them to the reservation list in
    ARCHITECTURE.md §1.
@@ -97,8 +99,8 @@ No application code was changed.
    (document why, as `CreateAccount` does).
 8. Mirror specs under `spec/slices/<slice>/`, steps in
    `features/step_definitions/<slice>_steps.rb`; run `bin/rails
-   zeitwerk:check` and `rake quality` (rspec, cucumber, crap4r ≤ 8,
-   mutant on the slice's domain).
+   zeitwerk:check` and `rake quality` (rspec, cucumber, packwerk,
+   crap4r ≤ 8, mutant on the slice's domain).
 
 ## Test status after review
 

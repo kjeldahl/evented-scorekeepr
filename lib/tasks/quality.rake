@@ -28,12 +28,18 @@ namespace :quality do
   task :rubocop do
     sh "bundle exec rubocop"
   end
+
+  desc "Run packwerk (slice boundary check: no cross-slice constant refs)"
+  task :packwerk do
+    sh "bundle exec packwerk check"
+  end
 end
 
 desc "Full quality gate: specs, features, crap4r, mutation tests"
 task quality: :environment do
   sh "bundle exec rspec"
   sh "bundle exec cucumber"
+  Rake::Task["quality:packwerk"].invoke
   Rake::Task["quality:crap"].invoke
   Rake::Task["quality:mutant"].invoke
 end

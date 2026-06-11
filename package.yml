@@ -1,0 +1,9 @@
+# Root package: shared rails plumbing (ApplicationController, EventStore,
+# Result, lib, config) that every slice may use (docs/ARCHITECTURE.md rule 5).
+#
+# The root's one reference INTO a slice — ApplicationController calling
+# Identity::Users.find, the sanctioned exception of ARCHITECTURE.md rule 4 —
+# cannot be a declared dependency (slices depend on root, so root → identity
+# would be a cycle). It is recorded in package_todo.yml instead; that file
+# must never grow beyond this single entry.
+enforce_dependencies: true

@@ -21,6 +21,9 @@ group :development, :test do
   gem "brakeman", require: false
   gem "rubocop-rails-omakase", require: false
 
+  # Quality gate: slice boundary enforcement (no cross-slice constant refs)
+  gem "packwerk", require: false
+
   gem "rspec-rails", "~> 8.0"
   gem "cucumber-rails", require: false
   gem "capybara"

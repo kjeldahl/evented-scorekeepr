@@ -80,6 +80,17 @@ references to `params`, `session` or routes. It may use `EventStore`,
    `app/assets/stylesheets/application.css`. Shared infrastructure lives only
    in `lib/` (`EventStore`, `Result`).
 
+Rules 3–5 are machine-enforced by **packwerk** (`bin/rails quality:packwerk`,
+part of CI): each slice is a package (`app/slices/<slice>/package.yml`) whose
+only dependency is the root package (the shared plumbing of rule 5/6), so any
+cross-slice constant reference fails the build. The rule-4 exception is
+recorded in `package_todo.yml`, which must never grow beyond that single
+entry. Because the slice `domain/`/`web/` dirs are Zeitwerk-collapsed,
+packwerk needs the load-path extension in
+`config/packwerk/collapsed_slice_dirs.rb` — without it slice constants are
+unresolvable and the check silently passes; re-verify the gate trips after
+any packwerk upgrade.
+
 ## 3. Event conventions
 
 - Event **type names are strings in PascalCase, past tense**:

@@ -1,0 +1,8 @@
+# Slices integrate through events only (docs/ARCHITECTURE.md): no slice may
+# reference another slice's classes, so the only dependency is the root
+# package (ApplicationController, EventStore, Result — the shared plumbing).
+# Fold other slices' event types/tags instead of adding a dependency here.
+enforce_dependencies: true
+
+dependencies:
+  - "."
