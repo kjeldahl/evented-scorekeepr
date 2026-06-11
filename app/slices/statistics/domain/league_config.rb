@@ -19,7 +19,7 @@ module Statistics
         handlers: { "LeagueCreated" => ->(_state, event) { config(event) } },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[LeagueCreated],
+            event_types: "LeagueCreated",
             tags: [ "league:#{league_id}", "account:#{account_id}" ]
           )
         )

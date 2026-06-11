@@ -31,8 +31,9 @@ RSpec.describe Statistics::HeadToHead do
     end
 
     it "accumulates wins and losses against the same opponent" do
-      result = rows(match([ "a" ], [ "b" ]), match([ "b" ], [ "a" ]), match([ "a" ], [ "b" ]))
-      expect(result).to eq([ row(opponent: "Bob", played: 3, won: 2, lost: 1) ])
+      result = rows(match([ "a" ], [ "b" ]), match([ "b" ], [ "a" ]),
+                    match([ "a" ], [ "b" ]), match([ "b" ], [ "a" ]))
+      expect(result).to eq([ row(opponent: "Bob", played: 4, won: 2, lost: 2) ])
     end
 
     it "counts every player on the other side of a 2v2, never the teammate" do
@@ -48,9 +49,9 @@ RSpec.describe Statistics::HeadToHead do
                                         row(opponent: "Dave", played: 1, won: 0, lost: 1))
     end
 
-    it "orders by most played first" do
-      result = rows(match([ "a" ], [ "b" ]), match([ "b" ], [ "a" ]), match([ "a" ], [ "c" ]))
-      expect(result.map(&:opponent)).to eq(%w[Bob Carol])
+    it "orders by most played first, even against the name order" do
+      result = rows(match([ "a" ], [ "c" ]), match([ "c" ], [ "a" ]), match([ "a" ], [ "b" ]))
+      expect(result.map(&:opponent)).to eq(%w[Carol Bob])
     end
 
     it "orders opponents tied on played by name" do
