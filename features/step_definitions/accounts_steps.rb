@@ -104,3 +104,22 @@ Then("{string} cannot see the {string} account") do |name, account_name|
   expect(page).to have_css(".flash--alert")
   expect(page).to have_no_css("h1", text: account_name)
 end
+
+Then("{string} sees an outgoing invitation to {string} in the {string} account") do |name, email, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts/#{account_id_for(account_name)}"
+  expect(page).to have_css(".outgoing-invitations li", text: email)
+end
+
+Then("{string} sees no outgoing invitation to {string} in the {string} account") do |name, email, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts/#{account_id_for(account_name)}"
+  expect(page).to have_no_css(".outgoing-invitations li", text: email)
+end
+
+When("{string} accepts the outgoing invitation to {string} in the {string} account on behalf of the invited player") \
+do |name, email, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts/#{account_id_for(account_name)}"
+  within(".outgoing-invitations li", text: email) { click_button "Accept on behalf" }
+end

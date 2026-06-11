@@ -331,11 +331,12 @@ in sync). All routes except signup/login require authentication.
 | GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations |
 | GET | `/accounts/new` | `accounts/accounts#new` | `new_account_path` | new-account form |
 | POST | `/accounts` | `accounts/accounts#create` | `accounts_path` | create account; → account page |
-| GET | `/accounts/:id` | `accounts/accounts#show` | `account_path` | account home: leagues list, members, invite + new-league links |
+| GET | `/accounts/:id` | `accounts/accounts#show` | `account_path` | account home: leagues list, members, outgoing invitations, invite + new-league links |
 | GET | `/accounts/:account_id/invitations/new` | `accounts/invitations#new` | `new_account_invitation_path` | invite-player form |
 | POST | `/accounts/:account_id/invitations` | `accounts/invitations#create` | `account_invitations_path` | invite player; → account page |
 | GET | `/invitations` | `accounts/pending_invitations#index` | `pending_invitations_path` | my pending invitations (by my email) |
 | POST | `/invitations/:invitation_id/accept` | `accounts/invitation_acceptances#create` | `accept_invitation_path` | accept; → that account page |
+| POST | `/accounts/:account_id/invitations/:invitation_id/accept_on_behalf` | `accounts/on_behalf_acceptances#create` | `accept_account_invitation_on_behalf_path` | **dev/test only** (not routed in production): accept an outgoing invitation on behalf of the invited player; → account page |
 | GET | `/accounts/:account_id/leagues/new` | `leagues/leagues#new` | `new_account_league_path` | new-league form |
 | POST | `/accounts/:account_id/leagues` | `leagues/leagues#create` | `account_leagues_path` | create league; → **scoreboard page** |
 | POST | `/accounts/:account_id/leagues/:id/close` | `leagues/leagues#close` | `close_account_league_path` | close league; → scoreboard page |

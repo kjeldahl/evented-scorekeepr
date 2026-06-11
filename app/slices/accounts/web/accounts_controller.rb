@@ -19,6 +19,7 @@ module Accounts
       @account = Account.find(params[:id])
       @members = Members.for_account(params[:id])
       @leagues = AccountLeagues.for_account(params[:id])
+      @outgoing_invitations = OutgoingInvitations.for_account(params[:id])
     end
 
     private

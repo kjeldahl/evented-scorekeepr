@@ -22,6 +22,13 @@ Rails.application.routes.draw do
 
     get  "invitations", to: "pending_invitations#index", as: :pending_invitations
     post "invitations/:invitation_id/accept", to: "invitation_acceptances#create", as: :accept_invitation
+
+    # Development tooling: accept an outgoing invitation on behalf of the
+    # invited player. Not routed in production.
+    unless Rails.env.production?
+      post "accounts/:account_id/invitations/:invitation_id/accept_on_behalf",
+           to: "on_behalf_acceptances#create", as: :accept_account_invitation_on_behalf
+    end
   end
 
   # Leagues slice: create and close leagues.

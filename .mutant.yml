@@ -33,6 +33,7 @@ matcher:
     - Accounts::DashboardController*
     - Accounts::InvitationAcceptancesController*
     - Accounts::InvitationsController*
+    - Accounts::OnBehalfAcceptancesController*
     - Accounts::PendingInvitationsController*
     - Leagues::BaseController*
     - Leagues::LeaguesController*
