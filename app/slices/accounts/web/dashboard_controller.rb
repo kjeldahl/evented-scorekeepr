@@ -4,6 +4,7 @@ module Accounts
     def show
       @accounts = MyAccounts.for_user(current_user.id)
       @pending_invitations = PendingInvitations.for_email(current_user.email)
+      @super_admin = SuperAdmin.super_admin?(user_id: current_user.id)
     end
   end
 end

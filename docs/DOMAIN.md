@@ -128,8 +128,11 @@ for the starting configuration); no new events are introduced.
 
 A **super admin** is a user who may *view* every account — the account page
 (members, leagues, outgoing invitations), every scoreboard and every player
-statistics page — without being a member. The privilege is strictly
-read-only:
+statistics page — without being a member. For discovery, a super
+admin's dashboard links to a read-only **all-accounts list** naming every
+account in the system (alphabetically by name); opening an account from it
+is the same view-only access. Ordinary users never see this list. The
+privilege is strictly read-only:
 
 - It grants **no membership**: a super admin never appears in member lists,
   is never selectable as a player, never appears on scoreboards or in

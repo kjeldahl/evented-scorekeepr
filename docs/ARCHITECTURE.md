@@ -353,7 +353,23 @@ end
   enforcement stays in the member gates and command invariants.
   Granting has **no web UI and no route**: `Identity::GrantSuperAdmin.
   call(user_id:)` (identity domain) is called from cucumber steps, console
-  or seeds only — the routing table below is unchanged.
+  or seeds only.
+- **All-accounts list (discovery)**: `GET /accounts` ->
+  `Accounts::AccountsController#index` is the one **super-admin-only** page
+  (everything else stays member-or-super-admin or member-only). The gate is
+  a controller-private `require_super_admin!` (before_action on `index`
+  only) using the slice's existing `Accounts::SuperAdmin` fold; non-super
+  admins (members included) are redirected like any other refused gate.
+  The reader is `Accounts::AllAccounts` (`accounts/domain/all_accounts.rb`):
+  a read-only projection over **all** `AccountCreated` events (event type
+  only, no tags; acceptable outside commands since this fold never feeds an
+  append condition) returning `{id, name}` value objects sorted
+  alphabetically by name. View: `accounts/views/accounts/index.html.erb`,
+  account names linking to `account_path` and nothing else (no write
+  affordances). `Accounts::DashboardController#show` folds
+  `Accounts::SuperAdmin` to show the dashboard link to the list only for
+  super admins. Membership and commands are untouched; the list grants
+  nothing beyond the existing view-only access.
 
 ### Routing table
 
@@ -370,7 +386,8 @@ in sync). All routes except signup/login require authentication.
 | DELETE | `/logout` | `identity/sessions#destroy` | `logout_path` | sign out; → login |
 | GET | `/profile` | `identity/profiles#show` | `profile_path` | profile page: set the display handle |
 | POST | `/profile` | `identity/profiles#update` | — | set handle; → profile |
-| GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations |
+| GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations; super admins also get a link to the all-accounts list |
+| GET | `/accounts` | `accounts/accounts#index` | `accounts_path` | **super admin only**: read-only all-accounts list (alphabetical by name), each linking to its account page |
 | GET | `/accounts/new` | `accounts/accounts#new` | `new_account_path` | new-account form |
 | POST | `/accounts` | `accounts/accounts#create` | `accounts_path` | create account; → account page |
 | GET | `/accounts/:id` | `accounts/accounts#show` | `account_path` | account home: leagues list, members, outgoing invitations, invite + new-league links |

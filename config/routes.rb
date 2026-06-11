@@ -18,7 +18,8 @@ Rails.application.routes.draw do
   root "accounts/dashboard#show"
 
   scope module: :accounts do
-    resources :accounts, only: %i[new create show] do
+    # index is the super-admin-only all-accounts list (docs/DOMAIN.md § Super admin).
+    resources :accounts, only: %i[index new create show] do
       resources :invitations, only: %i[new create]
     end
 

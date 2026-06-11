@@ -161,6 +161,62 @@ When("{string} leaves the {string} account") do |name, account_name|
   click_button "Leave account"
 end
 
+Then("{string} sees a link to the all-accounts list on their dashboard") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/"
+  expect(page).to have_link("All accounts", href: "/accounts")
+end
+
+Then("{string} does not see a link to the all-accounts list on their dashboard") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/"
+  expect(page).to have_css("h1", text: "My accounts")
+  expect(page).to have_no_link("All accounts")
+end
+
+Then("{string} sees only the {string} account on their dashboard") do |name, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/"
+  expect(page.all(".account-list li").map(&:text)).to eq([ account_name ])
+end
+
+Then("{string} sees the all-accounts list:") do |name, table|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts"
+  expect(page.all("table.all-accounts td").map(&:text)).to eq(table.hashes.map { |row| row.fetch("account") })
+end
+
+When("{string} opens the {string} account from the all-accounts list") do |name, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts"
+  within("table.all-accounts") { click_link account_name }
+end
+
+Then("the all-accounts list offers {string} no action other than opening an account") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts"
+  expect(page).to have_no_css(".card form")
+  expect(page).to have_no_css(".card button")
+  links = page.all("table.all-accounts a").map { |link| link[:href] }
+  expect(links).not_to be_empty
+  links.each { |href| expect(href).to match(%r{\A/accounts/[^/]+\z}) }
+end
+
+Then("{string} cannot see the all-accounts list") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts"
+  expect(page).to have_current_path("/")
+  expect(page).to have_css(".flash--alert")
+  expect(page).to have_no_css("table.all-accounts")
+end
+
+Then("someone who is not signed in cannot see the all-accounts list") do
+  visit "/accounts"
+  expect(page).to have_current_path("/login")
+  expect(page).to have_css(".flash--alert")
+  expect(page).to have_no_css("table.all-accounts")
+end
+
 Then("{string} sees the member {string} in the {string} account") do |viewer, member_name, account_name|
   sign_in(viewer) unless signed_in_as?(viewer)
   visit "/accounts/#{account_id_for(account_name)}"

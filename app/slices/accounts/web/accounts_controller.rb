@@ -1,6 +1,11 @@
 module Accounts
   class AccountsController < BaseController
     before_action :require_account_member!, only: :show
+    before_action :require_super_admin!, only: :index
+
+    def index
+      @accounts = AllAccounts.all
+    end
 
     def new
     end
@@ -36,6 +41,14 @@ module Accounts
 
     def viewer_allowed?
       @member || SuperAdmin.super_admin?(user_id: current_user.id)
+    end
+
+    # The all-accounts list is the one super-admin-only page
+    # (docs/ARCHITECTURE.md § Super admin read access).
+    def require_super_admin!
+      return if SuperAdmin.super_admin?(user_id: current_user.id)
+
+      redirect_to root_path, alert: "Only super admins can view all accounts."
     end
   end
 end
