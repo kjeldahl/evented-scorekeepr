@@ -6,6 +6,9 @@ require_relative '../config/environment'
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
 
+# Skip BCrypt key stretching in tests (~0.25s per hash at the default cost).
+BCrypt::Engine.cost = BCrypt::Engine::MIN_COST
+
 RSpec.configure do |config|
   config.use_active_record = false
 
