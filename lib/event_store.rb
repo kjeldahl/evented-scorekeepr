@@ -44,6 +44,15 @@ module EventStore
       pool.with { |conn| DcbEventStore::Schema.create!(conn) }
     end
 
+    # Idempotent bootstrap: create the configured database if it is missing,
+    # then the event store schema. Lets a fresh checkout start with bin/setup.
+    def prepare!
+      return if memory?
+
+      create_database!
+      create_schema!
+    end
+
     def drop_schema!
       return if memory?
 
@@ -70,6 +79,28 @@ module EventStore
     end
 
     private
+
+    def create_database!
+      with_maintenance_connection do |conn|
+        next if database_exists?(conn)
+
+        conn.exec("CREATE DATABASE #{conn.escape_identifier(connection_config[:database])}")
+      end
+    end
+
+    def database_exists?(conn)
+      query = "SELECT 1 FROM pg_database WHERE datname = $1"
+      conn.exec_params(query, [ connection_config[:database] ]).ntuples.positive?
+    end
+
+    # CREATE DATABASE cannot run against the target database itself, so this
+    # connects to the always-present "postgres" maintenance database instead.
+    def with_maintenance_connection
+      conn = PG.connect(**pg_config.merge(dbname: "postgres"))
+      yield conn
+    ensure
+      conn&.close
+    end
 
     def memory_store
       @memory_store ||= DcbEventStore::InMemoryStore.new

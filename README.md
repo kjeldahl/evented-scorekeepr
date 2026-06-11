@@ -41,16 +41,19 @@ Read models, including the scoreboard, are folds over events.
 
 ## Getting started
 
-Requirements: Ruby >= 3.3, PostgreSQL.
+Requirements: Ruby >= 3.3, a running PostgreSQL server.
 
 ```bash
-bundle install
-createdb scorekeepr_development
-createdb scorekeepr_test
-bin/rails event_store:setup
-RAILS_ENV=test bin/rails event_store:setup
-bin/rails server
+bin/setup
 ```
+
+That installs the gems, creates the `scorekeepr` PostgreSQL role and the
+development and test databases with the event store schema (idempotent —
+safe to re-run any time), and starts the server. Pass `--skip-server` to
+set up without starting it. If the script cannot reach PostgreSQL as a
+superuser it prints the `CREATE ROLE` statement to run manually; the
+individual steps are also available as `bin/rails event_store:prepare`
+(database + schema) and `bin/rails event_store:setup` (schema only).
 
 Connection settings can be overridden with `EVENT_STORE_HOST/PORT/USER/
 PASSWORD/DATABASE` (see `config/event_store.yml`).
