@@ -37,6 +37,10 @@ Rails.application.routes.draw do
   get "accounts/:account_id/leagues/:league_id/scoreboard",
       to: "scoreboards/scoreboards#show", as: :account_league_scoreboard
 
+  # Statistics slice: per-player league statistics.
+  get "accounts/:account_id/leagues/:league_id/players/:player_id",
+      to: "statistics/players#show", as: :account_league_player
+
   # Matches slice: register match results.
   scope module: :matches do
     resources :accounts, only: [] do

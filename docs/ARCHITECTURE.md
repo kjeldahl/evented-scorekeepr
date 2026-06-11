@@ -341,6 +341,7 @@ in sync). All routes except signup/login require authentication.
 | GET | `/accounts/:account_id/leagues/:league_id/scoreboard` | `scoreboards/scoreboards#show` | `account_league_scoreboard_path` | **the league page**: standings table, recent matches, "Register match" link, "Close league" button |
 | GET | `/accounts/:account_id/leagues/:league_id/matches/new` | `matches/matches#new` | `new_account_league_match_path` | register-match form |
 | POST | `/accounts/:account_id/leagues/:league_id/matches` | `matches/matches#create` | `account_league_matches_path` | register match; → scoreboard page |
+| GET | `/accounts/:account_id/leagues/:league_id/players/:player_id` | `statistics/players#show` | `account_league_player_path` | player statistics: points/rank, form, head-to-head, match history |
 
 **League page ownership — decided, do not re-litigate:** the leagues slice
 owns league *lifecycle* (new/create/close forms and commands) and has **no

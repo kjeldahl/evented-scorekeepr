@@ -76,6 +76,24 @@ enforced with DCB append conditions, never with read-then-write races.
 - Matches: sides have 1 or 2 players each, all players distinct account
   members, scores are non-negative integers, no draws, league must be open.
 
+## Player statistics (per league)
+
+Every player name on a scoreboard links to that player's statistics page in
+the league (member-only, like the scoreboard). The page shows:
+
+- Current points and rank in the league, and matches played.
+- **Form**: the player's last five results, most recent first, rendered like
+  `W W L W L` (fewer if fewer matches played).
+- **Head-to-head**: one row per opponent the player has faced (an opponent is
+  any player on the other side, in 1v1 and 2v2 alike): played, won, lost
+  against that opponent. Ordered by most played, then name.
+- **Match history**: all of the player's matches, newest first, each with the
+  result line ("Alice beats Bob 21-8") and the player's points after that
+  match (the running balance from the stake fold).
+
+Player statistics are pure folds over `MatchRegistered` (+ `LeagueCreated`
+for the starting configuration); no new events are introduced.
+
 ## Slices
 
 | Slice | Responsibility |
@@ -85,3 +103,4 @@ enforced with DCB append conditions, never with read-then-write races.
 | `leagues` | create / close leagues |
 | `matches` | register match results (optimised for fast input) |
 | `scoreboards` | standings, statistics, recent matches |
+| `statistics` | per-player league statistics: form, head-to-head, history |
