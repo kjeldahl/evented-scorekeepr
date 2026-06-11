@@ -10,6 +10,7 @@
 #   users                                       # name => { email:, password: }
 #   remember_user(name, email:, password:)      # record credentials only
 #   register_user(name, email:, password:)      # register via the domain command + remember
+#   grant_super_admin(name)                     # grant super admin via the domain command
 #   sign_up(name, email:, password:)            # register through the real /signup UI + remember
 #   sign_in(name)                               # sign in through the real /login UI
 #   sign_out                                    # sign out via the layout's Sign out button
@@ -33,6 +34,13 @@ module ScorekeeprWorld
 
     remember_user(name, email:, password:)
     result.value
+  end
+
+  # Granting has no web UI and no route (docs/DOMAIN.md § Super admin), so
+  # the step calls the domain command directly, like register_user does.
+  def grant_super_admin(name)
+    result = Identity::GrantSuperAdmin.call(user_id: user_id_for(name))
+    raise "could not grant super admin to #{name}: #{result.error}" if result.failure?
   end
 
   def sign_up(name, email:, password:)

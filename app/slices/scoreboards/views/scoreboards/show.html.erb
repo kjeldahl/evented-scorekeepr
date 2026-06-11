@@ -11,7 +11,9 @@
     <% end %>
   </p>
 
-  <% if @league.open? %>
+  <%# Write affordances are hidden from non-member viewers (super admins);
+      enforcement stays in the member gates and command invariants. %>
+  <% if @league.open? && @member %>
     <div class="actions">
       <%= link_to "Register match",
                   new_account_league_match_path(@league.account_id, @league.league_id) %>

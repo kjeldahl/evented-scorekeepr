@@ -55,6 +55,7 @@ The league page shows the scoreboard plus the most recent matches.
 |---|---|---|
 | `UserRegistered` | user_id, name, email, password_digest | `user:{user_id}`, `user_email:{email}` |
 | `UserHandleSet` | user_id, handle | `user:{user_id}` |
+| `SuperAdminGranted` | user_id | `user:{user_id}` |
 | `AccountCreated` | account_id, name, owner_user_id | `account:{account_id}`, `user:{owner_user_id}` |
 | `PlayerInvited` | invitation_id, account_id, email, invited_by_user_id | `invitation:{invitation_id}`, `account:{account_id}`, `invitee_email:{email}` |
 | `InvitationAccepted` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}`, `user:{user_id}` |
@@ -86,7 +87,11 @@ enforced with DCB append conditions, never with read-then-write races.
   registered matches, standings and statistics keep showing the departed
   player; they just stop being a selectable member and lose access.
 - Only account members can create, rename and close leagues, register
-  matches and view the account, its leagues and scoreboards.
+  matches and view the account, its leagues and scoreboards. **Sole
+  exception:** a super admin (see below) may additionally *view* any
+  account, its leagues, scoreboards and player statistics without being a
+  member — viewing only; every write invariant above stays membership-based
+  and is untouched.
 - League names must be present (create and rename alike); starting_points > 0;
   0 < stake_percentage < 100. Only open leagues can be renamed.
 - Matches: sides have 1 or 2 players each, all players distinct account
@@ -119,11 +124,40 @@ the league (member-only, like the scoreboard). The page shows:
 Player statistics are pure folds over `MatchRegistered` (+ `LeagueCreated`
 for the starting configuration); no new events are introduced.
 
+## Super admin
+
+A **super admin** is a user who may *view* every account — the account page
+(members, leagues, outgoing invitations), every scoreboard and every player
+statistics page — without being a member. The privilege is strictly
+read-only:
+
+- It grants **no membership**: a super admin never appears in member lists,
+  is never selectable as a player, never appears on scoreboards or in
+  statistics, and "all players must be members" rejects them like any other
+  non-member.
+- It grants **no write privileges**: creating/renaming/closing leagues,
+  registering matches, inviting/revoking and leaving remain member-only —
+  the membership invariants in commands are unchanged and never consult
+  super admin status.
+- A super admin who is *also* an ordinary member of some account behaves
+  like any other member there.
+
+The fact is the `SuperAdminGranted` event (identity slice owns it; tag
+`user:{user_id}`); super admin status is `true` iff at least one
+`SuperAdminGranted` exists for the user. Granting is a domain-level command
+(`Identity::GrantSuperAdmin.call(user_id:)`) with **no web UI and no route**
+— it is invoked from cucumber steps, the console or seed tasks. The command
+is idempotent: granting an existing super admin succeeds without appending.
+**Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
+yet because no behaviour requires it; when it is needed, add the event to
+the table above and the status fold becomes latest-wins (like
+`MemberLeft` for membership).
+
 ## Slices
 
 | Slice | Responsibility |
 |---|---|
-| `identity` | sign up, sign in / out |
+| `identity` | sign up, sign in / out, super admin grant |
 | `accounts` | create account, invite players, accept invitations, membership |
 | `leagues` | create / close leagues |
 | `matches` | register match results (optimised for fast input) |

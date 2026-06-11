@@ -18,7 +18,7 @@ The app is built in five slices under `app/slices/`:
 
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
-| `identity` | `Identity` | sign up, sign in / out, profile (handle) | `UserRegistered`, `UserHandleSet` |
+| `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register match results | `MatchRegistered` |
@@ -317,6 +317,43 @@ end
   consistency boundary, the before_action is UX).
 - Accounts slice **owns** (appends) the membership events; everyone else only
   folds them.
+- **Super admin read access** (see `docs/DOMAIN.md` § Super admin): exactly
+  three *view-only* gates also open for super admins —
+  `Accounts::AccountsController#show`, `Scoreboards::ScoreboardsController#show`
+  and `Statistics::PlayersController#show`. Their `require_account_member!`
+  passes when the user is a member **or** a super admin. Every other
+  member gate (invitations new/create, invitation revocations, on-behalf
+  acceptances, account leavings, league new/create/edit/update/close,
+  match new/create) stays membership-only, and **no command consults super
+  admin status** — a super admin is simply not a member. Each of the three
+  slices defines its **own** `<Slice>::SuperAdmin` read model (duplicate
+  per slice, like `Membership` — never share the class), folding the
+  identity slice's `SuperAdminGranted` by tag. The canonical fold:
+
+```ruby
+def projection(user_id:)
+  DcbEventStore::Projection.new(
+    initial_state: false,
+    handlers: { "SuperAdminGranted" => ->(_s, _e) { true } },
+    query: DcbEventStore::Query.new(
+      DcbEventStore::QueryItem.new(
+        event_types: %w[SuperAdminGranted],
+        tags: [ "user:#{user_id}" ]
+      )
+    )
+  )
+end
+```
+
+  The gate keeps the membership answer it already folded (e.g.
+  `@member = Membership.member?(...)`) and the three views use it to hide
+  write affordances from non-member viewers (invite/new-league links on the
+  account page, register-match link and close-league button on the
+  scoreboard page) — the links would only redirect anyway; the real
+  enforcement stays in the member gates and command invariants.
+  Granting has **no web UI and no route**: `Identity::GrantSuperAdmin.
+  call(user_id:)` (identity domain) is called from cucumber steps, console
+  or seeds only — the routing table below is unchanged.
 
 ### Routing table
 

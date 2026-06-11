@@ -19,9 +19,13 @@
   <% else %>
     <p class="muted">No leagues yet.</p>
   <% end %>
-  <div class="actions">
-    <%= link_to "New league", new_account_league_path(@account.id) %>
-  </div>
+  <%# Write affordances are hidden from non-member viewers (super admins);
+      enforcement stays in the member gates and command invariants. %>
+  <% if @member %>
+    <div class="actions">
+      <%= link_to "New league", new_account_league_path(@account.id) %>
+    </div>
+  <% end %>
 </div>
 
 <div class="card">
@@ -36,10 +40,12 @@
       <% end %>
     </tbody>
   </table>
-  <div class="actions">
-    <%= link_to "Invite player", new_account_invitation_path(@account.id) %>
-    <%= button_to "Leave account", leave_account_path(@account.id) %>
-  </div>
+  <% if @member %>
+    <div class="actions">
+      <%= link_to "Invite player", new_account_invitation_path(@account.id) %>
+      <%= button_to "Leave account", leave_account_path(@account.id) %>
+    </div>
+  <% end %>
 </div>
 
 <div class="card">
@@ -50,10 +56,12 @@
         <li>
           <%= invitation.email %>
           <span class="muted">awaiting acceptance</span>
-          <%= button_to "Revoke", revoke_account_invitation_path(@account.id, invitation.invitation_id) %>
-          <% if dev_tools? %>
-            <%= button_to "Accept on behalf",
-                          accept_account_invitation_on_behalf_path(@account.id, invitation.invitation_id) %>
+          <% if @member %>
+            <%= button_to "Revoke", revoke_account_invitation_path(@account.id, invitation.invitation_id) %>
+            <% if dev_tools? %>
+              <%= button_to "Accept on behalf",
+                            accept_account_invitation_on_behalf_path(@account.id, invitation.invitation_id) %>
+            <% end %>
           <% end %>
         </li>
       <% end %>

@@ -38,4 +38,20 @@ RSpec.describe Identity::Events do
       expect(event.tags).to eq([ "user:user-1" ])
     end
   end
+
+  describe ".super_admin_granted" do
+    subject(:event) { described_class.super_admin_granted(user_id: "user-1") }
+
+    it "has the SuperAdminGranted type" do
+      expect(event.type).to eq("SuperAdminGranted")
+    end
+
+    it "carries the user_id as data" do
+      expect(event.data).to eq(user_id: "user-1")
+    end
+
+    it "is tagged with the user id" do
+      expect(event.tags).to eq([ "user:user-1" ])
+    end
+  end
 end

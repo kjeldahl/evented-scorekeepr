@@ -6,9 +6,22 @@ namespace :quality do
     sh "bundle exec crap4r app/slices lib"
   end
 
-  desc "Run mutant against slice domain code"
+  desc "Run mutant against slice domain code touched since SINCE (default origin/main)"
   task :mutant do
-    sh "bundle exec mutant run"
+    since = ENV.fetch("SINCE", "origin/main")
+    if system("git rev-parse -q --verify #{since}^{commit}", out: File::NULL, err: File::NULL)
+      sh "bundle exec mutant run --since #{since}"
+    else
+      puts "Base revision #{since} not found; running the full mutation suite"
+      Rake::Task["quality:mutant:full"].invoke
+    end
+  end
+
+  namespace :mutant do
+    desc "Run mutant against all slice domain code (the weekly CI job)"
+    task :full do
+      sh "bundle exec mutant run"
+    end
   end
 
   desc "Run rubocop"

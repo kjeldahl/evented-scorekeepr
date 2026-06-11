@@ -14,6 +14,10 @@ Given("{string} is a registered user with email {string} and password {string}")
   register_user(name, email:, password:)
 end
 
+Given("{string} is a super admin") do |name|
+  grant_super_admin(name)
+end
+
 When("someone signs up with name {string}, email {string} and password {string}") do |name, email, password|
   @last_actor = name
   sign_up(name, email:, password:)

@@ -32,9 +32,25 @@ Then("{string} does not appear on the {string} scoreboard") do |player, league|
   expect(scoreboard_players).not_to include(player)
 end
 
-# The scoreboard page is the league page (docs/ARCHITECTURE.md), so both
-# refusal phrases land there: a non-member is bounced to the dashboard with
-# an alert and never sees the league's name or its standings.
+# The scoreboard page is the league page (docs/ARCHITECTURE.md), so the
+# visibility phrases land there: an allowed viewer (member or super admin)
+# stays on the page and sees the league's name and its standings section.
+Then("{string} can see the {string} league") do |viewer, league|
+  visit_scoreboard_as(viewer, league)
+  expect(page).to have_no_css(".flash--alert")
+  expect(page).to have_css("h1", text: league)
+end
+
+Then("{string} can see the scoreboard of {string}") do |viewer, league|
+  visit_scoreboard_as(viewer, league)
+  record = league_for(league)
+  expect(page).to have_current_path("/accounts/#{record.account_id}/leagues/#{record.id}/scoreboard")
+  expect(page).to have_no_css(".flash--alert")
+  expect(page).to have_css("h2", text: "Standings")
+end
+
+# A refused viewer is bounced to the dashboard with an alert and never sees
+# the league's name or its standings.
 Then("{string} cannot see the {string} league") do |viewer, league|
   visit_scoreboard_as(viewer, league)
   expect(page).to have_current_path("/")
