@@ -10,7 +10,7 @@ RSpec.configure do |config|
   config.use_active_record = false
 
   # All state lives in the DCB event store; wipe it between examples that
-  # touch it. The events table is append-only, so wiping = drop + recreate.
+  # touch it (fresh in-memory store, or drop + recreate under postgres).
   config.before(:suite) { EventStore.reset! }
   config.before(:each, :event_store) { EventStore.reset! }
 

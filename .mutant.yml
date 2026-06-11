@@ -9,10 +9,11 @@ requires:
 environment_variables:
   RAILS_ENV: test # mutant requires config/environment itself, before rails_helper sets this
   CI: "1"
-# The whole test suite shares ONE Postgres event store and resets it
-# (drop/recreate the events table) in before(:suite) / per-example hooks.
-# Parallel mutant workers would corrupt each other's store — keep jobs at 1.
-jobs: 1
+# Tests run against the in-memory event store (config/event_store.yml), so
+# every mutant worker has its own isolated store and workers can run in
+# parallel. If you force EVENT_STORE_ADAPTER=postgres, drop jobs back to 1 —
+# the suite would share (and drop/recreate) one Postgres events table.
+jobs: 4
 matcher:
   subjects:
     - Identity*

@@ -1,4 +1,5 @@
 default: &default
+  adapter: <%= ENV.fetch("EVENT_STORE_ADAPTER", "postgres") %>
   host: <%= ENV.fetch("EVENT_STORE_HOST", "localhost") %>
   port: <%= ENV.fetch("EVENT_STORE_PORT", 5432) %>
   username: <%= ENV.fetch("EVENT_STORE_USER", "scorekeepr") %>
@@ -8,8 +9,12 @@ development:
   <<: *default
   database: scorekeepr_development
 
+# Tests default to the in-memory store (fast, per-process isolation — lets
+# mutant run parallel workers). Set EVENT_STORE_ADAPTER=postgres to run the
+# same suite against the real PostgreSQL-backed store.
 test:
   <<: *default
+  adapter: <%= ENV.fetch("EVENT_STORE_ADAPTER", "memory") %>
   database: scorekeepr_test
 
 production:

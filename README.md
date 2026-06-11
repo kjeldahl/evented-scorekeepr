@@ -58,7 +58,10 @@ PASSWORD/DATABASE` (see `config/event_store.yml`).
 ## Tests and quality gates
 
 Behaviour is specified in Gherkin (`features/**/*.feature`) and executed
-with Cucumber; domain code is unit tested with RSpec.
+with Cucumber; domain code is unit tested with RSpec. Tests run against the
+gem's in-memory event store by default (fast, parallel-safe); set
+`EVENT_STORE_ADAPTER=postgres` to exercise the real PostgreSQL-backed store
+(CI runs both).
 
 ```bash
 bundle exec rspec        # unit specs
