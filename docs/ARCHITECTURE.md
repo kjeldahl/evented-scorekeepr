@@ -18,9 +18,9 @@ The app is built in five slices under `app/slices/`:
 
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
-| `identity` | `Identity` | sign up, sign in / out | `UserRegistered` |
-| `accounts` | `Accounts` | dashboard, create account, invite, accept, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted` |
-| `leagues` | `Leagues` | create / close leagues | `LeagueCreated`, `LeagueClosed` |
+| `identity` | `Identity` | sign up, sign in / out, profile (handle) | `UserRegistered`, `UserHandleSet` |
+| `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft` |
+| `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register match results | `MatchRegistered` |
 | `scoreboards` | `Scoreboards` | league page: standings, statistics, recent matches | *(none — read only)* |
 
@@ -46,7 +46,7 @@ controller name, so `Leagues::LeaguesController#new` renders
 share one lookup path, **resource directory names under `views/` must be
 unique across slices**. The reserved names per the routing table below:
 
-- identity: `views/registrations/`, `views/sessions/`
+- identity: `views/registrations/`, `views/sessions/`, `views/profiles/`
 - accounts: `views/dashboard/`, `views/accounts/`, `views/invitations/`, `views/pending_invitations/`
 - leagues: `views/leagues/`
 - matches: `views/matches/`
@@ -70,7 +70,8 @@ references to `params`, `session` or routes. It may use `EventStore`,
    another slice's data, fold its events yourself inside your own `domain/`.
 4. **Single exception:** `ApplicationController#current_user` calls
    `Identity::Users.find(user_id)` — the identity slice's public reader. It
-   returns a user value object responding to `id`, `name`, `email`, or `nil`.
+   returns a user value object responding to `id`, `name`, `email`,
+   `handle`, or `nil`.
    No other cross-slice class reference is permitted anywhere.
 5. Slice controllers may use the shared helpers `ApplicationController`
    provides (`current_user`, `signed_in?`, `require_authentication`) and
@@ -285,9 +286,10 @@ gate so the wording can differ per feature without touching shared code.
   class dependency on the accounts slice. Instead, every slice that serves
   account-scoped pages defines its **own** private membership read model in
   its `domain/`, folding the accounts slice's *events* (the shared contract
-  per `docs/DOMAIN.md`): a user is a member of an account iff there is an
-  `AccountCreated` event tagged `account:{id}` + `user:{user_id}` (the owner)
-  or an `InvitationAccepted` event tagged `account:{id}` + `user:{user_id}`.
+  per `docs/DOMAIN.md`): a user is a member of an account iff the latest
+  membership event tagged `account:{id}` + `user:{user_id}` grants it —
+  `AccountCreated` (the owner) and `InvitationAccepted` grant membership,
+  `MemberLeft` ends it (a later accepted invitation grants it again).
   The canonical fold (duplicate this per slice — do not share the class):
 
 ```ruby
@@ -296,11 +298,12 @@ def projection(account_id:, user_id:)
     initial_state: false,
     handlers: {
       "AccountCreated"     => ->(_s, _e) { true },
-      "InvitationAccepted" => ->(_s, _e) { true }
+      "InvitationAccepted" => ->(_s, _e) { true },
+      "MemberLeft"         => ->(_s, _e) { false }
     },
     query: DcbEventStore::Query.new(
       DcbEventStore::QueryItem.new(
-        event_types: %w[AccountCreated InvitationAccepted],
+        event_types: %w[AccountCreated InvitationAccepted MemberLeft],
         tags: [ "account:#{account_id}", "user:#{user_id}" ]
       )
     )
@@ -328,17 +331,24 @@ in sync). All routes except signup/login require authentication.
 | GET | `/login` | `identity/sessions#new` | `login_path` | sign-in form |
 | POST | `/login` | `identity/sessions#create` | — | sign in; → root |
 | DELETE | `/logout` | `identity/sessions#destroy` | `logout_path` | sign out; → login |
+| GET | `/profile` | `identity/profiles#show` | `profile_path` | profile page: set the display handle |
+| POST | `/profile` | `identity/profiles#update` | — | set handle; → profile |
 | GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations |
 | GET | `/accounts/new` | `accounts/accounts#new` | `new_account_path` | new-account form |
 | POST | `/accounts` | `accounts/accounts#create` | `accounts_path` | create account; → account page |
 | GET | `/accounts/:id` | `accounts/accounts#show` | `account_path` | account home: leagues list, members, outgoing invitations, invite + new-league links |
 | GET | `/accounts/:account_id/invitations/new` | `accounts/invitations#new` | `new_account_invitation_path` | invite-player form |
 | POST | `/accounts/:account_id/invitations` | `accounts/invitations#create` | `account_invitations_path` | invite player; → account page |
+| POST | `/accounts/:account_id/invitations/:invitation_id/revoke` | `accounts/invitation_revocations#create` | `revoke_account_invitation_path` | revoke outgoing invitation; → account page |
+| POST | `/accounts/:account_id/leave` | `accounts/account_leavings#create` | `leave_account_path` | leave the account; → dashboard |
 | GET | `/invitations` | `accounts/pending_invitations#index` | `pending_invitations_path` | my pending invitations (by my email) |
 | POST | `/invitations/:invitation_id/accept` | `accounts/invitation_acceptances#create` | `accept_invitation_path` | accept; → that account page |
+| POST | `/invitations/:invitation_id/decline` | `accounts/invitation_declines#create` | `decline_invitation_path` | decline; → dashboard |
 | POST | `/accounts/:account_id/invitations/:invitation_id/accept_on_behalf` | `accounts/on_behalf_acceptances#create` | `accept_account_invitation_on_behalf_path` | **dev/test only** (not routed in production): accept an outgoing invitation on behalf of the invited player; → account page |
 | GET | `/accounts/:account_id/leagues/new` | `leagues/leagues#new` | `new_account_league_path` | new-league form |
 | POST | `/accounts/:account_id/leagues` | `leagues/leagues#create` | `account_leagues_path` | create league; → **scoreboard page** |
+| GET | `/accounts/:account_id/leagues/:id/edit` | `leagues/leagues#edit` | `edit_account_league_path` | rename-league form |
+| PATCH/PUT | `/accounts/:account_id/leagues/:id` | `leagues/leagues#update` | `account_league_path` | rename league; → scoreboard page |
 | POST | `/accounts/:account_id/leagues/:id/close` | `leagues/leagues#close` | `close_account_league_path` | close league; → scoreboard page |
 | GET | `/accounts/:account_id/leagues/:league_id/scoreboard` | `scoreboards/scoreboards#show` | `account_league_scoreboard_path` | **the league page**: standings table, recent matches, "Register match" link, "Close league" button |
 | GET | `/accounts/:account_id/leagues/:league_id/matches/new` | `matches/matches#new` | `new_account_league_match_path` | register-match form |

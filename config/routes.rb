@@ -11,6 +11,8 @@ Rails.application.routes.draw do
   get    "login",  to: "identity/sessions#new"
   post   "login",  to: "identity/sessions#create"
   delete "logout", to: "identity/sessions#destroy"
+  get    "profile", to: "identity/profiles#show", as: :profile
+  post   "profile", to: "identity/profiles#update"
 
   # Accounts slice: dashboard, accounts, invitations, membership.
   root "accounts/dashboard#show"
@@ -20,8 +22,13 @@ Rails.application.routes.draw do
       resources :invitations, only: %i[new create]
     end
 
+    post "accounts/:account_id/invitations/:invitation_id/revoke",
+         to: "invitation_revocations#create", as: :revoke_account_invitation
+    post "accounts/:account_id/leave", to: "account_leavings#create", as: :leave_account
+
     get  "invitations", to: "pending_invitations#index", as: :pending_invitations
     post "invitations/:invitation_id/accept", to: "invitation_acceptances#create", as: :accept_invitation
+    post "invitations/:invitation_id/decline", to: "invitation_declines#create", as: :decline_invitation
 
     # Development tooling: accept an outgoing invitation on behalf of the
     # invited player. Not routed in production.
@@ -31,10 +38,10 @@ Rails.application.routes.draw do
     end
   end
 
-  # Leagues slice: create and close leagues.
+  # Leagues slice: create, rename and close leagues.
   scope module: :leagues do
     resources :accounts, only: [] do
-      resources :leagues, only: %i[new create] do
+      resources :leagues, only: %i[new create edit update] do
         post :close, on: :member
       end
     end

@@ -8,6 +8,10 @@ RSpec.describe Leagues::League do
     )
   end
 
+  def renamed(league_id: "league-1", name: "Foosball Summer")
+    Leagues::Events.league_renamed(league_id:, account_id: "acc-1", name:)
+  end
+
   def closed(league_id: "league-1")
     Leagues::Events.league_closed(league_id:, account_id: "acc-1")
   end
@@ -39,13 +43,20 @@ RSpec.describe Leagues::League do
       expect(summary.open?).to be(false)
     end
 
-    it "stays absent when a stray LeagueClosed arrives without a creation" do
+    it "carries the new name after a LeagueRenamed event" do
+      summary = projection.fold([ created, renamed(name: "Foosball Summer") ])
+      expect(summary.name).to eq("Foosball Summer")
+      expect(summary.open?).to be(true)
+    end
+
+    it "stays absent when a stray LeagueClosed or LeagueRenamed arrives without a creation" do
       expect(projection.fold([ closed ])).to be_nil
+      expect(projection.fold([ renamed ])).to be_nil
     end
 
     it "queries the lifecycle events tagged with the league" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[LeagueCreated LeagueClosed])
+      expect(item.event_types).to eq(%w[LeagueCreated LeagueRenamed LeagueClosed])
       expect(item.tags).to contain_exactly("league:league-1")
     end
   end

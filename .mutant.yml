@@ -26,12 +26,16 @@ matcher:
     # Mutant covers slice DOMAIN code only. Controllers (app/slices/*/web)
     # are exercised through Cucumber, not the rspec suite mutant runs, so
     # mutating them is not wired to a kill signal — exclude every controller.
+    - Identity::ProfilesController*
     - Identity::RegistrationsController*
     - Identity::SessionsController*
+    - Accounts::AccountLeavingsController*
     - Accounts::AccountsController*
     - Accounts::BaseController*
     - Accounts::DashboardController*
     - Accounts::InvitationAcceptancesController*
+    - Accounts::InvitationDeclinesController*
+    - Accounts::InvitationRevocationsController*
     - Accounts::InvitationsController*
     - Accounts::OnBehalfAcceptancesController*
     - Accounts::PendingInvitationsController*

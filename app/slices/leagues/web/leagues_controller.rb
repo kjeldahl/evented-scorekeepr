@@ -15,6 +15,22 @@ module Leagues
       end
     end
 
+    def edit
+      @league = League.find(params[:id])
+    end
+
+    def update
+      result = RenameLeague.call(league_id: params[:id], account_id: params[:account_id],
+                                 user_id: current_user.id, name: params[:name])
+      if result.success?
+        redirect_to account_league_scoreboard_path(params[:account_id], params[:id]), notice: "League renamed."
+      else
+        @league = League.find(params[:id])
+        flash.now[:alert] = result.error
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
     def close
       result = CloseLeague.call(league_id: params[:id], account_id: params[:account_id], user_id: current_user.id)
       scoreboard = account_league_scoreboard_path(params[:account_id], params[:id])
@@ -40,8 +56,14 @@ module Leagues
       redirect_to root_path, alert: membership_alert
     end
 
+    MEMBERSHIP_ALERTS = {
+      "close" => "only members can close leagues",
+      "edit" => "only members can rename leagues",
+      "update" => "only members can rename leagues"
+    }.freeze
+
     def membership_alert
-      action_name == "close" ? "only members can close leagues" : "only members can create leagues"
+      MEMBERSHIP_ALERTS.fetch(action_name, "only members can create leagues")
     end
   end
 end

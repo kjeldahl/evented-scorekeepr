@@ -20,9 +20,22 @@ RSpec.describe Accounts::Members do
       expect(projection.fold([ accepted, created ])).to eq(%w[user-2 user-1])
     end
 
-    it "queries both membership event types tagged with the account" do
+    it "removes a member who left" do
+      created = Accounts::Events.account_created(account_id: "acc-1", name: "Office", owner_user_id: "user-1")
+      accepted = Accounts::Events.invitation_accepted(invitation_id: "inv-1", account_id: "acc-1", user_id: "user-2")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-2")
+      expect(projection.fold([ created, accepted, left ])).to eq(%w[user-1])
+    end
+
+    it "lists a member again when they rejoin after leaving" do
+      accepted = Accounts::Events.invitation_accepted(invitation_id: "inv-1", account_id: "acc-1", user_id: "user-2")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-2")
+      expect(projection.fold([ accepted, left, accepted ])).to eq(%w[user-2])
+    end
+
+    it "queries the membership event types tagged with the account" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted])
+      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted MemberLeft])
       expect(item.tags).to eq([ "account:acc-1" ])
     end
   end
@@ -43,9 +56,21 @@ RSpec.describe Accounts::Members do
       expect(projection.fold([ event ])).to eq("Alice")
     end
 
-    it "queries UserRegistered events tagged with the user" do
+    it "shows the handle instead of the name once UserHandleSet is folded" do
+      registered = DcbEventStore::Event.new(
+        type: "UserRegistered",
+        data: { user_id: "user-1", name: "Alice", email: "alice@example.com", password_digest: "x" },
+        tags: [ "user:user-1", "user_email:alice@example.com" ]
+      )
+      handle_set = DcbEventStore::Event.new(
+        type: "UserHandleSet", data: { user_id: "user-1", handle: "Ace" }, tags: [ "user:user-1" ]
+      )
+      expect(projection.fold([ registered, handle_set ])).to eq("Ace")
+    end
+
+    it "queries the display-name event types tagged with the user" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq([ "UserRegistered" ])
+      expect(item.event_types).to eq(%w[UserRegistered UserHandleSet])
       expect(item.tags).to eq([ "user:user-1" ])
     end
   end

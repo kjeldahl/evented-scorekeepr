@@ -9,6 +9,14 @@ RSpec.describe Accounts::OutgoingInvitations do
     Accounts::Events.invitation_accepted(invitation_id:, account_id:, user_id: "user-2")
   end
 
+  def revoked(invitation_id:, account_id: "acc-1")
+    Accounts::Events.invitation_revoked(invitation_id:, account_id:, revoked_by_user_id: "owner-1")
+  end
+
+  def declined(invitation_id:, account_id: "acc-1")
+    Accounts::Events.invitation_declined(invitation_id:, account_id:, user_id: "user-2")
+  end
+
   def outgoing(invitation_id:, email:)
     described_class::OutgoingInvitation.new(invitation_id:, email:)
   end
@@ -48,13 +56,29 @@ RSpec.describe Accounts::OutgoingInvitations do
       expect(state).to eq("inv-2" => outgoing(invitation_id: "inv-2", email: "carol@example.com"))
     end
 
-    it "ignores an acceptance for an unknown invitation" do
+    it "removes an invitation once it is revoked" do
+      state = projection.fold([
+        invited(invitation_id: "inv-1", email: "bob@example.com"),
+        revoked(invitation_id: "inv-1")
+      ])
+      expect(state).to eq({})
+    end
+
+    it "removes an invitation once it is declined" do
+      state = projection.fold([
+        invited(invitation_id: "inv-1", email: "bob@example.com"),
+        declined(invitation_id: "inv-1")
+      ])
+      expect(state).to eq({})
+    end
+
+    it "ignores a settlement for an unknown invitation" do
       expect(projection.fold([ accepted(invitation_id: "inv-ghost") ])).to eq({})
     end
 
-    it "queries both invitation event types tagged with the account" do
+    it "queries all invitation event types tagged with the account" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[PlayerInvited InvitationAccepted])
+      expect(item.event_types).to eq(%w[PlayerInvited InvitationAccepted InvitationRevoked InvitationDeclined])
       expect(item.tags).to eq([ "account:acc-1" ])
     end
   end

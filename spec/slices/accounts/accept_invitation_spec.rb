@@ -89,11 +89,11 @@ RSpec.describe Accounts::AcceptInvitation do
       expect { call(invitation_id:) }.not_to change { accepted_events.size }
     end
 
-    it "maps a concurrent-accept ConditionNotMet to the already-accepted failure" do
+    it "maps a concurrent-settlement ConditionNotMet to the no-longer-pending failure" do
       invitation_id = invite(create_account)
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       result = call(invitation_id:)
-      expect(result).to eq(Result.failure("the invitation has already been accepted"))
+      expect(result).to eq(Result.failure("the invitation is no longer pending"))
     end
 
     it "loses the race against an accept that lands after the decision was read" do
@@ -102,8 +102,31 @@ RSpec.describe Accounts::AcceptInvitation do
       call(invitation_id:) # the concurrent accept wins the race after the stale decision was read
       allow(EventStore).to receive(:decide).and_return(stale_decision)
       result = call(invitation_id:, user_id: "user-3")
-      expect(result).to eq(Result.failure("the invitation has already been accepted"))
+      expect(result).to eq(Result.failure("the invitation is no longer pending"))
       expect(accepted_events.count).to eq(1)
+    end
+  end
+
+  describe "settled invitations", :event_store do
+    it "rejects accepting a revoked invitation" do
+      account_id = create_account
+      invitation_id = invite(account_id)
+      Accounts::RevokeInvitation.call(invitation_id:, account_id:, user_id: "owner-1")
+      expect(call(invitation_id:)).to eq(Result.failure("the invitation has been revoked"))
+    end
+
+    it "rejects accepting a declined invitation" do
+      invitation_id = invite(create_account)
+      Accounts::DeclineInvitation.call(invitation_id:, user_id: "user-2", user_email: "bob@example.com")
+      expect(call(invitation_id:)).to eq(Result.failure("the invitation has been declined"))
+    end
+
+    it "appends nothing for a settled invitation" do
+      account_id = create_account
+      invitation_id = invite(account_id)
+      Accounts::RevokeInvitation.call(invitation_id:, account_id:, user_id: "owner-1")
+      call(invitation_id:)
+      expect(accepted_events).to be_empty
     end
   end
 end

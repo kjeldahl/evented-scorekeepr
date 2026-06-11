@@ -1,6 +1,7 @@
 # Read model for the account page's members list: the owner plus everyone
-# who accepted an invitation, with display names resolved by folding the
-# identity slice's UserRegistered events (events are the cross-slice
+# who accepted an invitation and has not left, with display names (handle
+# when set, else the registered name) resolved by folding the identity
+# slice's UserRegistered/UserHandleSet events (events are the cross-slice
 # contract — docs/ARCHITECTURE.md).
 module Accounts
   module Members
@@ -19,11 +20,12 @@ module Accounts
         initial_state: [],
         handlers: {
           "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:owner_user_id) ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] }
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] },
+          "MemberLeft" => ->(state, event) { state - [ event.data.fetch(:user_id) ] }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[AccountCreated InvitationAccepted],
+            event_types: %w[AccountCreated InvitationAccepted MemberLeft],
             tags: "account:#{account_id}"
           )
         )
@@ -34,12 +36,17 @@ module Accounts
       EventStore.project(user_name_projection(user_id))
     end
 
+    # The latest of name (UserRegistered, always first) and handle
+    # (UserHandleSet) wins, so a handle is shown instead of the name.
     def user_name_projection(user_id)
       DcbEventStore::Projection.new(
         initial_state: nil,
-        handlers: { "UserRegistered" => ->(_state, event) { event.data.fetch(:name) } },
+        handlers: {
+          "UserRegistered" => ->(_state, event) { event.data.fetch(:name) },
+          "UserHandleSet" => ->(_state, event) { event.data.fetch(:handle) }
+        },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user:#{user_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered UserHandleSet], tags: "user:#{user_id}")
         )
       )
     end

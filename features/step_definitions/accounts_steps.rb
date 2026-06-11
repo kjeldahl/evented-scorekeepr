@@ -123,3 +123,53 @@ do |name, email, account_name|
   visit "/accounts/#{account_id_for(account_name)}"
   within(".outgoing-invitations li", text: email) { click_button "Accept on behalf" }
 end
+
+When("{string} revokes the invitation to {string} in the {string} account") do |name, email, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts/#{account_id_for(account_name)}"
+  within(".outgoing-invitations li", text: email) { click_button "Revoke" }
+end
+
+When("{string} attempts to revoke the invitation to {string} in the {string} account") do |name, email, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  path = "/accounts/#{account_id_for(account_name)}/invitations/#{invitation_id_to(email, account_name)}/revoke"
+  page.driver.submit :post, path, {}
+end
+
+Then("the invitation revocation is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end
+
+When("{string} declines the invitation to the {string} account") do |name, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/invitations"
+  within(".invitation-list li", text: account_name) { click_button "Decline" }
+end
+
+When("{string} attempts to decline the invitation to the {string} account") do |name, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  page.driver.submit :post, "/invitations/#{latest_invitation_id(account_name)}/decline", {}
+end
+
+Then("the invitation decline is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end
+
+When("{string} leaves the {string} account") do |name, account_name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/accounts/#{account_id_for(account_name)}"
+  click_button "Leave account"
+end
+
+Then("{string} sees the member {string} in the {string} account") do |viewer, member_name, account_name|
+  sign_in(viewer) unless signed_in_as?(viewer)
+  visit "/accounts/#{account_id_for(account_name)}"
+  expect(page).to have_css("table.members td", exact_text: member_name)
+end
+
+Then("{string} does not see the member {string} in the {string} account") do |viewer, member_name, account_name|
+  sign_in(viewer) unless signed_in_as?(viewer)
+  visit "/accounts/#{account_id_for(account_name)}"
+  expect(page).to have_css("table.members")
+  expect(page).to have_no_css("table.members td", exact_text: member_name)
+end

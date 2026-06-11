@@ -1,8 +1,9 @@
 # The accounts slice's own membership fold: a user is a member of an account
-# iff they own it (AccountCreated tagged with both account and user) or they
-# accepted an invitation into it (InvitationAccepted with the same tags).
-# Other slices duplicate this fold over the same events — events are the
-# only cross-slice contract (docs/ARCHITECTURE.md).
+# iff the latest membership event for the account + user pair grants it —
+# AccountCreated (the owner) and InvitationAccepted grant membership,
+# MemberLeft ends it (a later accepted invitation grants it again). Other
+# slices duplicate this fold over the same events — events are the only
+# cross-slice contract (docs/ARCHITECTURE.md).
 module Accounts
   module Membership
     extend self
@@ -16,11 +17,12 @@ module Accounts
         initial_state: false,
         handlers: {
           "AccountCreated" => ->(_state, _event) { true },
-          "InvitationAccepted" => ->(_state, _event) { true }
+          "InvitationAccepted" => ->(_state, _event) { true },
+          "MemberLeft" => ->(_state, _event) { false }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[AccountCreated InvitationAccepted],
+            event_types: %w[AccountCreated InvitationAccepted MemberLeft],
             tags: [ "account:#{account_id}", "user:#{user_id}" ]
           )
         )

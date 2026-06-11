@@ -1,0 +1,16 @@
+<% content_for :title, "Profile — Scorekeepr" %>
+
+<div class="card">
+  <h1>Profile</h1>
+  <p class="muted">Signed in as <%= current_user.name %> (<%= current_user.email %>).</p>
+
+  <%= form_with url: profile_path do |form| %>
+    <%= form.label :handle, "Handle" %>
+    <%= form.text_field :handle, value: params[:handle] || current_user.handle %>
+    <p class="muted">Shown instead of your name on members lists, scoreboards and statistics.</p>
+
+    <div class="actions">
+      <%= form.submit "Save handle" %>
+    </div>
+  <% end %>
+</div>

@@ -24,7 +24,7 @@
         <nav class="site-nav">
           <% if signed_in? %>
             <%= link_to "Accounts", root_path %>
-            <span class="muted"><%= current_user.name %></span>
+            <%= link_to current_user.name, profile_path, class: "muted" %>
             <%= button_to "Sign out", "/logout", method: :delete, class: "nav-button" %>
           <% else %>
             <%= link_to "Sign in", login_path %>

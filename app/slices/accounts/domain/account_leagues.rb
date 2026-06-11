@@ -19,11 +19,12 @@ module Accounts
         initial_state: {},
         handlers: {
           "LeagueCreated" => ->(state, event) { state.merge(created_league(event)) },
+          "LeagueRenamed" => ->(state, event) { rename_league(state, event) },
           "LeagueClosed" => ->(state, event) { close_league(state, event) }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[LeagueCreated LeagueClosed],
+            event_types: %w[LeagueCreated LeagueRenamed LeagueClosed],
             tags: "account:#{account_id}"
           )
         )
@@ -33,6 +34,12 @@ module Accounts
     def created_league(event)
       league_id = event.data.fetch(:league_id)
       { league_id => League.new(league_id:, name: event.data.fetch(:name), open: true) }
+    end
+
+    def rename_league(state, event)
+      league_id = event.data.fetch(:league_id)
+      league = state[league_id]
+      league ? state.merge(league_id => league.with(name: event.data.fetch(:name))) : state
     end
 
     def close_league(state, event)

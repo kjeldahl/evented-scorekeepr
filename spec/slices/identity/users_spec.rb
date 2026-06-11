@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Identity::Users do
   describe ".find", :event_store do
-    it "returns a user value object with id, name and email" do
+    it "returns a user value object with id, name, email and no handle" do
       user_id = Identity::RegisterUser.call(name: "Alice", email: "alice@example.com", password: "secret123").value
 
       user = described_class.find(user_id)
@@ -10,6 +10,20 @@ RSpec.describe Identity::Users do
       expect(user.id).to eq(user_id)
       expect(user.name).to eq("Alice")
       expect(user.email).to eq("alice@example.com")
+      expect(user.handle).to be_nil
+    end
+
+    it "carries the latest handle once one is set" do
+      user_id = Identity::RegisterUser.call(name: "Alice", email: "alice@example.com", password: "secret123").value
+      Identity::SetHandle.call(user_id:, handle: "Ace")
+      Identity::SetHandle.call(user_id:, handle: "Maverick")
+
+      expect(described_class.find(user_id).handle).to eq("Maverick")
+    end
+
+    it "ignores a handle event without a registration" do
+      Identity::SetHandle.call(user_id: "ghost", handle: "Ace")
+      expect(described_class.find("ghost")).to be_nil
     end
 
     it "returns nil for an unknown user id" do
@@ -25,9 +39,9 @@ RSpec.describe Identity::Users do
   end
 
   describe ".projection" do
-    it "queries UserRegistered events tagged with the user" do
+    it "queries the user's identity event types tagged with the user" do
       item = described_class.projection("user-1").query.items.sole
-      expect(item.event_types).to eq([ "UserRegistered" ])
+      expect(item.event_types).to eq(%w[UserRegistered UserHandleSet])
       expect(item.tags).to eq([ "user:user-1" ])
     end
   end

@@ -1,0 +1,18 @@
+<% content_for :title, "Rename league — Scorekeepr" %>
+
+<div class="card">
+  <h1>Rename league</h1>
+
+  <%= form_with url: account_league_path(params[:account_id], params[:id]), method: :patch do |form| %>
+    <%= form.label :name, "Name" %>
+    <%= form.text_field :name, value: params[:name] || @league&.name %>
+
+    <div class="actions">
+      <%= form.submit "Rename league" %>
+    </div>
+  <% end %>
+
+  <p class="muted">
+    <%= link_to "Back to league", account_league_scoreboard_path(params[:account_id], params[:id]) %>
+  </p>
+</div>

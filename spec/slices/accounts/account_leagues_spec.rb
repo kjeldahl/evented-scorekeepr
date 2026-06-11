@@ -12,6 +12,14 @@ RSpec.describe Accounts::AccountLeagues do
     )
   end
 
+  def league_renamed(league_id:, name:, account_id: "acc-1")
+    DcbEventStore::Event.new(
+      type: "LeagueRenamed",
+      data: { league_id:, account_id:, name: },
+      tags: [ "league:#{league_id}", "account:#{account_id}" ]
+    )
+  end
+
   def league_closed(league_id:, account_id: "acc-1")
     DcbEventStore::Event.new(
       type: "LeagueClosed",
@@ -49,9 +57,18 @@ RSpec.describe Accounts::AccountLeagues do
       expect(projection.fold([ league_closed(league_id: "lg-9") ])).to eq({})
     end
 
+    it "renames a league once LeagueRenamed is folded" do
+      events = [ league_created(league_id: "lg-1", name: "Office Foosball"), league_renamed(league_id: "lg-1", name: "Lunch Foosball") ]
+      expect(projection.fold(events).fetch("lg-1").name).to eq("Lunch Foosball")
+    end
+
+    it "ignores a rename for an unknown league" do
+      expect(projection.fold([ league_renamed(league_id: "lg-9", name: "Ghost") ])).to eq({})
+    end
+
     it "queries league lifecycle events tagged with the account" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[LeagueCreated LeagueClosed])
+      expect(item.event_types).to eq(%w[LeagueCreated LeagueRenamed LeagueClosed])
       expect(item.tags).to eq([ "account:acc-1" ])
     end
   end

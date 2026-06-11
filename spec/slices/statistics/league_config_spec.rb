@@ -25,9 +25,29 @@ RSpec.describe Statistics::LeagueConfig do
       ))
     end
 
-    it "queries LeagueCreated scoped to both league and account (tenancy)" do
+    it "carries the new name after a LeagueRenamed event, keeping the settings" do
+      renamed = DcbEventStore::Event.new(
+        type: "LeagueRenamed",
+        data: { league_id: "league-1", account_id: "acc-1", name: "Foosball Summer" },
+        tags: [ "league:league-1", "account:acc-1" ]
+      )
+      config = projection.fold([ league_created, renamed ])
+      expect(config.name).to eq("Foosball Summer")
+      expect(config.starting_points).to eq(1015)
+    end
+
+    it "stays nil when a rename arrives without a creation" do
+      renamed = DcbEventStore::Event.new(
+        type: "LeagueRenamed",
+        data: { league_id: "league-1", account_id: "acc-1", name: "Ghost" },
+        tags: [ "league:league-1", "account:acc-1" ]
+      )
+      expect(projection.fold([ renamed ])).to be_nil
+    end
+
+    it "queries the league configuration events scoped to both league and account (tenancy)" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[LeagueCreated])
+      expect(item.event_types).to eq(%w[LeagueCreated LeagueRenamed])
       expect(item.tags).to contain_exactly("league:league-1", "account:acc-1")
     end
   end

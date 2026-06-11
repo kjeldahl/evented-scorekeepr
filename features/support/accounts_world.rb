@@ -94,6 +94,16 @@ module AccountsWorld
       raise "no invitation to #{account_name.inspect} found"
   end
 
+  # The newest invitation sent to an email in an account (for revoke paths
+  # where the button is not on the page).
+  def invitation_id_to(email, account_name)
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(event_types: %w[PlayerInvited], tags: [ "account:#{account_id_for(account_name)}" ])
+    ])
+    EventStore.read(query).reverse.find { |event| event.data[:email] == email }&.data&.fetch(:invitation_id) or
+      raise "no invitation to #{email.inspect} in #{account_name.inspect}"
+  end
+
   def pending_invitation_account_ids(email)
     Accounts::PendingInvitations.for_email(email).map(&:account_id)
   end

@@ -1,6 +1,7 @@
 # Read model for "my pending invitations": the invitations sent to an email
-# (PlayerInvited folded by the invitee_email tag) that have not been
-# accepted yet, decorated with the account name for display.
+# (PlayerInvited folded by the invitee_email tag) that have not been settled
+# yet — accepted, revoked or declined — decorated with the account name for
+# display.
 module Accounts
   module PendingInvitations
     PendingInvitation = Data.define(:invitation_id, :account_id, :account_name, :email)
@@ -10,7 +11,7 @@ module Accounts
     def for_email(email)
       email = email.to_s.strip.downcase
       EventStore.project(invitations_projection(email))
-                .reject { |invitation| accepted?(invitation.fetch(:invitation_id)) }
+                .reject { |invitation| settled?(invitation.fetch(:invitation_id)) }
                 .map { |invitation| decorate(invitation) }
     end
 
@@ -24,16 +25,23 @@ module Accounts
       )
     end
 
-    def accepted?(invitation_id)
-      EventStore.project(accepted_projection(invitation_id))
+    def settled?(invitation_id)
+      EventStore.project(settled_projection(invitation_id))
     end
 
-    def accepted_projection(invitation_id)
+    def settled_projection(invitation_id)
       DcbEventStore::Projection.new(
         initial_state: false,
-        handlers: { "InvitationAccepted" => ->(_state, _event) { true } },
+        handlers: {
+          "InvitationAccepted" => ->(_state, _event) { true },
+          "InvitationRevoked" => ->(_state, _event) { true },
+          "InvitationDeclined" => ->(_state, _event) { true }
+        },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "InvitationAccepted", tags: "invitation:#{invitation_id}")
+          DcbEventStore::QueryItem.new(
+            event_types: %w[InvitationAccepted InvitationRevoked InvitationDeclined],
+            tags: "invitation:#{invitation_id}"
+          )
         )
       )
     end

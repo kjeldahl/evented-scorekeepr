@@ -28,5 +28,29 @@ module Accounts
         tags: [ "invitation:#{invitation_id}", "account:#{account_id}", "user:#{user_id}" ]
       )
     end
+
+    def invitation_revoked(invitation_id:, account_id:, revoked_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "InvitationRevoked",
+        data: { invitation_id:, account_id:, revoked_by_user_id: },
+        tags: [ "invitation:#{invitation_id}", "account:#{account_id}" ]
+      )
+    end
+
+    def invitation_declined(invitation_id:, account_id:, user_id:)
+      DcbEventStore::Event.new(
+        type: "InvitationDeclined",
+        data: { invitation_id:, account_id:, user_id: },
+        tags: [ "invitation:#{invitation_id}", "account:#{account_id}" ]
+      )
+    end
+
+    def member_left(account_id:, user_id:)
+      DcbEventStore::Event.new(
+        type: "MemberLeft",
+        data: { account_id:, user_id: },
+        tags: [ "account:#{account_id}", "user:#{user_id}" ]
+      )
+    end
   end
 end

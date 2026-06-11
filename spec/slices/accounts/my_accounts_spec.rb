@@ -14,9 +14,21 @@ RSpec.describe Accounts::MyAccounts do
       expect(projection.fold([ created, accepted, created ])).to eq(%w[acc-1 acc-2])
     end
 
-    it "queries both membership event types tagged with the user" do
+    it "drops an account once the user left it" do
+      created = Accounts::Events.account_created(account_id: "acc-1", name: "Office", owner_user_id: "user-1")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-1")
+      expect(projection.fold([ created, left ])).to eq([])
+    end
+
+    it "lists the account again when the user rejoins after leaving" do
+      accepted = Accounts::Events.invitation_accepted(invitation_id: "inv-1", account_id: "acc-1", user_id: "user-1")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-1")
+      expect(projection.fold([ accepted, left, accepted ])).to eq(%w[acc-1])
+    end
+
+    it "queries the membership event types tagged with the user" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted])
+      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted MemberLeft])
       expect(item.tags).to eq([ "user:user-1" ])
     end
   end

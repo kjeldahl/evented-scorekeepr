@@ -22,4 +22,20 @@ RSpec.describe Identity::Events do
       expect(event.tags).to contain_exactly("user:user-1", "user_email:alice@example.com")
     end
   end
+
+  describe ".user_handle_set" do
+    subject(:event) { described_class.user_handle_set(user_id: "user-1", handle: "Ace") }
+
+    it "has the UserHandleSet type" do
+      expect(event.type).to eq("UserHandleSet")
+    end
+
+    it "carries user_id and handle as data" do
+      expect(event.data).to eq(user_id: "user-1", handle: "Ace")
+    end
+
+    it "is tagged with the user id" do
+      expect(event.tags).to eq([ "user:user-1" ])
+    end
+  end
 end

@@ -102,9 +102,15 @@ module MatchesWorld
     "#{names.values_at(*winners).join(" and ")} #{verb} #{names.values_at(*losers).join(" and ")} #{scores}"
   end
 
+  # Display names: the handle (UserHandleSet) wins over the registered name,
+  # latest event last — mirroring how the app shows players.
   def registered_user_names
-    query = DcbEventStore::Query.new([ DcbEventStore::QueryItem.new(event_types: %w[UserRegistered]) ])
-    EventStore.read(query).to_h { |event| [ event.data[:user_id], event.data[:name] ] }
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(event_types: %w[UserRegistered UserHandleSet])
+    ])
+    EventStore.read(query).each_with_object({}) do |event, names|
+      names[event.data[:user_id]] = event.data[:handle] || event.data[:name]
+    end
   end
 end
 
