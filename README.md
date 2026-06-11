@@ -79,7 +79,9 @@ Quality tooling:
 - [Kjeldahl/crap4r](https://github.com/Kjeldahl/crap4r) keeps every method
   at a CRAP score of 8 or below (complexity² × untested³ + complexity).
 - [mutant](https://github.com/mbj/mutant) mutation-tests the slice domain
-  code to prove the specs actually pin the behaviour.
+  code to prove the specs actually pin the behaviour. CI runs it
+  incrementally (`--since` the base revision, only subjects you touched);
+  a scheduled workflow runs the full suite weekly when anything changed.
 
 ## Development roles
 
