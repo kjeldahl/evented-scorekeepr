@@ -20,6 +20,7 @@ matcher:
     - Leagues*
     - Matches*
     - Scoreboards*
+    - Statistics*
   ignore:
     # Mutant covers slice DOMAIN code only. Controllers (app/slices/*/web)
     # are exercised through Cucumber, not the rspec suite mutant runs, so
@@ -38,3 +39,5 @@ matcher:
     - Matches::MatchesController*
     - Scoreboards::BaseController*
     - Scoreboards::ScoreboardsController*
+    - Statistics::BaseController*
+    - Statistics::PlayersController*
