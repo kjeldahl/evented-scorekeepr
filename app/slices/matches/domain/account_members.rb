@@ -1,7 +1,9 @@
 # Read model for the register-match form's player selects: every member of
-# the account (the owner plus accepted invitees) with display names resolved
-# by folding the identity slice's UserRegistered events. Both folds read
-# other slices' events — the cross-slice contract (docs/ARCHITECTURE.md).
+# the account (the owner plus accepted invitees who have not left) with
+# display names (handle when set, else the registered name) resolved by
+# folding the identity slice's UserRegistered/UserHandleSet events. Both
+# folds read other slices' events — the cross-slice contract
+# (docs/ARCHITECTURE.md).
 module Matches
   module AccountMembers
     Member = Data.define(:user_id, :name)
@@ -20,11 +22,12 @@ module Matches
         initial_state: [],
         handlers: {
           "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:owner_user_id) ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] }
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] },
+          "MemberLeft" => ->(state, event) { state - [ event.data.fetch(:user_id) ] }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[AccountCreated InvitationAccepted],
+            event_types: %w[AccountCreated InvitationAccepted MemberLeft],
             tags: "account:#{account_id}"
           )
         )
@@ -35,12 +38,17 @@ module Matches
       EventStore.project(user_name_projection(user_id))
     end
 
+    # The latest of name (UserRegistered, always first) and handle
+    # (UserHandleSet) wins, so a handle is shown instead of the name.
     def user_name_projection(user_id)
       DcbEventStore::Projection.new(
         initial_state: nil,
-        handlers: { "UserRegistered" => ->(_state, event) { event.data.fetch(:name) } },
+        handlers: {
+          "UserRegistered" => ->(_state, event) { event.data.fetch(:name) },
+          "UserHandleSet" => ->(_state, event) { event.data.fetch(:handle) }
+        },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user:#{user_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered UserHandleSet], tags: "user:#{user_id}")
         )
       )
     end

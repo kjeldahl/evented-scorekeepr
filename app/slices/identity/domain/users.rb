@@ -1,9 +1,9 @@
 # The identity slice's public reader: resolves a user_id to a user value
-# object (id, name, email) or nil. ApplicationController#current_user is the
-# only permitted cross-slice caller (docs/ARCHITECTURE.md).
+# object (id, name, email, handle) or nil. ApplicationController#current_user
+# is the only permitted cross-slice caller (docs/ARCHITECTURE.md).
 module Identity
   module Users
-    User = Data.define(:id, :name, :email)
+    User = Data.define(:id, :name, :email, :handle)
 
     extend self
 
@@ -16,11 +16,13 @@ module Identity
         initial_state: nil,
         handlers: {
           "UserRegistered" => ->(_state, event) {
-            User.new(id: event.data.fetch(:user_id), name: event.data.fetch(:name), email: event.data.fetch(:email))
-          }
+            User.new(id: event.data.fetch(:user_id), name: event.data.fetch(:name),
+                     email: event.data.fetch(:email), handle: nil)
+          },
+          "UserHandleSet" => ->(state, event) { state&.with(handle: event.data.fetch(:handle)) }
         },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "UserRegistered", tags: "user:#{user_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[UserRegistered UserHandleSet], tags: "user:#{user_id}")
         )
       )
     end

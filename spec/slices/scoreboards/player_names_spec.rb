@@ -9,6 +9,14 @@ RSpec.describe Scoreboards::PlayerNames do
     )
   end
 
+  def handle_set(user_id:, handle:)
+    DcbEventStore::Event.new(
+      type: "UserHandleSet",
+      data: { user_id:, handle: },
+      tags: [ "user:#{user_id}" ]
+    )
+  end
+
   describe ".projection" do
     subject(:projection) { described_class.projection(%w[u-1 u-2]) }
 
@@ -22,9 +30,23 @@ RSpec.describe Scoreboards::PlayerNames do
       expect(names).to eq({ "u-1" => "Alice", "u-2" => "Bob" })
     end
 
+    it "shows the handle instead of the name once UserHandleSet is folded" do
+      names = projection.fold([ user_registered(user_id: "u-1", name: "Alice"),
+                                user_registered(user_id: "u-2", name: "Bob"),
+                                handle_set(user_id: "u-1", handle: "Ace") ])
+      expect(names).to eq({ "u-1" => "Ace", "u-2" => "Bob" })
+    end
+
+    it "lets the latest handle win" do
+      names = projection.fold([ user_registered(user_id: "u-1", name: "Alice"),
+                                handle_set(user_id: "u-1", handle: "Ace"),
+                                handle_set(user_id: "u-1", handle: "Maverick") ])
+      expect(names).to eq({ "u-1" => "Maverick" })
+    end
+
     it "queries one narrow item per user" do
       expect(projection.query.items.map(&:tags)).to eq([ [ "user:u-1" ], [ "user:u-2" ] ])
-      expect(projection.query.items.map(&:event_types).uniq).to eq([ %w[UserRegistered] ])
+      expect(projection.query.items.map(&:event_types).uniq).to eq([ %w[UserRegistered UserHandleSet] ])
     end
   end
 

@@ -16,10 +16,13 @@ module Statistics
     def projection(league_id:, account_id:)
       DcbEventStore::Projection.new(
         initial_state: nil,
-        handlers: { "LeagueCreated" => ->(_state, event) { config(event) } },
+        handlers: {
+          "LeagueCreated" => ->(_state, event) { config(event) },
+          "LeagueRenamed" => ->(state, event) { state&.with(name: event.data.fetch(:name)) }
+        },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: "LeagueCreated",
+            event_types: %w[LeagueCreated LeagueRenamed],
             tags: [ "league:#{league_id}", "account:#{account_id}" ]
           )
         )

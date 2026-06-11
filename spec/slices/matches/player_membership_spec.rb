@@ -17,6 +17,14 @@ RSpec.describe Matches::PlayerMembership do
     )
   end
 
+  def member_left(account_id: "acc-1", user_id: "user-2")
+    DcbEventStore::Event.new(
+      type: "MemberLeft",
+      data: { account_id:, user_id: },
+      tags: [ "account:#{account_id}", "user:#{user_id}" ]
+    )
+  end
+
   describe ".projection" do
     subject(:projection) { described_class.projection(account_id: "acc-1", player_ids: %w[user-1 user-2]) }
 
@@ -33,12 +41,22 @@ RSpec.describe Matches::PlayerMembership do
       expect(projection.fold([ invitation_accepted, account_created ])).to eq(%w[user-2 user-1])
     end
 
+    it "drops a player who left the account" do
+      events = [ account_created, invitation_accepted, member_left ]
+      expect(projection.fold(events)).to eq(%w[user-1])
+    end
+
+    it "counts a player who rejoined after leaving" do
+      events = [ invitation_accepted, member_left, invitation_accepted ]
+      expect(projection.fold(events)).to eq(%w[user-2])
+    end
+
     it "builds one narrow query item per player" do
       expect(projection.query.items.map(&:tags)).to eq([
         [ "account:acc-1", "user:user-1" ],
         [ "account:acc-1", "user:user-2" ]
       ])
-      expect(projection.query.items.map(&:event_types).uniq.sole).to eq(%w[AccountCreated InvitationAccepted])
+      expect(projection.query.items.map(&:event_types).uniq.sole).to eq(%w[AccountCreated InvitationAccepted MemberLeft])
     end
   end
 end

@@ -54,10 +54,15 @@ The league page shows the scoreboard plus the most recent matches.
 | Event | Data | Tags |
 |---|---|---|
 | `UserRegistered` | user_id, name, email, password_digest | `user:{user_id}`, `user_email:{email}` |
+| `UserHandleSet` | user_id, handle | `user:{user_id}` |
 | `AccountCreated` | account_id, name, owner_user_id | `account:{account_id}`, `user:{owner_user_id}` |
 | `PlayerInvited` | invitation_id, account_id, email, invited_by_user_id | `invitation:{invitation_id}`, `account:{account_id}`, `invitee_email:{email}` |
 | `InvitationAccepted` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}`, `user:{user_id}` |
+| `InvitationRevoked` | invitation_id, account_id, revoked_by_user_id | `invitation:{invitation_id}`, `account:{account_id}` |
+| `InvitationDeclined` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}` |
+| `MemberLeft` | account_id, user_id | `account:{account_id}`, `user:{user_id}` |
 | `LeagueCreated` | league_id, account_id, name, game_type, starting_points, stake_percentage | `league:{league_id}`, `account:{account_id}` |
+| `LeagueRenamed` | league_id, account_id, name | `league:{league_id}`, `account:{account_id}` |
 | `LeagueClosed` | league_id, account_id | `league:{league_id}`, `account:{account_id}` |
 | `MatchRegistered` | match_id, league_id, account_id, home_player_ids, away_player_ids, home_score, away_score, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
 
@@ -69,12 +74,32 @@ enforced with DCB append conditions, never with read-then-write races.
 
 - An email can register only once (`user_email:` tag + append condition).
 - Account membership: the owner is a member from creation; an invitation can
-  be accepted only once, only by a signed-in user whose email matches.
-- Only account members can create leagues, register matches and view the
-  account, its leagues and scoreboards.
-- League names must be present; starting_points > 0; 0 < stake_percentage < 100.
+  be accepted only once, only by a signed-in user whose email matches. An
+  invitation is **settled** once it is accepted, revoked (by a member) or
+  declined (by the invited user) — a settled invitation cannot be accepted,
+  revoked or declined again. Declining requires the matching email, like
+  accepting.
+- Any member — the owner included — can leave an account (`MemberLeft`).
+  Membership is the *latest* of the membership events in order:
+  `AccountCreated`/`InvitationAccepted` grant it, `MemberLeft` ends it, and a
+  later accepted invitation grants it again. Leaving changes no history:
+  registered matches, standings and statistics keep showing the departed
+  player; they just stop being a selectable member and lose access.
+- Only account members can create, rename and close leagues, register
+  matches and view the account, its leagues and scoreboards.
+- League names must be present (create and rename alike); starting_points > 0;
+  0 < stake_percentage < 100. Only open leagues can be renamed.
 - Matches: sides have 1 or 2 players each, all players distinct account
   members, scores are non-negative integers, no draws, league must be open.
+
+## Display names (handles)
+
+A user may set a **handle** on their profile (`UserHandleSet`, latest wins;
+handle must be present). Wherever *players* are displayed — account members,
+match-form player pickers, scoreboards, recent-match lines and player
+statistics — the handle is shown instead of the registered name; users
+without a handle are shown by name. The registered name and email remain the
+identity facts (sign-in, invitations by email).
 
 ## Player statistics (per league)
 

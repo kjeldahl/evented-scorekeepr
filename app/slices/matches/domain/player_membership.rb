@@ -11,7 +11,8 @@ module Matches
         initial_state: [],
         handlers: {
           "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:owner_user_id) ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] }
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:user_id) ] },
+          "MemberLeft" => ->(state, event) { state - [ event.data.fetch(:user_id) ] }
         },
         query: DcbEventStore::Query.new(player_ids.map { |player_id| query_item(account_id, player_id) })
       )
@@ -19,7 +20,7 @@ module Matches
 
     def query_item(account_id, player_id)
       DcbEventStore::QueryItem.new(
-        event_types: %w[AccountCreated InvitationAccepted],
+        event_types: %w[AccountCreated InvitationAccepted MemberLeft],
         tags: [ "account:#{account_id}", "user:#{player_id}" ]
       )
     end

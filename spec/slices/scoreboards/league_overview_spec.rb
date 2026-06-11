@@ -10,6 +10,14 @@ RSpec.describe Scoreboards::LeagueOverview do
     )
   end
 
+  def league_renamed(league_id: "league-1", account_id: "acc-1", name: "Foosball Summer")
+    DcbEventStore::Event.new(
+      type: "LeagueRenamed",
+      data: { league_id:, account_id:, name: },
+      tags: [ "league:#{league_id}", "account:#{account_id}" ]
+    )
+  end
+
   def league_closed(league_id: "league-1", account_id: "acc-1")
     DcbEventStore::Event.new(
       type: "LeagueClosed",
@@ -41,13 +49,21 @@ RSpec.describe Scoreboards::LeagueOverview do
       expect(summary.starting_points).to eq(1015)
     end
 
-    it "stays nil when only a close event is folded (no creation seen)" do
+    it "carries the new name after a LeagueRenamed event, keeping the settings" do
+      summary = projection.fold([ league_created, league_renamed ])
+      expect(summary.name).to eq("Foosball Summer")
+      expect(summary.starting_points).to eq(1015)
+      expect(summary).to be_open
+    end
+
+    it "stays nil when only a close or rename event is folded (no creation seen)" do
       expect(projection.fold([ league_closed ])).to be_nil
+      expect(projection.fold([ league_renamed ])).to be_nil
     end
 
     it "queries the lifecycle events scoped to both league and account (tenancy)" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[LeagueCreated LeagueClosed])
+      expect(item.event_types).to eq(%w[LeagueCreated LeagueRenamed LeagueClosed])
       expect(item.tags).to contain_exactly("league:league-1", "account:acc-1")
     end
   end

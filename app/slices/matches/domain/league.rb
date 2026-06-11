@@ -22,11 +22,12 @@ module Matches
         initial_state: nil,
         handlers: {
           "LeagueCreated" => ->(_state, event) { Summary.new(name: event.data.fetch(:name), status: :open) },
+          "LeagueRenamed" => ->(state, event) { state&.with(name: event.data.fetch(:name)) },
           "LeagueClosed" => ->(state, _event) { state&.with(status: :closed) }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[LeagueCreated LeagueClosed],
+            event_types: %w[LeagueCreated LeagueRenamed LeagueClosed],
             tags: [ "league:#{league_id}", "account:#{account_id}" ]
           )
         )

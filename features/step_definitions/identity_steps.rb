@@ -72,3 +72,21 @@ end
 When("{string} signs out") do |_name|
   sign_out
 end
+
+When("{string} sets the handle {string}") do |name, handle|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  fill_in "Handle", with: handle
+  submit_form "Save handle"
+end
+
+When("{string} attempts to set the handle {string}") do |name, handle|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  fill_in "Handle", with: handle
+  submit_form "Save handle"
+end
+
+Then("the handle change is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end

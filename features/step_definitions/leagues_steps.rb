@@ -53,3 +53,38 @@ end
 When("{string} closes the {string} league") do |actor, league_name|
   close_league_via_ui(actor, league_name)
 end
+
+When("{string} renames the {string} league to {string}") do |name, league_name, new_name|
+  sign_in(name) unless signed_in_as?(name)
+  league = league_for(league_name)
+  visit "/accounts/#{league.account_id}/leagues/#{league.id}/edit"
+  fill_in "Name", with: new_name
+  submit_form "Rename league"
+  remember_league(new_name, league.id)
+end
+
+When("{string} attempts to rename the {string} league to {string}") do |name, league_name, new_name|
+  sign_in(name) unless signed_in_as?(name)
+  league = league_for(league_name)
+  page.driver.submit :patch, "/accounts/#{league.account_id}/leagues/#{league.id}", { name: new_name }
+end
+
+Then("the league rename is accepted") do
+  expect(page).to have_css(".flash--notice")
+end
+
+Then("the league rename is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end
+
+Then("the league is shown as {string} on its scoreboard page") do |league_name|
+  visit_scoreboard_as_member(league_name)
+  expect(page).to have_css("h1", text: league_name)
+end
+
+Then("the {string} account lists the league {string}") do |account_name, league_name|
+  owner = account_owner_name(account_name)
+  sign_in(owner) unless signed_in_as?(owner)
+  visit "/accounts/#{account_id_for(account_name)}"
+  expect(page).to have_css(".league-list li", text: league_name)
+end

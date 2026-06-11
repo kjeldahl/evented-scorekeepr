@@ -1,6 +1,7 @@
 # Read model for the dashboard: the accounts a user belongs to, i.e. every
 # account they created (AccountCreated) or were accepted into
-# (InvitationAccepted), folded by the user:{id} tag.
+# (InvitationAccepted) and have not left (MemberLeft), folded by the
+# user:{id} tag.
 module Accounts
   module MyAccounts
     extend self
@@ -14,11 +15,12 @@ module Accounts
         initial_state: [],
         handlers: {
           "AccountCreated" => ->(state, event) { state | [ event.data.fetch(:account_id) ] },
-          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:account_id) ] }
+          "InvitationAccepted" => ->(state, event) { state | [ event.data.fetch(:account_id) ] },
+          "MemberLeft" => ->(state, event) { state - [ event.data.fetch(:account_id) ] }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[AccountCreated InvitationAccepted],
+            event_types: %w[AccountCreated InvitationAccepted MemberLeft],
             tags: "user:#{user_id}"
           )
         )

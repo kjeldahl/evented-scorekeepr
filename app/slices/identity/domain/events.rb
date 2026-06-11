@@ -12,5 +12,13 @@ module Identity
         tags: [ "user:#{user_id}", "user_email:#{email}" ]
       )
     end
+
+    def user_handle_set(user_id:, handle:)
+      DcbEventStore::Event.new(
+        type: "UserHandleSet",
+        data: { user_id:, handle: },
+        tags: [ "user:#{user_id}" ]
+      )
+    end
   end
 end

@@ -26,7 +26,7 @@
 
 <div class="card">
   <h2>Members</h2>
-  <table>
+  <table class="members">
     <thead>
       <tr><th>Name</th></tr>
     </thead>
@@ -38,5 +38,27 @@
   </table>
   <div class="actions">
     <%= link_to "Invite player", new_account_invitation_path(@account.id) %>
+    <%= button_to "Leave account", leave_account_path(@account.id) %>
   </div>
+</div>
+
+<div class="card">
+  <h2>Outgoing invitations</h2>
+  <% if @outgoing_invitations.any? %>
+    <ul class="outgoing-invitations">
+      <% @outgoing_invitations.each do |invitation| %>
+        <li>
+          <%= invitation.email %>
+          <span class="muted">awaiting acceptance</span>
+          <%= button_to "Revoke", revoke_account_invitation_path(@account.id, invitation.invitation_id) %>
+          <% if dev_tools? %>
+            <%= button_to "Accept on behalf",
+                          accept_account_invitation_on_behalf_path(@account.id, invitation.invitation_id) %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="muted">No outgoing invitations.</p>
+  <% end %>
 </div>

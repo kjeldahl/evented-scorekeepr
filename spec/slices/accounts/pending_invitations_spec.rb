@@ -33,10 +33,25 @@ RSpec.describe Accounts::PendingInvitations do
     end
   end
 
-  describe ".accepted_projection" do
-    it "queries only InvitationAccepted events tagged with the invitation" do
-      item = described_class.accepted_projection("inv-1").query.items.sole
-      expect(item.event_types).to eq([ "InvitationAccepted" ])
+  describe ".settled_projection" do
+    subject(:projection) { described_class.settled_projection("inv-1") }
+
+    it "starts unsettled" do
+      expect(projection.initial_state).to be(false)
+    end
+
+    it "settles on acceptance, revocation and decline alike" do
+      accepted = Accounts::Events.invitation_accepted(invitation_id: "inv-1", account_id: "acc-1", user_id: "u2")
+      revoked = Accounts::Events.invitation_revoked(invitation_id: "inv-1", account_id: "acc-1", revoked_by_user_id: "u1")
+      declined = Accounts::Events.invitation_declined(invitation_id: "inv-1", account_id: "acc-1", user_id: "u2")
+      expect(projection.fold([ accepted ])).to be(true)
+      expect(projection.fold([ revoked ])).to be(true)
+      expect(projection.fold([ declined ])).to be(true)
+    end
+
+    it "queries the settling event types tagged with the invitation" do
+      item = projection.query.items.sole
+      expect(item.event_types).to eq(%w[InvitationAccepted InvitationRevoked InvitationDeclined])
       expect(item.tags).to eq([ "invitation:inv-1" ])
     end
   end

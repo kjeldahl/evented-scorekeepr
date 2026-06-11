@@ -12,6 +12,14 @@ module Leagues
       )
     end
 
+    def league_renamed(league_id:, account_id:, name:)
+      DcbEventStore::Event.new(
+        type: "LeagueRenamed",
+        data: { league_id:, account_id:, name: },
+        tags: [ "league:#{league_id}", "account:#{account_id}" ]
+      )
+    end
+
     def league_closed(league_id:, account_id:)
       DcbEventStore::Event.new(
         type: "LeagueClosed",

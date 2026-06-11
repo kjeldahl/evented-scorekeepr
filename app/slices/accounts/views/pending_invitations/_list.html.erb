@@ -4,6 +4,7 @@
       <li>
         You are invited to join <strong><%= invitation.account_name %></strong>
         <%= button_to "Accept", accept_invitation_path(invitation.invitation_id) %>
+        <%= button_to "Decline", decline_invitation_path(invitation.invitation_id) %>
       </li>
     <% end %>
   </ul>

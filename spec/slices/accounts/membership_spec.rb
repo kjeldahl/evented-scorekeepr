@@ -18,9 +18,22 @@ RSpec.describe Accounts::Membership do
       expect(projection.fold([ event ])).to be(true)
     end
 
-    it "queries both membership event types with the account and user tags" do
+    it "is no longer a member once a MemberLeft event is folded" do
+      created = Accounts::Events.account_created(account_id: "acc-1", name: "Office", owner_user_id: "user-1")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-1")
+      expect(projection.fold([ created, left ])).to be(false)
+    end
+
+    it "is a member again when an invitation is accepted after leaving" do
+      created = Accounts::Events.account_created(account_id: "acc-1", name: "Office", owner_user_id: "user-1")
+      left = Accounts::Events.member_left(account_id: "acc-1", user_id: "user-1")
+      rejoined = Accounts::Events.invitation_accepted(invitation_id: "inv-2", account_id: "acc-1", user_id: "user-1")
+      expect(projection.fold([ created, left, rejoined ])).to be(true)
+    end
+
+    it "queries the membership event types with the account and user tags" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted])
+      expect(item.event_types).to eq(%w[AccountCreated InvitationAccepted MemberLeft])
       expect(item.tags).to contain_exactly("account:acc-1", "user:user-1")
     end
   end
