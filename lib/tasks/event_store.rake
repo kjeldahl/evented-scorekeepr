@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 namespace :event_store do
+  desc "Create the database (if missing), the events table and supporting functions"
+  task prepare: :environment do
+    EventStore.prepare!
+    puts "Event store ready for #{Rails.env}."
+  end
+
   desc "Create the events table and supporting functions"
   task setup: :environment do
     EventStore.create_schema!
