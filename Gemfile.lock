@@ -8,9 +8,10 @@ GIT
 
 GIT
   remote: https://github.com/Kjeldahl/ruby-dcb.git
-  revision: 528bb571b82487a0a4ebd8d92f8f774746b3995d
+  revision: 0cfe2fae8616595ca227bbe2be37406a830acef9
   specs:
     dcb_event_store (0.1.0)
+      logger (~> 1.6)
       pg (~> 1.5)
 
 GEM
