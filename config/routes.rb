@@ -5,6 +5,11 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # ActionCable websocket endpoint (live updates, e.g. the TV dashboard).
+  # The engine's automatic internal mount is disabled in config/application.rb
+  # so this explicit mount is the single source of truth.
+  mount ActionCable.server => "/cable"
+
   # Identity slice: sign up, sign in / out.
   get    "signup", to: "identity/registrations#new"
   post   "signup", to: "identity/registrations#create"
@@ -48,9 +53,15 @@ Rails.application.routes.draw do
     end
   end
 
-  # Scoreboards slice: the league page (standings + recent matches).
+  # Scoreboards slice: the league page (standings + recent matches) and the
+  # TV dashboard (full-screen, read-only, live-updating via ActionCable push;
+  # the version endpoint is the catch-up contract checked on (re)connect).
   get "accounts/:account_id/leagues/:league_id/scoreboard",
       to: "scoreboards/scoreboards#show", as: :account_league_scoreboard
+  get "accounts/:account_id/leagues/:league_id/tv",
+      to: "scoreboards/tv#show", as: :account_league_tv
+  get "accounts/:account_id/leagues/:league_id/tv/version",
+      to: "scoreboards/tv#version", as: :account_league_tv_version
 
   # Statistics slice: per-player league statistics.
   get "accounts/:account_id/leagues/:league_id/players/:player_id",

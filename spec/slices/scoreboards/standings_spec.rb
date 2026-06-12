@@ -45,6 +45,11 @@ RSpec.describe Scoreboards::Standings do
       expect(row_for(rows, "Bob").streak).to eq("L1")
     end
 
+    it "exposes the structured streak (kind and length) on each row" do
+      expect(row_for(rows, "Alice")).to have_attributes(streak_kind: "W", streak_length: 1)
+      expect(row_for(rows, "Bob")).to have_attributes(streak_kind: "L", streak_length: 1)
+    end
+
     it "attributes the game points for and against" do
       expect(row_for(rows, "Alice")).to have_attributes(points_for: 21, points_against: 8)
       expect(row_for(rows, "Bob")).to have_attributes(points_for: 8, points_against: 21)
@@ -113,6 +118,11 @@ RSpec.describe Scoreboards::Standings do
       expect(row_for(rows, "Alice").streak).to eq("W2")
       expect(row_for(rows, "Bob").streak).to eq("W1")
       expect(row_for(rows, "Carol").streak).to eq("L2")
+    end
+
+    it "carries the structured streak alongside the display string" do
+      expect(row_for(rows, "Alice")).to have_attributes(streak_kind: "W", streak_length: 2)
+      expect(row_for(rows, "Carol")).to have_attributes(streak_kind: "L", streak_length: 2)
     end
   end
 

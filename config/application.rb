@@ -11,7 +11,7 @@ require "action_mailer/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
 require "action_view/railtie"
-# require "action_cable/engine"
+require "action_cable/engine"
 # require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
@@ -52,5 +52,10 @@ module Scorekeepr
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # ActionCable is mounted explicitly in config/routes.rb (kept in sync with
+    # the docs/ARCHITECTURE.md routing table), so the engine's automatic
+    # internal mount at the default path is disabled to avoid a duplicate route.
+    config.action_cable.mount_path = nil
   end
 end

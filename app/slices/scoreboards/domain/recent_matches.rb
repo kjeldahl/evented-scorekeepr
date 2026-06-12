@@ -1,6 +1,7 @@
-# The league page's recent-matches list: the 5 most recent matches phrased the
-# way the features do — winning side first, "beats" for one winner, "beat"
-# for two, winner's score first — newest match first.
+# The recent-matches list on the league page and the TV dashboard: the 5
+# most recent matches phrased the way the features do — winning side first,
+# "beats" for one winner, "beat" for two, winner's score first — newest
+# match first.
 module Scoreboards
   module RecentMatches
     extend self

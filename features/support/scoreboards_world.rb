@@ -41,12 +41,57 @@ module ScoreboardsWorld
   # Compares the rendered standings against the Gherkin table: same number
   # of rows, same order, and every cell under the table's headers exact.
   def expect_scoreboard(table)
-    rendered = scoreboard_rows
+    expect_table_rows(scoreboard_rows, table)
+  end
+
+  def expect_table_rows(rendered, table)
     expected = table.hashes
     expect(rendered.size).to eq(expected.size)
     expected.each_with_index do |expected_row, index|
       expect(rendered[index].slice(*expected_row.keys)).to eq(expected_row)
     end
+  end
+
+  # --- TV dashboard helpers ---------------------------------------------
+  #   visit_tv_as(viewer, league_name)      # signs the viewer in and opens the TV page
+  #   tv_path_for(league_name)              # the TV page path
+  #   tv_rows                               # rendered standings rows, keyed by header
+  #   tv_recent_matches                     # the latest-matches lines, top to bottom
+  #   tv_version_as(viewer, league_name)    # GETs the version endpoint, returns the integer
+
+  def visit_tv_as(viewer, league_name)
+    sign_in(viewer) unless signed_in_as?(viewer)
+    visit tv_path_for(league_name)
+  end
+
+  def tv_path_for(league_name)
+    league = league_for(league_name)
+    "/accounts/#{league.account_id}/leagues/#{league.id}/tv"
+  end
+
+  def tv_rows
+    headers = page.all(".tv-standings thead th").map { |header| header.text.strip.downcase }
+    page.all(".tv-standings tbody tr").map do |row|
+      headers.zip(row.all("td").map { |cell| cell.text.strip }).to_h
+    end
+  end
+
+  def tv_recent_matches
+    page.all(".tv-recent li").map { |item| item.text.strip }
+  end
+
+  def tv_version_as(viewer, league_name)
+    sign_in(viewer) unless signed_in_as?(viewer)
+    visit "#{tv_path_for(league_name)}/version"
+    JSON.parse(page.body).fetch("version")
+  end
+
+  # --- TV live updates ----------------------------------------------------
+  #   tv_stream_broadcasts(league_name)  # broadcasts recorded by the test
+  #                                      # cable adapter on the league's
+  #                                      # "events:league:{id}" stream
+  def tv_stream_broadcasts(league_name)
+    ActionCable.server.pubsub.broadcasts("events:league:#{league_for(league_name).id}")
   end
 end
 

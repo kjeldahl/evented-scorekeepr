@@ -6,7 +6,8 @@
 module Scoreboards
   class Standings
     Row = Data.define(:rank, :player_id, :name, :points, :played, :wins, :losses,
-                      :win_percentage, :points_for, :points_against, :streak)
+                      :win_percentage, :points_for, :points_against, :streak,
+                      :streak_kind, :streak_length)
 
     Streak = Data.define(:kind, :length) do
       def self.none = new(kind: nil, length: 0)
@@ -77,7 +78,8 @@ module Scoreboards
       Row.new(rank:, player_id: player, name: names.fetch(player, player),
               points: stats.points, played: stats.played, wins: stats.wins, losses: stats.losses,
               win_percentage: stats.win_percentage, points_for: stats.points_for,
-              points_against: stats.points_against, streak: stats.streak.to_s)
+              points_against: stats.points_against, streak: stats.streak.to_s,
+              streak_kind: stats.streak.kind, streak_length: stats.streak.length)
     end
   end
 end

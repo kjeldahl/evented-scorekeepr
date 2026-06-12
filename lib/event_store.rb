@@ -15,7 +15,18 @@ require "pg"
 module EventStore
   class << self
     def append(events, condition = nil)
-      with_store { |store| store.append(events, condition) }
+      appended = with_store { |store| store.append(events, condition) }
+      notify_append_hooks(Array(events))
+      appended
+    end
+
+    # Registers an observer block called with the appended events (always an
+    # Array) after every successful append — never on a failed condition,
+    # because the store raises before notification. Hooks survive reset!.
+    # This stays pure Ruby; the ActionCable broadcast bridge lives in
+    # config/initializers/event_store_broadcasts.rb.
+    def on_append(&block)
+      append_hooks << block
     end
 
     def read(query)
@@ -79,6 +90,14 @@ module EventStore
     end
 
     private
+
+    def notify_append_hooks(events)
+      append_hooks.each { |hook| hook.call(events) }
+    end
+
+    def append_hooks
+      @append_hooks ||= []
+    end
 
     def create_database!
       with_maintenance_connection do |conn|

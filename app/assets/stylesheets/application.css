@@ -123,6 +123,24 @@ button:hover, input[type="submit"]:hover { background: var(--accent-dark); }
 .recent-matches { margin: 0; padding-left: 1.25rem; }
 .recent-matches li { padding: 0.15rem 0; }
 
+/* TV dashboard (scoreboards slice): dark full-screen wall display. */
+body.tv { background: #10181f; color: #e8eef2; }
+body.tv .tv-container { max-width: 72rem; padding: 2rem 1.5rem; }
+body.tv .card { background: #1b2630; border-color: #2c3a47; }
+body.tv h1, body.tv h2 { color: #e8eef2; }
+body.tv .muted { color: #9fb0bd; }
+.tv-header h1 { font-size: 3rem; margin: 0; }
+.tv-header .tv-game { font-size: 1.3rem; margin: 0.25rem 0 0; }
+.tv-spotlights { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.tv-spotlight-title { font-size: 1.8rem; font-weight: 700; margin: 0; }
+.tv-spotlight-detail { font-size: 1.2rem; margin: 0.35rem 0 0; }
+body.tv table { background: transparent; font-size: 1.4rem; }
+body.tv th, body.tv td { border-color: #2c3a47; }
+body.tv thead th { color: #9fb0bd; }
+body.tv tbody tr:nth-child(odd), body.tv tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+.tv-recent ol { margin: 0; padding-left: 1.5rem; font-size: 1.2rem; }
+.tv-recent li { padding: 0.15rem 0; }
+
 /* Utilities */
 .muted { color: var(--muted); }
 .actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1rem; }

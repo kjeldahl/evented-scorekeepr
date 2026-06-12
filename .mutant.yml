@@ -45,5 +45,10 @@ matcher:
     - Matches::MatchesController*
     - Scoreboards::BaseController*
     - Scoreboards::ScoreboardsController*
+    - Scoreboards::TvController*
+    # The TV channel is web/ too (the same view-only gate as TvController,
+    # behind ActionCable) — exercised by channel specs and Cucumber, not a
+    # mutant kill signal.
+    - Scoreboards::TvChannel*
     - Statistics::BaseController*
     - Statistics::PlayersController*

@@ -49,6 +49,32 @@ points conceded (against), and current streak (e.g. W3 / L2).
 
 The league page shows the scoreboard plus the most recent matches.
 
+### TV dashboard
+
+Each league also has a **TV dashboard** — a full-screen, read-only page
+meant for a screen in the room where games are played, reached via the
+"TV mode" link on the league's scoreboard page (shown to every viewer of
+that page, members and super admins alike). It shows:
+
+- The league name, game type and an open/closed badge.
+- A **leader spotlight**: the rank-1 player with their points.
+- A **hot-streak spotlight**: the player with the longest *current* winning
+  streak of at least 2; hidden when nobody has one; ties broken by
+  standings order.
+- The standings table.
+- The latest 5 matches, newest first.
+
+The page auto-refreshes: updates are **pushed over a websocket** whenever a
+league event is appended — i.e. whenever a match is registered or the
+league is renamed or closed. The per-league **version** — a monotonic count
+of the league's events (`LeagueCreated`, `LeagueRenamed`, `LeagueClosed`,
+`MatchRegistered` tagged `league:{id}`) — remains the catch-up contract:
+on websocket (re)connect the page fetches it once and reloads when it
+differs from the version it last rendered, covering updates missed while
+disconnected. The version is a pure read-model fold and the push is
+infrastructure, not an event: no new events are introduced and the version
+never feeds an append condition.
+
 ## Events
 
 | Event | Data | Tags |
@@ -127,8 +153,8 @@ for the starting configuration); no new events are introduced.
 ## Super admin
 
 A **super admin** is a user who may *view* every account — the account page
-(members, leagues, outgoing invitations), every scoreboard and every player
-statistics page — without being a member. For discovery, a super
+(members, leagues, outgoing invitations), every scoreboard, every TV
+dashboard and every player statistics page — without being a member. For discovery, a super
 admin's dashboard links to a read-only **all-accounts list** naming every
 account in the system (alphabetically by name); opening an account from it
 is the same view-only access. Ordinary users never see this list. The
@@ -164,5 +190,5 @@ the table above and the status fold becomes latest-wins (like
 | `accounts` | create account, invite players, accept invitations, membership |
 | `leagues` | create / close leagues |
 | `matches` | register match results (optimised for fast input) |
-| `scoreboards` | standings, statistics, recent matches |
+| `scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version |
 | `statistics` | per-player league statistics: form, head-to-head, history |

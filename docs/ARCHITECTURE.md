@@ -22,14 +22,14 @@ The app is built in five slices under `app/slices/`:
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register match results | `MatchRegistered` |
-| `scoreboards` | `Scoreboards` | league page: standings, statistics, recent matches | *(none — read only)* |
+| `scoreboards` | `Scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version (`Scoreboards::LeagueVersion`) | *(none — read only)* |
 
 ### Slice layout
 
 ```
 app/slices/<slice>/
   domain/          # pure Ruby: commands, the Events module, projections/read models
-  web/             # controllers only
+  web/             # controllers and ActionCable channels; channels enforce the same gates as controllers
   views/<resource>/  # ERB templates for that slice's controllers
 ```
 
@@ -50,7 +50,7 @@ unique across slices**. The reserved names per the routing table below:
 - accounts: `views/dashboard/`, `views/accounts/`, `views/invitations/`, `views/pending_invitations/`
 - leagues: `views/leagues/`
 - matches: `views/matches/`
-- scoreboards: `views/scoreboards/`
+- scoreboards: `views/scoreboards/`, `views/tv/`
 - statistics: `views/players/`
 
 `domain/` is **pure Ruby**: no Rails controller/view/helper code, no
@@ -78,7 +78,9 @@ references to `params`, `session` or routes. It may use `EventStore`,
    nothing else from outside their slice.
 6. Shared UI lives only in `app/views/layouts/` and
    `app/assets/stylesheets/application.css`. Shared infrastructure lives only
-   in `lib/` (`EventStore`, `Result`).
+   in `lib/` (`EventStore`, `Result`) and `app/channels/` (the
+   `ApplicationCable::Connection`/`Channel` base classes — root-package web
+   infrastructure like `ApplicationController`, see § Live updates).
 
 Rules 3–5 are machine-enforced by **packwerk** (`bin/rails quality:packwerk`,
 part of CI): each slice is a package (`app/slices/<slice>/package.yml`) whose
@@ -329,15 +331,19 @@ end
 - Accounts slice **owns** (appends) the membership events; everyone else only
   folds them.
 - **Super admin read access** (see `docs/DOMAIN.md` § Super admin): exactly
-  three *view-only* gates also open for super admins —
-  `Accounts::AccountsController#show`, `Scoreboards::ScoreboardsController#show`
-  and `Statistics::PlayersController#show`. Their `require_account_member!`
-  passes when the user is a member **or** a super admin. Every other
+  four *view-only* gates also open for super admins —
+  `Accounts::AccountsController#show`, `Scoreboards::ScoreboardsController#show`,
+  `Scoreboards::TvController#show` (plus its `#version` catch-up endpoint and
+  `Scoreboards::TvChannel`, same gate) and `Statistics::PlayersController#show`. Their
+  `require_account_member!` passes when the user is a member **or** a super
+  admin. Every other
   member gate (invitations new/create, invitation revocations, on-behalf
   acceptances, account leavings, league new/create/edit/update/close,
   match new/create) stays membership-only, and **no command consults super
   admin status** — a super admin is simply not a member. Each of the three
-  slices defines its **own** `<Slice>::SuperAdmin` read model (duplicate
+  slices involved (accounts, scoreboards, statistics — the TV gate reuses
+  the scoreboards fold) defines its **own** `<Slice>::SuperAdmin` read model
+  (duplicate
   per slice, like `Membership` — never share the class), folding the
   identity slice's `SuperAdminGranted` by tag. The canonical fold:
 
@@ -361,7 +367,9 @@ end
   write affordances from non-member viewers (invite/new-league links on the
   account page, register-match link and close-league button on the
   scoreboard page) — the links would only redirect anyway; the real
-  enforcement stays in the member gates and command invariants.
+  enforcement stays in the member gates and command invariants. The TV
+  dashboard has no write affordances at all, so its gate needs no `@member`
+  distinction in the view.
   Granting has **no web UI and no route**: `Identity::GrantSuperAdmin.
   call(user_id:)` (identity domain) is called from cucumber steps, console
   or seeds only.
@@ -390,6 +398,7 @@ in sync). All routes except signup/login require authentication.
 | Verb | Path | Controller#action | Helper | Purpose |
 |---|---|---|---|---|
 | GET | `/up` | `rails/health#show` | `rails_health_check_path` | health check |
+| GET | `/cable` | `ActionCable.server` (mounted engine) | — | websocket endpoint for live updates; slice channels subscribe clients to `events:{tag}` streams (used by the TV dashboard, see § Live updates) |
 | GET | `/signup` | `identity/registrations#new` | `signup_path` | sign-up form |
 | POST | `/signup` | `identity/registrations#create` | — | register; signs in; → root |
 | GET | `/login` | `identity/sessions#new` | `login_path` | sign-in form |
@@ -416,6 +425,8 @@ in sync). All routes except signup/login require authentication.
 | PATCH/PUT | `/accounts/:account_id/leagues/:id` | `leagues/leagues#update` | `account_league_path` | rename league; → scoreboard page |
 | POST | `/accounts/:account_id/leagues/:id/close` | `leagues/leagues#close` | `close_account_league_path` | close league; → scoreboard page |
 | GET | `/accounts/:account_id/leagues/:league_id/scoreboard` | `scoreboards/scoreboards#show` | `account_league_scoreboard_path` | **the league page**: standings table, recent matches, "Register match" link, "Close league" button |
+| GET | `/accounts/:account_id/leagues/:league_id/tv` | `scoreboards/tv#show` | `account_league_tv_path` | **TV dashboard**: full-screen read-only league page (standings, leader + hot-streak spotlights, latest matches); live-updates via ActionCable push (see § Live updates) |
+| GET | `/accounts/:account_id/leagues/:league_id/tv/version` | `scoreboards/tv#version` | `account_league_tv_version_path` | JSON `{"version": N}` fetched by the TV page on websocket (re)connect as catch-up for updates missed while disconnected; N is a monotonic per-league count of the league's events (`LeagueCreated`, `LeagueRenamed`, `LeagueClosed`, `MatchRegistered` tagged `league:{id}`), folded by `Scoreboards::LeagueVersion` |
 | GET | `/accounts/:account_id/leagues/:league_id/matches/new` | `matches/matches#new` | `new_account_league_match_path` | register-match form |
 | POST | `/accounts/:account_id/leagues/:league_id/matches` | `matches/matches#create` | `account_league_matches_path` | register match; → scoreboard page |
 | GET | `/accounts/:account_id/leagues/:league_id/players/:player_id` | `statistics/players#show` | `account_league_player_path` | player statistics: points/rank, form, head-to-head, match history |
@@ -438,6 +449,59 @@ numeric `th`/`td` (right-aligned tabular numerals), `.actions` for
 button/link rows, `.muted` for secondary text. Forms: label above input,
 plain `form_with` (no JS framework; full page loads are fine). No new CSS
 frameworks; extend `application.css` sparingly if a slice truly needs it.
+
+The TV dashboard renders with the dedicated minimal layout
+`app/views/layouts/tv.html.erb` (no site nav, full-screen styling) — a
+shared layout per rule 6 in §2. TV styles live in
+`app/assets/stylesheets/application.css` under a `tv-` class prefix. The
+page has **no polling loop**: a tiny inline vanilla-JS script subscribes to
+`Scoreboards::TvChannel` via the ActionCable client **shipped inside the
+actioncable gem** (`app/assets/javascripts/actioncable.js`, on the asset
+path once the engine is loaded — no npm, no importmap). On a received
+broadcast it reloads; on (re)connect it fetches the version endpoint once
+and reloads when the version differs from the one embedded in the page
+(catch-up for updates missed while disconnected). This inline script is
+allowed on this page only — it does not loosen the no-JS-framework
+constraint anywhere else.
+
+### Live updates (ActionCable)
+
+ActionCable (Rails built-in) pushes live updates over the websocket mounted
+at `/cable` (explicit mount in `config/routes.rb`; the engine's automatic
+mount is disabled via `config.action_cable.mount_path = nil` in
+`config/application.rb`).
+
+- **Adapter** (`config/cable.yml`): this app has no ActiveRecord, so
+  `solid_cable` and the built-in `postgresql` cable adapter are unavailable.
+  `async` (in-process pub/sub) is used in development and production and is
+  correct for a single server process — broadcasts originate in the process
+  serving the websocket. Switch production to the `redis` adapter when
+  scaling to multiple processes. Test uses the `test` adapter.
+- **Append notifications**: `EventStore.on_append(&block)`
+  (`lib/event_store.rb`) is a minimal pure-Ruby observer hook — after every
+  successful `append`, registered blocks are called with the appended
+  events. `lib/` stays free of Rails/ActionCable references; the bridge is
+  the initializer `config/initializers/event_store_broadcasts.rb`, which
+  registers a hook broadcasting to the ActionCable stream `events:{tag}`
+  for **every tag of every appended event**, payload `{ type: event.type }`.
+  The broadcast is infrastructure, not an event: nothing is appended, no
+  new event types exist.
+- **Streams are named by event tag.** "Events are the only cross-slice
+  contract" extends to live notifications: a slice channel may stream any
+  tag documented in `docs/DOMAIN.md` (its own or another slice's), but
+  never reference another slice's classes.
+- **Channels**: the shared base classes `ApplicationCable::Connection` and
+  `ApplicationCable::Channel` live in `app/channels/` (root package —
+  shared web infrastructure like `ApplicationController`). The connection
+  identifies `current_user_id` by reading the user id from the encrypted
+  session cookie (the identity slice still owns *writing*
+  `session[:user_id]`); unauthenticated connections are rejected. Slice
+  channels live in the slice's `web/` directory and enforce the same gates
+  as the slice's controllers, rejecting the subscription on failure.
+  `Scoreboards::TvChannel` (`app/slices/scoreboards/web/tv_channel.rb`)
+  gates member-or-super-admin with the slice's **own** folds (the same
+  view-only gate as `TvController`) and
+  `stream_from "events:league:#{league_id}"`.
 
 ## 7. Testing & quality gates
 

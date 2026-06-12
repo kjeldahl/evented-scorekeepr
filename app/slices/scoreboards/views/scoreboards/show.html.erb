@@ -21,6 +21,11 @@
                     close_account_league_path(@league.account_id, @league.league_id) %>
     </div>
   <% end %>
+
+  <%# View-only, so every viewer of this page gets it — same gate as the page. %>
+  <div class="actions">
+    <%= link_to "TV mode", account_league_tv_path(@league.account_id, @league.league_id) %>
+  </div>
 </div>
 
 <div class="card">

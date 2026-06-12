@@ -1,0 +1,107 @@
+<% content_for :title, "#{@league.name} — TV — Scorekeepr" %>
+
+<%# Wall display: read-only, no links or write affordances anywhere. %>
+<div class="tv-dashboard"
+     data-tv-version="<%= @version %>"
+     data-tv-version-url="<%= account_league_tv_version_path(@league.account_id, @league.league_id) %>"
+     data-tv-account-id="<%= @league.account_id %>"
+     data-tv-league-id="<%= @league.league_id %>">
+  <header class="tv-header">
+    <h1><%= @league.name %></h1>
+    <p class="tv-game muted">
+      <%= @league.game_type %>
+      <% if @league.open? %>
+        <span class="badge badge--open">Open</span>
+      <% else %>
+        <span class="badge badge--closed">Closed</span>
+      <% end %>
+    </p>
+  </header>
+
+  <% if @leader || @hot_streak %>
+    <div class="tv-spotlights">
+      <% if @leader %>
+        <div class="card tv-leader">
+          <p class="tv-spotlight-title">👑 <%= @leader.name %></p>
+          <p class="tv-spotlight-detail"><%= @leader.points %> points</p>
+        </div>
+      <% end %>
+      <% if @hot_streak %>
+        <div class="card tv-streak">
+          <p class="tv-spotlight-title">🔥 Hot streak</p>
+          <p class="tv-spotlight-detail"><%= @hot_streak.name %> is on fire — <%= @hot_streak.streak_length %> wins in a row</p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section class="card tv-standings">
+    <h2>Standings</h2>
+    <% if @rows.empty? %>
+      <p class="muted empty-state">No matches yet.</p>
+    <% else %>
+      <table>
+        <thead>
+          <tr>
+            <th class="num">Rank</th>
+            <th>Player</th>
+            <th class="num">Points</th>
+            <th>Streak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr>
+              <td class="num"><%= row.rank %></td>
+              <td><%= row.name %></td>
+              <td class="num"><%= row.points %></td>
+              <td><%= row.streak %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </section>
+
+  <section class="card tv-recent">
+    <h2>Latest matches</h2>
+    <% if @recent_matches.empty? %>
+      <p class="muted empty-state">No matches yet.</p>
+    <% else %>
+      <ol>
+        <% @recent_matches.each do |line| %>
+          <li><%= line %></li>
+        <% end %>
+      </ol>
+    <% end %>
+  </section>
+</div>
+
+<%# Live updates via ActionCable push: a received broadcast on the league's
+    event stream reloads the page. On every (re)connect the version endpoint
+    is fetched once and compared against the version embedded above —
+    catch-up for updates missed while disconnected. %>
+<script>
+  (function () {
+    var root = document.querySelector(".tv-dashboard");
+    var catchUp = function () {
+      fetch(root.dataset.tvVersionUrl, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+        .then(function (response) { return response.json(); })
+        .then(function (payload) {
+          if (String(payload.version) !== root.dataset.tvVersion) { location.reload(); }
+        })
+        .catch(function () { /* checked again on the next (re)connect */ });
+    };
+    ActionCable.createConsumer().subscriptions.create(
+      {
+        channel: "Scoreboards::TvChannel",
+        account_id: root.dataset.tvAccountId,
+        league_id: root.dataset.tvLeagueId
+      },
+      {
+        received: function () { location.reload(); },
+        connected: catchUp
+      }
+    );
+  })();
+</script>

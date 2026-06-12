@@ -1,0 +1,16 @@
+# ActionCable pub/sub adapter per environment.
+#
+# Constraint: this app has NO ActiveRecord, so `solid_cable` and the built-in
+# `postgresql` cable adapter (both ride on ActiveRecord connections) are
+# unavailable. `async` is in-process pub/sub, which is correct for a single
+# server process — broadcasts originate in the same process that serves the
+# websocket. Switch production to the `redis` adapter when scaling to
+# multiple server processes.
+development:
+  adapter: async
+
+test:
+  adapter: test
+
+production:
+  adapter: async
