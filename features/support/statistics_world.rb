@@ -10,6 +10,7 @@
 #   player_page_summary                                 # the rendered summary line text
 #   player_page_form                                    # the rendered form tokens ("W W L")
 #   expect_player_page_table(css, table)                # strict compare against a Gherkin table
+#   match_history_pager                                 # the pager nav under the history table
 module StatisticsWorld
   def open_player_page(viewer, player_name, league_name)
     visit_scoreboard_as(viewer, league_name)
@@ -27,6 +28,10 @@ module StatisticsWorld
 
   def player_page_form
     page.find(".player-form .form-results").text
+  end
+
+  def match_history_pager
+    page.find("nav.pagination")
   end
 
   def player_page_table_rows(css)

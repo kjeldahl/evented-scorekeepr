@@ -5,10 +5,11 @@ Feature: Player statistics
   (the last five results, most recent first, like "W W L" — fewer if fewer
   matches played), a head-to-head table with one row per opponent faced (an
   opponent is any player on the other side, in 1v1 and 2v2 alike; ordered
-  by most played, then name), and the full match history newest first with
-  the player's points after each match (the running balance from the stake
-  fold). Like the scoreboard, a player page is visible to account members
-  only.
+  by most played, then name), and the match history newest first with the
+  player's points after each match (the running balance from the stake
+  fold). The match history is paged ten matches per page — page one holds
+  the newest — with Older/Newer links between pages. Like the scoreboard,
+  a player page is visible to account members only.
 
   Background:
     Given "Alice" is a registered user with email "alice@example.com" and password "secret123"
@@ -96,6 +97,21 @@ Feature: Player statistics
       | Alice and Carol beat Bob and Dave 10-4 | 1091         |
       | Bob beats Alice 21-19                  | 990          |
       | Alice beats Bob 21-8                   | 1100         |
+
+  Scenario: Match history is paged ten matches per page
+    # Eleven Alice wins: page one shows the ten newest, and only the very
+    # first match (which left Alice at 1000 + 100 = 1100) spills onto page
+    # two, reached via the "Older" link.
+    Given "Alice" registers 11 matches in "Foosball Spring" where "Alice" beats "Bob" 21-8
+    When "Alice" opens "Alice"'s statistics page in "Foosball Spring"
+    Then the match history shows 10 matches on page 1 of 2
+    When "Alice" follows the "Older" match history link
+    Then the match history shows 1 matches on page 2 of 2
+    And the match history shows:
+      | match                | points after |
+      | Alice beats Bob 21-8 | 1100         |
+    When "Alice" follows the "Newer" match history link
+    Then the match history shows 10 matches on page 1 of 2
 
   Scenario: Only account members can see a player's statistics page
     # Match 1: Bob stakes 10% of 1000 = 100 -> Alice 1100, rank 1, 1 match

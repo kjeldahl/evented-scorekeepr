@@ -93,6 +93,36 @@ RSpec.describe Statistics::PlayerPage, :event_store do
         Statistics::MatchHistory::Row.new(line: "Alice beats Bob 21-8", points_after: 1100)
       ])
     end
+
+    it "fits a short history on a single page" do
+      expect(page).to have_attributes(history_page: 1, history_pages: 1)
+    end
+  end
+
+  describe "match-history paging" do
+    before do
+      EventStore.append(register_users + (1..11).map do |number|
+        match_registered(match_id: "m-#{number}", home: [ "a" ], away: [ "b" ],
+                         home_score: 21, away_score: 8)
+      end)
+    end
+
+    it "shows the ten newest matches on the first page by default" do
+      page = described_class.find(league:, player_id: "a")
+      expect(page).to have_attributes(history_page: 1, history_pages: 2)
+      expect(page.history.size).to eq(10)
+    end
+
+    it "shows the overflow on the requested page" do
+      page = described_class.find(league:, player_id: "a", history_page: 2)
+      expect(page).to have_attributes(history_page: 2, history_pages: 2)
+      expect(page.history.sole.points_after).to eq(1100)
+    end
+
+    it "clamps an out-of-range page request" do
+      expect(described_class.find(league:, player_id: "a", history_page: 0).history_page).to eq(1)
+      expect(described_class.find(league:, player_id: "a", history_page: 99).history_page).to eq(2)
+    end
   end
 
   it "uses the league's scoring settings" do

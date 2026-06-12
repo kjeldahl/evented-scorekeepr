@@ -27,6 +27,15 @@ Then("the match history shows:") do |table|
   expect_player_page_table("table.match-history", table)
 end
 
+Then("the match history shows {int} matches on page {int} of {int}") do |count, number, pages|
+  expect(player_page_table_rows("table.match-history").size).to eq(count)
+  expect(match_history_pager).to have_text("Page #{number} of #{pages}")
+end
+
+When("{string} follows the {string} match history link") do |_viewer, label|
+  match_history_pager.click_link(label)
+end
+
 Then("{string} cannot see {string}'s statistics page in {string}") do |viewer, player, league|
   sign_in(viewer) unless signed_in_as?(viewer)
   visit player_page_path(player, league)

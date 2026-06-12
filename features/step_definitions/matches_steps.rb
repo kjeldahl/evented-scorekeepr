@@ -11,6 +11,14 @@ do |registrar, league, winner, loser, winner_score, loser_score|
                              home_score: winner_score, away_score: loser_score)
 end
 
+Given("{string} registers {int} matches in {string} where {string} beats {string} {int}-{int}") \
+do |registrar, count, league, winner, loser, winner_score, loser_score|
+  count.times do
+    register_match!(registrar, league:, home: [ winner ], away: [ loser ],
+                               home_score: winner_score, away_score: loser_score)
+  end
+end
+
 When("{string} registers a match in {string} where {string} and {string} beat {string} and {string} {int}-{int}") \
 do |registrar, league, winner_1, winner_2, loser_1, loser_2, winner_score, loser_score|
   register_match!(registrar, league:, home: [ winner_1, winner_2 ], away: [ loser_1, loser_2 ],

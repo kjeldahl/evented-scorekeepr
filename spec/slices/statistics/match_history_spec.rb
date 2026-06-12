@@ -50,4 +50,46 @@ RSpec.describe Statistics::MatchHistory do
                                                           points_after: 1091))
     end
   end
+
+  describe ".page" do
+    def page_of(player_id, *matches, number: 1)
+      described_class.page(entries(*matches), player_id:, names:, number:)
+    end
+
+    def matches(count)
+      Array.new(count) { match([ "a" ], [ "b" ]) }
+    end
+
+    it "is a single full page when the history fits exactly" do
+      page = page_of("a", *matches(10))
+      expect(page).to have_attributes(number: 1, pages: 1)
+      expect(page.rows.size).to eq(10)
+    end
+
+    it "puts the ten newest matches on page one and the rest after" do
+      page = page_of("a", *matches(11))
+      expect(page).to have_attributes(number: 1, pages: 2)
+      expect(page.rows.size).to eq(10)
+    end
+
+    it "keeps newest-first order across pages: the last page holds the oldest match" do
+      # Eleven Alice wins: the very first one left her at 1100, and only
+      # that oldest match spills onto page two.
+      page = page_of("a", *matches(11), number: 2)
+      expect(page.rows.sole.points_after).to eq(1100)
+    end
+
+    it "clamps a page number past the end to the last page" do
+      expect(page_of("a", *matches(11), number: 99)).to have_attributes(number: 2, pages: 2)
+    end
+
+    it "clamps a page number below one to the first page" do
+      expect(page_of("a", *matches(3), number: 0)).to have_attributes(number: 1, pages: 1)
+    end
+
+    it "is an empty single page for a player with no matches" do
+      page = page_of("c", match([ "a" ], [ "b" ]))
+      expect(page).to eq(described_class::Page.new(rows: [], number: 1, pages: 1))
+    end
+  end
 end

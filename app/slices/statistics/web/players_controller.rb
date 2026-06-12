@@ -12,7 +12,8 @@ module Statistics
     private
 
     def load_player_page
-      @page = PlayerPage.find(league: @league, player_id: params[:player_id])
+      @page = PlayerPage.find(league: @league, player_id: params[:player_id],
+                              history_page: params[:page].to_i)
       return if @page
 
       redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),

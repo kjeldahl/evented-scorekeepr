@@ -51,4 +51,17 @@
       <% end %>
     </tbody>
   </table>
+  <% if @page.history_pages > 1 %>
+    <nav class="pagination">
+      <% if @page.history_page > 1 %>
+        <%= link_to "Newer", account_league_player_path(@league.account_id, @league.league_id,
+                                                        @page.player_id, page: @page.history_page - 1) %>
+      <% end %>
+      <span class="muted">Page <%= @page.history_page %> of <%= @page.history_pages %></span>
+      <% if @page.history_page < @page.history_pages %>
+        <%= link_to "Older", account_league_player_path(@league.account_id, @league.league_id,
+                                                        @page.player_id, page: @page.history_page + 1) %>
+      <% end %>
+    </nav>
+  <% end %>
 </div>
