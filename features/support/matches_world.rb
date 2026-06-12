@@ -85,32 +85,11 @@ module MatchesWorld
       event.data[:away_score] == expected[:away_score].to_i
   end
 
-  # Formats the league's matches newest first as the features phrase them:
-  # the winning side first ("Alice beats Bob 21-8", "Alice and Carol beat
-  # Bob and Dave 10-4").
+  # The recent-matches list as the league page renders it, newest first
+  # ("Alice beats Bob 21-8", "Alice and Carol beat Bob and Dave 10-4").
   def recent_match_lines(league_name)
-    names = registered_user_names
-    match_events(league_name).reverse.map { |event| match_line(event.data, names) }
-  end
-
-  def match_line(data, names)
-    home, away = data.values_at(:home_player_ids, :away_player_ids)
-    home_score, away_score = data.values_at(:home_score, :away_score)
-    winners, losers = home_score > away_score ? [ home, away ] : [ away, home ]
-    verb = winners.one? ? "beats" : "beat"
-    scores = [ home_score, away_score ].sort.reverse.join("-")
-    "#{names.values_at(*winners).join(" and ")} #{verb} #{names.values_at(*losers).join(" and ")} #{scores}"
-  end
-
-  # Display names: the handle (UserHandleSet) wins over the registered name,
-  # latest event last — mirroring how the app shows players.
-  def registered_user_names
-    query = DcbEventStore::Query.new([
-      DcbEventStore::QueryItem.new(event_types: %w[UserRegistered UserHandleSet])
-    ])
-    EventStore.read(query).each_with_object({}) do |event, names|
-      names[event.data[:user_id]] = event.data[:handle] || event.data[:name]
-    end
+    visit_scoreboard_as_member(league_name)
+    page.all("ol.recent-matches li").map { |item| item.text.strip }
   end
 end
 

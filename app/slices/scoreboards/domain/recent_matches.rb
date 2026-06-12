@@ -1,14 +1,16 @@
-# The league page's recent-matches list: every registered match phrased the
+# The league page's recent-matches list: the 5 most recent matches phrased the
 # way the features do — winning side first, "beats" for one winner, "beat"
 # for two, winner's score first — newest match first.
 module Scoreboards
   module RecentMatches
     extend self
 
+    LIMIT = 5
+
     def lines(league_id)
-      matches = LeagueMatches.for_league(league_id)
+      matches = LeagueMatches.for_league(league_id).last(LIMIT).reverse
       names = PlayerNames.for(matches.flat_map(&:players))
-      matches.reverse.map { |match| line(match, names) }
+      matches.map { |match| line(match, names) }
     end
 
     def line(match, names)

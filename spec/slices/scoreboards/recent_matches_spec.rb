@@ -65,5 +65,19 @@ RSpec.describe Scoreboards::RecentMatches do
       ])
       expect(described_class.lines("league-1")).to eq([ "Bob beats Carol 21-15", "Alice beats Bob 21-8" ])
     end
+
+    it "caps the list at the 5 most recent matches, dropping the oldest" do
+      EventStore.append([
+        user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
+        *(1..6).map do |number|
+          match_registered(match_id: "m-#{number}", home: [ "a" ], away: [ "b" ],
+                           home_score: 21, away_score: number)
+        end
+      ])
+      expect(described_class.lines("league-1")).to eq([
+        "Alice beats Bob 21-6", "Alice beats Bob 21-5", "Alice beats Bob 21-4",
+        "Alice beats Bob 21-3", "Alice beats Bob 21-2"
+      ])
+    end
   end
 end

@@ -1,11 +1,13 @@
 Feature: Scoreboard
   The league page shows the standings plus the most recent matches.
-  Standings are ranked by points; for each player it shows points, matches
-  played, wins, losses, win percentage, game points scored (for) and
-  conceded (against), and the current streak (e.g. W2 / L1). Players appear
-  on the scoreboard after their first registered match. Players tied on
-  points are ordered by name; ranks continue sequentially (simplest reading
-  of "ties share order by name").
+  The recent-matches list is capped at 5 entries (newest first); there is no
+  period filter, the cap is unconditional. Standings are ranked by points;
+  for each player it shows points, matches played, wins, losses, win
+  percentage, game points scored (for) and conceded (against), and the
+  current streak (e.g. W2 / L1). Players appear on the scoreboard after
+  their first registered match. Players tied on points are ordered by name;
+  ranks continue sequentially (simplest reading of "ties share order by
+  name").
 
   Background:
     Given "Alice" is a registered user with email "alice@example.com" and password "secret123"
@@ -66,6 +68,28 @@ Feature: Scoreboard
       | Alice beats Carol 21-18 |
       | Bob beats Carol 21-15   |
       | Alice beats Bob 21-8    |
+
+  Scenario: Recent matches list is capped at 5 when more than 5 matches exist
+    # Register 6 matches in order; only the 5 most recent must appear.
+    # Match 1 (oldest): Alice beats Bob 21-8   -- must NOT appear
+    # Match 2: Bob beats Carol 21-15
+    # Match 3: Alice beats Carol 21-18
+    # Match 4: Dave beats Alice 21-10
+    # Match 5: Carol beats Bob 21-14
+    # Match 6 (newest): Alice beats Dave 21-9
+    Given "Alice" registers a match in "Foosball Spring" where "Alice" beats "Bob" 21-8
+    And "Alice" registers a match in "Foosball Spring" where "Bob" beats "Carol" 21-15
+    And "Alice" registers a match in "Foosball Spring" where "Alice" beats "Carol" 21-18
+    And "Alice" registers a match in "Foosball Spring" where "Dave" beats "Alice" 21-10
+    And "Alice" registers a match in "Foosball Spring" where "Carol" beats "Bob" 21-14
+    When "Alice" registers a match in "Foosball Spring" where "Alice" beats "Dave" 21-9
+    Then the recent matches in "Foosball Spring" show:
+      | match                   |
+      | Alice beats Dave 21-9   |
+      | Carol beats Bob 21-14   |
+      | Dave beats Alice 21-10  |
+      | Alice beats Carol 21-18 |
+      | Bob beats Carol 21-15   |
 
   Scenario: Statistics update as each match is registered
     # Match 1: Bob stakes 100 -> Alice 1100, Bob 900
