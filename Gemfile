@@ -23,6 +23,8 @@ group :development, :test do
 
   # Quality gate: slice boundary enforcement (no cross-slice constant refs)
   gem "packwerk", require: false
+  # packwerk requires benchmark, no longer a default gem on Ruby >= 4.0
+  gem "benchmark", require: false
 
   gem "rspec-rails", "~> 8.0"
   gem "cucumber-rails", require: false
