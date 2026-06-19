@@ -1,0 +1,3 @@
+[tools]
+babashka = "1"
+ruby = "4"
