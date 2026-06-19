@@ -28,3 +28,6 @@
 
 # Mutant session cache
 /.mutant/
+/swarmforge/scripts
+.swarmforge/
+.worktrees/
