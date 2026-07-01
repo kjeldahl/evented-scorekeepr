@@ -1,6 +1,8 @@
-# The statistics slice's own fold of the matches slice's MatchRegistered
-# events (the cross-slice contract — docs/ARCHITECTURE.md): the league's
-# matches in registration order, oldest first, as Statistics::Match values.
+# The statistics slice's own fold of the matches slice's match events (the
+# cross-slice contract - docs/ARCHITECTURE.md): the league's matches in
+# registration order, oldest first, as Statistics::Match values. A later
+# MatchResultCorrected replaces its match's score in place, keeping league
+# order so the stake ledger and every per-player figure re-derive.
 module Statistics
   module LeagueMatches
     extend self
@@ -12,18 +14,30 @@ module Statistics
     def projection(league_id)
       DcbEventStore::Projection.new(
         initial_state: [],
-        handlers: { "MatchRegistered" => ->(state, event) { state + [ match(event) ] } },
+        handlers: {
+          "MatchRegistered" => ->(state, event) { state + [ match(event) ] },
+          "MatchResultCorrected" => ->(state, event) { correct(state, event) }
+        },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "MatchRegistered", tags: "league:#{league_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[MatchRegistered MatchResultCorrected], tags: "league:#{league_id}")
         )
       )
     end
 
     def match(event)
       Match.new(
+        match_id: event.data.fetch(:match_id),
         home_player_ids: event.data.fetch(:home_player_ids), away_player_ids: event.data.fetch(:away_player_ids),
         home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score)
       )
+    end
+
+    def correct(matches, event)
+      matches.map do |match|
+        next match unless match.match_id == event.data.fetch(:match_id)
+
+        match.with(home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score))
+      end
     end
   end
 end

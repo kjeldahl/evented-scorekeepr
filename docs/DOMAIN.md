@@ -41,6 +41,19 @@ if they win."
 - Scoring is derived: it is folded from `MatchRegistered` events in league
   order; no separate scoring events are stored.
 
+### Editing a match result
+
+Any player who took part in a match can correct its score while the league
+is open. Only the score changes; the players and the sides are fixed. Any
+match in the league can be corrected, not just the latest: a correction is a
+`MatchResultCorrected` event folded onto its `MatchRegistered` (matched by
+`match:{match_id}`), so the whole league re-folds in order and every later
+standing re-derives from the corrected scores. A corrected score obeys the
+same rules as a freshly registered one: non-negative integers and no draws.
+Editing is authorised by match participation (a non-participant, member or
+not, is rejected with "only players in the match can edit it"), never by a
+separate membership check.
+
 ## Standings & statistics (per league)
 
 For each player: rank (by points, ties share order by name), points, matches
@@ -65,10 +78,11 @@ that page, members and super admins alike). It shows:
 - The latest 5 matches, newest first.
 
 The page auto-refreshes: updates are **pushed over a websocket** whenever a
-league event is appended — i.e. whenever a match is registered or the
-league is renamed or closed. The per-league **version** — a monotonic count
-of the league's events (`LeagueCreated`, `LeagueRenamed`, `LeagueClosed`,
-`MatchRegistered` tagged `league:{id}`) — remains the catch-up contract:
+league event is appended — i.e. whenever a match is registered or corrected
+or the league is renamed or closed. The per-league **version** - a monotonic
+count of the league's events (`LeagueCreated`, `LeagueRenamed`,
+`LeagueClosed`, `MatchRegistered`, `MatchResultCorrected` tagged
+`league:{id}`) - remains the catch-up contract:
 on websocket (re)connect the page fetches it once and reloads when it
 differs from the version it last rendered, covering updates missed while
 disconnected. The version is a pure read-model fold and the push is
@@ -92,6 +106,7 @@ never feeds an append condition.
 | `LeagueRenamed` | league_id, account_id, name | `league:{league_id}`, `account:{account_id}` |
 | `LeagueClosed` | league_id, account_id | `league:{league_id}`, `account:{account_id}` |
 | `MatchRegistered` | match_id, league_id, account_id, home_player_ids, away_player_ids, home_score, away_score, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
+| `MatchResultCorrected` | match_id, league_id, account_id, home_score, away_score, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
 
 Emails are normalised (lowercased, stripped) before being used in data or
 tags. Uniqueness (e.g. one user per email, one membership per account) is
@@ -189,6 +204,6 @@ the table above and the status fold becomes latest-wins (like
 | `identity` | sign up, sign in / out, super admin grant |
 | `accounts` | create account, invite players, accept invitations, membership |
 | `leagues` | create / close leagues |
-| `matches` | register match results (optimised for fast input) |
+| `matches` | register match results (optimised for fast input) and correct them |
 | `scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version |
 | `statistics` | per-player league statistics: form, head-to-head, history |

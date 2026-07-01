@@ -67,11 +67,11 @@ Rails.application.routes.draw do
   get "accounts/:account_id/leagues/:league_id/players/:player_id",
       to: "statistics/players#show", as: :account_league_player
 
-  # Matches slice: register match results.
+  # Matches slice: register and correct match results.
   scope module: :matches do
     resources :accounts, only: [] do
       resources :leagues, only: [] do
-        resources :matches, only: %i[new create]
+        resources :matches, only: %i[new create edit update]
       end
     end
   end

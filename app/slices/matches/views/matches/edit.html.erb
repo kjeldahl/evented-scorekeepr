@@ -1,0 +1,40 @@
+<% content_for :title, "Edit match - #{@league.name} - Scorekeepr" %>
+
+<% names = members.to_h { |member| [ member.user_id, member.name ] } %>
+<% side = ->(player_ids) { player_ids.map { |id| names.fetch(id, id) }.join(" and ") } %>
+
+<div class="card match-form">
+  <h1><%= @league.name %></h1>
+  <p class="muted">Correct the score. The players and sides stay the same.</p>
+
+  <%= form_with url: account_league_match_path(params[:account_id], params[:league_id], @match.match_id),
+                method: :patch do |form| %>
+    <div class="sides">
+      <p><strong>Home:</strong> <%= side.call(@match.home_player_ids) %></p>
+      <p><strong>Away:</strong> <%= side.call(@match.away_player_ids) %></p>
+    </div>
+
+    <div class="score-entry">
+      <div>
+        <%= form.label :home_score, "Home score" %>
+        <%= form.number_field :home_score, value: params.fetch(:home_score, @match.home_score),
+                              min: 0, step: 1, required: true %>
+      </div>
+      <span class="score-entry__dash" aria-hidden="true">-</span>
+      <div>
+        <%= form.label :away_score, "Away score" %>
+        <%= form.number_field :away_score, value: params.fetch(:away_score, @match.away_score),
+                              min: 0, step: 1, required: true %>
+      </div>
+    </div>
+
+    <div class="actions">
+      <%= form.submit "Save match" %>
+    </div>
+  <% end %>
+
+  <p class="muted">
+    <%= link_to "Back to scoreboard",
+                account_league_scoreboard_path(params[:account_id], params[:league_id]) %>
+  </p>
+</div>

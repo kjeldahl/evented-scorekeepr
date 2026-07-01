@@ -4,7 +4,7 @@
 # this fold never feeds an append condition.
 module Scoreboards
   module LeagueVersion
-    EVENT_TYPES = %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered].freeze
+    EVENT_TYPES = %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered MatchResultCorrected].freeze
 
     extend self
 

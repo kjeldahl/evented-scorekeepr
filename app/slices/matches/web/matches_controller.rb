@@ -1,6 +1,9 @@
 module Matches
   class MatchesController < BaseController
-    before_action :require_account_member!
+    # Registering is member-gated; editing is authorised by match
+    # participation in the EditMatch command (a non-member is simply not a
+    # player), so it needs no membership before_action - only sign-in.
+    before_action :require_account_member!, only: %i[new create]
     before_action :load_form
 
     def new
@@ -17,7 +20,40 @@ module Matches
       end
     end
 
+    def edit
+      load_match or return
+    end
+
+    def update
+      result = EditMatch.call(match_id: params[:id], user_id: current_user.id, **edit_params)
+      if result.success?
+        redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
+                    notice: "Match updated"
+      else
+        return unless load_match
+
+        flash.now[:alert] = result.error
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
     private
+
+    def edit_params
+      { league_id: params[:league_id], account_id: params[:account_id],
+        home_score: params[:home_score], away_score: params[:away_score] }
+    end
+
+    # The edit form shows the fixed sides by name and prefills the score;
+    # an unknown match sends the editor back to the scoreboard.
+    def load_match
+      @match = MatchDetails.find(match_id: params[:id])
+      return @match if @match
+
+      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
+                  alert: "the match was not found"
+      nil
+    end
 
     def match_params
       { league_id: params[:league_id], account_id: params[:account_id],

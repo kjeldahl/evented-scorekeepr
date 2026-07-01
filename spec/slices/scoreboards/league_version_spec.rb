@@ -28,19 +28,24 @@ RSpec.describe Scoreboards::LeagueVersion do
       expect(projection.fold([ event("MatchRegistered") ])).to eq(1)
     end
 
-    it "adds one per event across the four types" do
-      events = [ event("LeagueCreated"), event("LeagueRenamed"), event("LeagueClosed"), event("MatchRegistered") ]
-      expect(projection.fold(events)).to eq(4)
+    it "counts a MatchResultCorrected event" do
+      expect(projection.fold([ event("MatchResultCorrected") ])).to eq(1)
     end
 
-    it "ignores event types outside the versioned four" do
+    it "adds one per event across the five types" do
+      events = [ event("LeagueCreated"), event("LeagueRenamed"), event("LeagueClosed"),
+                 event("MatchRegistered"), event("MatchResultCorrected") ]
+      expect(projection.fold(events)).to eq(5)
+    end
+
+    it "ignores event types outside the versioned five" do
       expect(projection.fold([ event("PlayerInvited") ])).to eq(0)
     end
 
-    it "queries exactly the four versioned event types scoped to the league's tag" do
+    it "queries exactly the five versioned event types scoped to the league's tag" do
       expect(projection.query.items).to contain_exactly(
         DcbEventStore::QueryItem.new(
-          event_types: %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered],
+          event_types: %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered MatchResultCorrected],
           tags: [ "league:league-1" ]
         )
       )

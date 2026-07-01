@@ -1,17 +1,24 @@
 # The recent-matches list on the league page and the TV dashboard: the 5
-# most recent matches phrased the way the features do — winning side first,
-# "beats" for one winner, "beat" for two, winner's score first — newest
-# match first.
+# most recent matches phrased the way the features do - winning side first,
+# "beats" for one winner, "beat" for two, winner's score first - newest
+# match first. The league page renders Entry values so it can show an edit
+# link to the players of a match; the TV dashboard renders the plain lines.
 module Scoreboards
   module RecentMatches
+    Entry = Data.define(:match_id, :line, :player_ids)
+
     extend self
 
     LIMIT = 5
 
-    def lines(league_id)
+    def entries(league_id)
       matches = LeagueMatches.for_league(league_id).last(LIMIT).reverse
       names = PlayerNames.for(matches.flat_map(&:players))
-      matches.map { |match| line(match, names) }
+      matches.map { |match| Entry.new(match_id: match.match_id, line: line(match, names), player_ids: match.players) }
+    end
+
+    def lines(league_id)
+      entries(league_id).map(&:line)
     end
 
     def line(match, names)

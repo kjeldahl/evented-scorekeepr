@@ -21,7 +21,7 @@ The app is built in five slices under `app/slices/`:
 | `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
-| `matches` | `Matches` | register match results | `MatchRegistered` |
+| `matches` | `Matches` | register and correct match results | `MatchRegistered`, `MatchResultCorrected` |
 | `scoreboards` | `Scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version (`Scoreboards::LeagueVersion`) | *(none — read only)* |
 
 ### Slice layout
@@ -429,6 +429,8 @@ in sync). All routes except signup/login require authentication.
 | GET | `/accounts/:account_id/leagues/:league_id/tv/version` | `scoreboards/tv#version` | `account_league_tv_version_path` | JSON `{"version": N}` fetched by the TV page on websocket (re)connect as catch-up for updates missed while disconnected; N is a monotonic per-league count of the league's events (`LeagueCreated`, `LeagueRenamed`, `LeagueClosed`, `MatchRegistered` tagged `league:{id}`), folded by `Scoreboards::LeagueVersion` |
 | GET | `/accounts/:account_id/leagues/:league_id/matches/new` | `matches/matches#new` | `new_account_league_match_path` | register-match form |
 | POST | `/accounts/:account_id/leagues/:league_id/matches` | `matches/matches#create` | `account_league_matches_path` | register match; → scoreboard page |
+| GET | `/accounts/:account_id/leagues/:league_id/matches/:id/edit` | `matches/matches#edit` | `edit_account_league_match_path` | edit-match form (correct the score) |
+| PATCH/PUT | `/accounts/:account_id/leagues/:league_id/matches/:id` | `matches/matches#update` | `account_league_match_path` | correct a match score; → scoreboard page |
 | GET | `/accounts/:account_id/leagues/:league_id/players/:player_id` | `statistics/players#show` | `account_league_player_path` | player statistics: points/rank, form, head-to-head, match history |
 
 **League page ownership — decided, do not re-litigate:** the leagues slice

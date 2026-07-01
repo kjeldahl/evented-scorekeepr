@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Statistics::MatchLine do
   def match(home, away, home_score, away_score)
-    Statistics::Match.new(home_player_ids: home, away_player_ids: away, home_score:, away_score:)
+    Statistics::Match.new(match_id: "m-1", home_player_ids: home, away_player_ids: away, home_score:, away_score:)
   end
 
   def names

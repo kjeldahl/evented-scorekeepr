@@ -8,7 +8,7 @@ RSpec.describe Scoreboards::Standings do
   end
 
   def match(home, away, home_score, away_score)
-    Scoreboards::Match.new(home_player_ids: home, away_player_ids: away, home_score:, away_score:)
+    Scoreboards::Match.new(match_id: "m-1", home_player_ids: home, away_player_ids: away, home_score:, away_score:)
   end
 
   def table(*matches)

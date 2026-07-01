@@ -36,4 +36,28 @@ RSpec.describe Matches::Events do
       )
     end
   end
+
+  describe ".match_result_corrected" do
+    def build(home_score: 21, away_score: 18)
+      described_class.match_result_corrected(
+        match_id: "match-1", league_id: "league-1", account_id: "acc-1",
+        home_score:, away_score:, corrected_by_user_id: "bob-1"
+      )
+    end
+
+    it "has the MatchResultCorrected type" do
+      expect(build.type).to eq("MatchResultCorrected")
+    end
+
+    it "carries the match, league, account, the new score and the editor as data" do
+      expect(build.data).to eq(
+        match_id: "match-1", league_id: "league-1", account_id: "acc-1",
+        home_score: 21, away_score: 18, corrected_by_user_id: "bob-1"
+      )
+    end
+
+    it "tags only the match, league and account - the sides are unchanged" do
+      expect(build.tags).to contain_exactly("match:match-1", "league:league-1", "account:acc-1")
+    end
+  end
 end

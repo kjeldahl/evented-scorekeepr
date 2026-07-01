@@ -74,8 +74,16 @@
     <p class="muted empty-state">No matches yet — register the first one.</p>
   <% else %>
     <ol class="recent-matches">
-      <% @recent_matches.each do |line| %>
-        <li><%= line %></li>
+      <% @recent_matches.each do |entry| %>
+        <li>
+          <span class="match-line"><%= entry.line %></span>
+          <%# Only a player of the match sees the edit link, and only while the
+              league is open; enforcement stays in the command's invariants. %>
+          <% if @member && @league.open? && entry.player_ids.include?(current_user.id) %>
+            <%= link_to "Edit",
+                        edit_account_league_match_path(@league.account_id, @league.league_id, entry.match_id) %>
+          <% end %>
+        </li>
       <% end %>
     </ol>
   <% end %>

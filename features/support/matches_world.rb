@@ -86,10 +86,93 @@ module MatchesWorld
   end
 
   # The recent-matches list as the league page renders it, newest first
-  # ("Alice beats Bob 21-8", "Alice and Carol beat Bob and Dave 10-4").
+  # ("Alice beats Bob 21-8", "Alice and Carol beat Bob and Dave 10-4"). Only
+  # the match line is read, so a match's edit link does not leak into it.
   def recent_match_lines(league_name)
     visit_scoreboard_as_member(league_name)
-    page.all("ol.recent-matches li").map { |item| item.text.strip }
+    page.all("ol.recent-matches li .match-line").map { |item| item.text.strip }
+  end
+
+  # --- Editing matches ---------------------------------------------------
+  #   edit_match!(editor, league:, winners:, losers:, winner_score:,
+  #               loser_score:, new_winners:, new_losers:, new_winner_score:,
+  #               new_loser_score:)  # corrects a match through the edit form
+  #   attempt_edit(editor, league:, winners:, losers:, winner_score:,
+  #                loser_score:, home_score:, away_score:)  # raw PATCH (rejections)
+  #   edit_match_path(league_name, match_id)  # the edit-form path (link assertions)
+  #   corrections_after_last_edit_attempt     # corrections stored since the attempt
+
+  def edit_match!(editor, league:, winners:, losers:, winner_score:, loser_score:,
+                  new_winners:, new_losers:, new_winner_score:, new_loser_score:)
+    event = find_registered_match(league, winners:, losers:, winner_score:, loser_score:)
+    home_score, away_score = corrected_scores(event, new_winners:, new_winner_score:, new_loser_score:)
+    sign_in(editor) unless signed_in_as?(editor)
+    visit edit_match_path(league, event.data.fetch(:match_id))
+    fill_in "Home score", with: home_score
+    fill_in "Away score", with: away_score
+    submit_form "Save match"
+  end
+
+  def attempt_edit(editor, league:, winners:, losers:, winner_score:, loser_score:, home_score:, away_score:)
+    event = find_registered_match(league, winners:, losers:, winner_score:, loser_score:)
+    @last_edit = { league:, match_id: event.data.fetch(:match_id) }
+    @corrections_before = correction_events(league).count
+    sign_in(editor) unless signed_in_as?(editor)
+    league_record = league_for(league)
+    submit_patch("/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{@last_edit[:match_id]}",
+                 { home_score:, away_score: })
+  end
+
+  def edit_match_path(league_name, match_id)
+    league_record = league_for(league_name)
+    "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league_name)}/matches/#{match_id}/edit"
+  end
+
+  def corrections_after_last_edit_attempt
+    correction_events(@last_edit.fetch(:league)).count - @corrections_before
+  end
+
+  # The registered match whose winning side and score match the description.
+  def find_registered_match(league_name, winners:, losers:, winner_score:, loser_score:)
+    winner_ids = winners.map { |name| user_id_for(name) }
+    loser_ids = losers.map { |name| user_id_for(name) }
+    match_events(league_name).find { |event| winning_side(event) == [ winner_ids, loser_ids, winner_score, loser_score ] } or
+      raise "no registered match #{winners.join(" and ")} beat #{losers.join(" and ")} #{winner_score}-#{loser_score} in #{league_name.inspect}"
+  end
+
+  # The new home/away scores for a correction: the winning side keeps its
+  # fixed home/away position, so the new winner score goes to whichever side
+  # the winners are on.
+  def corrected_scores(event, new_winners:, new_winner_score:, new_loser_score:)
+    home_ids = event.data.fetch(:home_player_ids)
+    new_winner_ids = new_winners.map { |name| user_id_for(name) }
+    if new_winner_ids.sort == home_ids.sort
+      [ new_winner_score, new_loser_score ]
+    else
+      [ new_loser_score, new_winner_score ]
+    end
+  end
+
+  def winning_side(event)
+    data = event.data
+    home_win = data.fetch(:home_score) > data.fetch(:away_score)
+    winners = home_win ? data.fetch(:home_player_ids) : data.fetch(:away_player_ids)
+    losers = home_win ? data.fetch(:away_player_ids) : data.fetch(:home_player_ids)
+    [ winners, losers, (home_win ? data.fetch(:home_score) : data.fetch(:away_score)),
+      (home_win ? data.fetch(:away_score) : data.fetch(:home_score)) ]
+  end
+
+  def correction_events(league_name)
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(event_types: %w[MatchResultCorrected], tags: [ "league:#{league_id_for(league_name)}" ])
+    ])
+    EventStore.read(query)
+  end
+
+  def submit_patch(path, params = {})
+    page.driver.submit :patch, path, params
+  rescue ActionDispatch::MissingController, ActionController::RoutingError
+    nil
   end
 end
 

@@ -3,7 +3,7 @@
 # Winners keep the order they were listed on the match — the pot remainder
 # is handed out in that order (docs/DOMAIN.md).
 module Scoreboards
-  Match = Data.define(:home_player_ids, :away_player_ids, :home_score, :away_score) do
+  Match = Data.define(:match_id, :home_player_ids, :away_player_ids, :home_score, :away_score) do
     def players = home_player_ids + away_player_ids
     def winners = home_win? ? home_player_ids : away_player_ids
     def losers = home_win? ? away_player_ids : home_player_ids

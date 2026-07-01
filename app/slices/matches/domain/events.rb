@@ -16,5 +16,18 @@ module Matches
                 *(home_player_ids + away_player_ids).map { |player_id| "player:#{player_id}" } ]
       )
     end
+
+    # A correction changes only the score; the sides are fixed, so the event
+    # carries no player ids and is tagged with the match, league and account
+    # (docs/DOMAIN.md). Scoreboards and statistics fold it onto the matching
+    # MatchRegistered and re-derive every later standing.
+    def match_result_corrected(match_id:, league_id:, account_id:, home_score:, away_score:,
+                               corrected_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "MatchResultCorrected",
+        data: { match_id:, league_id:, account_id:, home_score:, away_score:, corrected_by_user_id: },
+        tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
+      )
+    end
   end
 end

@@ -4,7 +4,7 @@ RSpec.describe Statistics::StakeLedger do
   subject(:ledger) { described_class.new(starting_points: 1000, stake_percentage: 10) }
 
   def match(home, away, home_score, away_score)
-    Statistics::Match.new(home_player_ids: home, away_player_ids: away, home_score:, away_score:)
+    Statistics::Match.new(match_id: "m-1", home_player_ids: home, away_player_ids: away, home_score:, away_score:)
   end
 
   describe "#entries" do

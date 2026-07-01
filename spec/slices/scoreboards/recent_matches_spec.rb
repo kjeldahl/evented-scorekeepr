@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Scoreboards::RecentMatches do
   def match(home, away, home_score, away_score)
-    Scoreboards::Match.new(home_player_ids: home, away_player_ids: away, home_score:, away_score:)
+    Scoreboards::Match.new(match_id: "m-1", home_player_ids: home, away_player_ids: away, home_score:, away_score:)
   end
 
   def names
@@ -77,6 +77,38 @@ RSpec.describe Scoreboards::RecentMatches do
       expect(described_class.lines("league-1")).to eq([
         "Alice beats Bob 21-6", "Alice beats Bob 21-5", "Alice beats Bob 21-4",
         "Alice beats Bob 21-3", "Alice beats Bob 21-2"
+      ])
+    end
+  end
+
+  describe ".entries", :event_store do
+    def user_registered(user_id:, name:)
+      DcbEventStore::Event.new(
+        type: "UserRegistered",
+        data: { user_id:, name:, email: "#{user_id}@example.com", password_digest: "x" },
+        tags: [ "user:#{user_id}", "user_email:#{user_id}@example.com" ]
+      )
+    end
+
+    def match_registered(match_id:, home:, away:, home_score:, away_score:)
+      DcbEventStore::Event.new(
+        type: "MatchRegistered",
+        data: { match_id:, league_id: "league-1", account_id: "acc-1", home_player_ids: home,
+                away_player_ids: away, home_score:, away_score:, registered_by_user_id: home.first },
+        tags: [ "match:#{match_id}", "league:league-1", "account:acc-1",
+                *(home + away).map { |player| "player:#{player}" } ]
+      )
+    end
+
+    it "carries each match's id, line and players, newest first" do
+      EventStore.append([
+        user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
+        match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8),
+        match_registered(match_id: "m-2", home: [ "b" ], away: [ "a" ], home_score: 21, away_score: 15)
+      ])
+      expect(described_class.entries("league-1")).to eq([
+        Scoreboards::RecentMatches::Entry.new(match_id: "m-2", line: "Bob beats Alice 21-15", player_ids: %w[b a]),
+        Scoreboards::RecentMatches::Entry.new(match_id: "m-1", line: "Alice beats Bob 21-8", player_ids: %w[a b])
       ])
     end
   end

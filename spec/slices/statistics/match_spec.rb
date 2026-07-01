@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe Statistics::Match do
   describe "a home win" do
     subject(:match) do
-      described_class.new(home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 21, away_score: 8)
+      described_class.new(match_id: "m-1", home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 21, away_score: 8)
     end
 
     it "is a home win" do
@@ -30,7 +30,7 @@ RSpec.describe Statistics::Match do
 
   describe "an away win" do
     subject(:match) do
-      described_class.new(home_player_ids: [ "a" ], away_player_ids: [ "b" ], home_score: 3, away_score: 5)
+      described_class.new(match_id: "m-1", home_player_ids: [ "a" ], away_player_ids: [ "b" ], home_score: 3, away_score: 5)
     end
 
     it "is not a home win" do
@@ -53,7 +53,7 @@ RSpec.describe Statistics::Match do
 
   describe "#involves?" do
     subject(:match) do
-      described_class.new(home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 10, away_score: 4)
+      described_class.new(match_id: "m-1", home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 10, away_score: 4)
     end
 
     it "is true for every player on either side" do
@@ -67,7 +67,7 @@ RSpec.describe Statistics::Match do
 
   describe "#won_by?" do
     subject(:match) do
-      described_class.new(home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 4, away_score: 10)
+      described_class.new(match_id: "m-1", home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 4, away_score: 10)
     end
 
     it "is true for each player on the winning side" do
@@ -83,7 +83,7 @@ RSpec.describe Statistics::Match do
 
   describe "#opponents_of" do
     subject(:match) do
-      described_class.new(home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 10, away_score: 4)
+      described_class.new(match_id: "m-1", home_player_ids: %w[a c], away_player_ids: %w[b d], home_score: 10, away_score: 4)
     end
 
     it "is the whole away side for a home player — the teammate is not an opponent" do
@@ -96,7 +96,7 @@ RSpec.describe Statistics::Match do
   end
 
   it "treats a shut-out loser's zero score as the loser score" do
-    match = described_class.new(home_player_ids: [ "a" ], away_player_ids: [ "b" ], home_score: 21, away_score: 0)
+    match = described_class.new(match_id: "m-1", home_player_ids: [ "a" ], away_player_ids: [ "b" ], home_score: 21, away_score: 0)
     expect(match.winner_score).to eq(21)
     expect(match.loser_score).to eq(0)
   end
