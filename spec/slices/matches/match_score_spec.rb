@@ -21,6 +21,10 @@ RSpec.describe Matches::MatchScore do
     it "is nil for a decimal string (scores are whole numbers)" do
       expect(described_class.parse("21.5")).to be_nil
     end
+
+    it "is nil for a non-integer numeric (a float is not a whole-number score)" do
+      expect(described_class.parse(21.5)).to be_nil
+    end
   end
 
   describe ".rejection" do

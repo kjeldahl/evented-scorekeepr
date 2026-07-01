@@ -42,10 +42,10 @@ RSpec.describe Scoreboards::LeagueMatches do
       matches = projection.fold([
         match_registered(match_id: "m-1", home_score: 21, away_score: 8),
         match_registered(match_id: "m-2", home_score: 21, away_score: 15),
-        match_corrected(match_id: "m-1", home_score: 21, away_score: 18)
+        match_corrected(match_id: "m-1", home_score: 17, away_score: 18)
       ])
       expect(matches.map { |match| [ match.match_id, match.home_score, match.away_score ] })
-        .to eq([ [ "m-1", 21, 18 ], [ "m-2", 21, 15 ] ])
+        .to eq([ [ "m-1", 17, 18 ], [ "m-2", 21, 15 ] ])
     end
 
     it "leaves other matches untouched by a correction" do

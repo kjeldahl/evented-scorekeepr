@@ -113,6 +113,14 @@ RSpec.describe Matches::EditMatch do
     it "rejects a match reached through a different account (tenancy)" do
       expect(call(account_id: "acc-2")).to eq(Result.failure("the match was not found"))
     end
+
+    # Defensive: a match whose league has no LeagueCreated (a corrupt history)
+    # is caught by the league guard rather than crashing on the closed? check.
+    it "rejects when the match's league was never created" do
+      register(match_id: "orphan", league_id: "ghost", account_id: "acc-1", home: [ "bob" ], away: [ "carol" ])
+      expect(call(match_id: "orphan", league_id: "ghost", user_id: "bob"))
+        .to eq(Result.failure("the league was not found"))
+    end
   end
 
   describe "league lifecycle", :event_store do
