@@ -30,14 +30,20 @@ module Matches
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
                     notice: "Match updated"
       else
-        return unless load_match
-
-        flash.now[:alert] = result.error
-        render :edit, status: :unprocessable_entity
+        render_edit_error(result.error)
       end
     end
 
     private
+
+    # A failed edit re-renders the form with the error; a match that has since
+    # vanished sends the editor back to the scoreboard instead.
+    def render_edit_error(message)
+      return unless load_match
+
+      flash.now[:alert] = message
+      render :edit, status: :unprocessable_entity
+    end
 
     def edit_params
       { league_id: params[:league_id], account_id: params[:account_id],

@@ -7,9 +7,9 @@
 module Matches
   class EditMatch
     def self.call(match_id:, league_id:, account_id:, user_id:, home_score:, away_score:)
-      home_score = score(home_score)
-      away_score = score(away_score)
-      failure = invalid_input(home_score, away_score)
+      home_score = MatchScore.parse(home_score)
+      away_score = MatchScore.parse(away_score)
+      failure = MatchScore.rejection(home_score, away_score)
       return failure if failure
 
       decision = decision_for(match_id:, league_id:, account_id:)
@@ -20,23 +20,6 @@ module Matches
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the league changed while you were working - please retry")
     end
-
-    def self.score(value)
-      Integer(value.to_s, exception: false) # Kernel#Integer ignores surrounding whitespace
-    end
-    private_class_method :score
-
-    def self.invalid_input(home_score, away_score)
-      return Result.failure("scores must be non-negative integers") unless valid_scores?(home_score, away_score)
-
-      Result.failure("draws are not allowed") if home_score == away_score
-    end
-    private_class_method :invalid_input
-
-    def self.valid_scores?(home_score, away_score)
-      [ home_score, away_score ].all? { |score| !score.nil? && score >= 0 }
-    end
-    private_class_method :valid_scores?
 
     def self.decision_for(match_id:, league_id:, account_id:)
       EventStore.decide(

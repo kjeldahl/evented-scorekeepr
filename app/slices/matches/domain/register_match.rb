@@ -10,8 +10,8 @@ module Matches
                   home_score:, away_score:)
       home = side(home_player_ids)
       away = side(away_player_ids)
-      home_score = score(home_score)
-      away_score = score(away_score)
+      home_score = MatchScore.parse(home_score)
+      away_score = MatchScore.parse(away_score)
       failure = invalid_input(home, away, home_score, away_score)
       return failure if failure
 
@@ -29,17 +29,11 @@ module Matches
     end
     private_class_method :side
 
-    def self.score(value)
-      Integer(value.to_s, exception: false) # Kernel#Integer ignores surrounding whitespace
-    end
-    private_class_method :score
-
     def self.invalid_input(home, away, home_score, away_score)
       return Result.failure("each side must have 1 or 2 players") unless valid_sides?(home, away)
       return Result.failure("a player cannot be on both sides") unless distinct_players?(home, away)
-      return Result.failure("scores must be non-negative integers") unless valid_scores?(home_score, away_score)
 
-      Result.failure("draws are not allowed") if home_score == away_score
+      MatchScore.rejection(home_score, away_score)
     end
     private_class_method :invalid_input
 
@@ -52,11 +46,6 @@ module Matches
       (home + away).uniq.size == home.size + away.size
     end
     private_class_method :distinct_players?
-
-    def self.valid_scores?(home_score, away_score)
-      [ home_score, away_score ].all? { |score| !score.nil? && score >= 0 }
-    end
-    private_class_method :valid_scores?
 
     def self.decision_for(league_id:, account_id:, user_id:, players:)
       EventStore.decide(
