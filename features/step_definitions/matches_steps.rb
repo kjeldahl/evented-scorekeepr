@@ -54,6 +54,12 @@ Then("the match is rejected because {string}") do |reason|
   expect(matches_registered_during_last_attempt).to eq(0)
 end
 
+# Attribution: the registrar recorded on the match. Under impersonation the
+# actor is the impersonated member, so the match is attributed to them.
+Then("the match was registered by {string}") do |name|
+  expect(last_registered_match_event.data.fetch(:registered_by_user_id)).to eq(user_id_for(name))
+end
+
 Then("the recent matches in {string} show:") do |league, table|
   expect(recent_match_lines(league)).to eq(table.hashes.map { |row| row.fetch("match") })
 end

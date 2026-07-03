@@ -22,6 +22,12 @@ matcher:
     - Matches*
     - Scoreboards*
     - Statistics*
+    # Root-owned audit infrastructure (lib/impersonation_audit.rb). Unlike the
+    # thin EventStore/Result plumbing, it carries real, security-sensitive
+    # decision logic (what is auditable, guard clauses, event construction), so
+    # it earns the same 100% mutation bar as slice domain code. Covered by
+    # spec/lib/impersonation_audit_spec.rb (rspec, mutant's kill signal).
+    - ImpersonationAudit*
   ignore:
     # Mutant covers slice DOMAIN code only. Controllers (app/slices/*/web)
     # are exercised through Cucumber, not the rspec suite mutant runs, so
@@ -37,6 +43,7 @@ matcher:
     - Accounts::InvitationDeclinesController*
     - Accounts::InvitationRevocationsController*
     - Accounts::InvitationsController*
+    - Accounts::ImpersonationsController*
     - Accounts::OnBehalfAcceptancesController*
     - Accounts::PendingInvitationsController*
     - Leagues::BaseController*

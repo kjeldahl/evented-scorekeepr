@@ -32,6 +32,13 @@ Rails.application.routes.draw do
          to: "invitation_revocations#create", as: :revoke_account_invitation
     post "accounts/:account_id/leave", to: "account_leavings#create", as: :leave_account
 
+    # Impersonation (docs/DOMAIN.md § Impersonation): a super admin starts a
+    # session against a member from that account's members list; ending it is
+    # whole-session, so the escape is a single account-independent route.
+    post "accounts/:account_id/members/:user_id/impersonate",
+         to: "impersonations#create", as: :impersonate_account_member
+    delete "impersonation", to: "impersonations#destroy", as: :impersonation
+
     get  "invitations", to: "pending_invitations#index", as: :pending_invitations
     post "invitations/:invitation_id/accept", to: "invitation_acceptances#create", as: :accept_invitation
     post "invitations/:invitation_id/decline", to: "invitation_declines#create", as: :decline_invitation

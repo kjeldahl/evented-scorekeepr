@@ -19,7 +19,7 @@ The app is built in five slices under `app/slices/`:
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
 | `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
-| `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft` |
+| `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start/stop impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted`, `ImpersonationEnded` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register and correct match results | `MatchRegistered`, `MatchResultCorrected` |
 | `scoreboards` | `Scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version (`Scoreboards::LeagueVersion`) | *(none — read only)* |
@@ -389,6 +389,33 @@ end
   `Accounts::SuperAdmin` to show the dashboard link to the list only for
   super admins. Membership and commands are untouched; the list grants
   nothing beyond the existing view-only access.
+- **Impersonation** (see `docs/DOMAIN.md` § Impersonation) is the one audited
+  exception to super admin being read-only, and it spans the accounts slice
+  and root infrastructure:
+  - The **feature** lives in the accounts slice: the `StartImpersonation` /
+    `StopImpersonation` commands and their `ImpersonationStarted` /
+    `ImpersonationEnded` events, `Accounts::ImpersonationsController`, and the
+    "Impersonate" button on each member row of the account page (rendered only
+    when the slice's own `SuperAdmin` fold says the viewer is a super admin,
+    and never on their own row). `StartImpersonation` is the sole command that
+    consults super admin status.
+  - The **session identity + audit** is root infrastructure, because it is
+    cross-cutting and must stay slice-agnostic. The controller keeps the real
+    login in `session[:user_id]` and records the impersonated member in
+    `session[:impersonated_user_id]`; `ApplicationController#current_user` then
+    resolves to that member (via the sanctioned `Identity::Users.find`), so
+    every slice sees the member as the actor with no impersonation-awareness.
+    Each request copies the session's impersonation into `Current`
+    (`lib/current.rb`, an `ActiveSupport::CurrentAttributes`); after any
+    append, the audit bridge (`config/initializers/impersonation_audit.rb` →
+    `ImpersonationAudit`, `lib/impersonation_audit.rb`) records an
+    `ImpersonatedActionRecorded` event against the real super admin. That
+    audit event is **root-owned infrastructure** (not a slice event): the
+    bridge is in the root package, which packwerk forbids from referencing any
+    slice, so it cannot build a slice's event. The impersonation lifecycle
+    events and audit events are themselves never audited (that avoids
+    double-recording the session boundaries and stops the hook recursing on
+    its own append).
 
 ### Routing table
 
@@ -415,6 +442,8 @@ in sync). All routes except signup/login require authentication.
 | POST | `/accounts/:account_id/invitations` | `accounts/invitations#create` | `account_invitations_path` | invite player; → account page |
 | POST | `/accounts/:account_id/invitations/:invitation_id/revoke` | `accounts/invitation_revocations#create` | `revoke_account_invitation_path` | revoke outgoing invitation; → account page |
 | POST | `/accounts/:account_id/leave` | `accounts/account_leavings#create` | `leave_account_path` | leave the account; → dashboard |
+| POST | `/accounts/:account_id/members/:user_id/impersonate` | `accounts/impersonations#create` | `impersonate_account_member_path` | **super admin only** (enforced in the `StartImpersonation` command): start impersonating a member; → account page |
+| DELETE | `/impersonation` | `accounts/impersonations#destroy` | `impersonation_path` | stop impersonating (whole-session, account-independent); → dashboard |
 | GET | `/invitations` | `accounts/pending_invitations#index` | `pending_invitations_path` | my pending invitations (by my email) |
 | POST | `/invitations/:invitation_id/accept` | `accounts/invitation_acceptances#create` | `accept_invitation_path` | accept; → that account page |
 | POST | `/invitations/:invitation_id/decline` | `accounts/invitation_declines#create` | `decline_invitation_path` | decline; → dashboard |

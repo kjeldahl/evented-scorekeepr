@@ -31,16 +31,18 @@ module Accounts
 
     # Membership is enforced per slice with its own fold (docs/ARCHITECTURE.md).
     # This show gate additionally opens for super admins (view-only access);
-    # the view uses @member to hide write affordances from non-member viewers.
+    # the view uses @member to hide write affordances from non-member viewers,
+    # and @super_admin to offer the impersonate button on member rows.
     def require_account_member!
       @member = Membership.member?(account_id: params[:id], user_id: current_user.id)
+      @super_admin = SuperAdmin.super_admin?(user_id: current_user.id)
       return if viewer_allowed?
 
       redirect_to root_path, alert: "Only account members can view this account."
     end
 
     def viewer_allowed?
-      @member || SuperAdmin.super_admin?(user_id: current_user.id)
+      @member || @super_admin
     end
 
     # The all-accounts list is the one super-admin-only page
