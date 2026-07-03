@@ -103,7 +103,12 @@ module EventStore
       with_maintenance_connection do |conn|
         next if database_exists?(conn)
 
-        conn.exec("CREATE DATABASE #{conn.escape_identifier(connection_config[:database])}")
+        # Own the database with the configured role so the events table and
+        # its triggers stay modifiable on later runs, even when a superuser
+        # (e.g. the OS user) runs the maintenance connection.
+        database = conn.escape_identifier(connection_config[:database])
+        owner = conn.escape_identifier(connection_config[:username])
+        conn.exec("CREATE DATABASE #{database} OWNER #{owner}")
       end
     end
 
