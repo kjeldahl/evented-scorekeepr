@@ -36,9 +36,13 @@ module Accounts
     def require_account_member!
       @member = Membership.member?(account_id: params[:id], user_id: current_user.id)
       @super_admin = SuperAdmin.super_admin?(user_id: current_user.id)
-      return if @member || @super_admin
+      return if viewer_allowed?
 
       redirect_to root_path, alert: "Only account members can view this account."
+    end
+
+    def viewer_allowed?
+      @member || @super_admin
     end
 
     # The all-accounts list is the one super-admin-only page
