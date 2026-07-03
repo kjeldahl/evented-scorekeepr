@@ -26,7 +26,7 @@ namespace :quality do
     since = ENV.fetch("SINCE", "origin/main")
     if system("git rev-parse -q --verify #{since}^{commit}", out: File::NULL, err: File::NULL)
       log = sh_logged("mutant", "bundle exec mutant run --since #{since}")
-      assert_mutant_coverage(log, 95.0)
+      assert_mutant_coverage(log, 100.0)
     else
       puts "Base revision #{since} not found; running the full mutation suite"
       Rake::Task["quality:mutant:full"].invoke
@@ -37,7 +37,7 @@ namespace :quality do
     desc "Run mutant against all slice domain code (the weekly CI job)"
     task :full do
       log = sh_logged("mutant-full", "bundle exec mutant run")
-      assert_mutant_coverage(log, 95.0)
+      assert_mutant_coverage(log, 100.0)
     end
   end
 
