@@ -10,8 +10,8 @@
 #   1. Replace the placeholder IPs below with your Hetzner server's IP.
 #   2. Replace proxy.host with your domain (DNS A record -> server IP).
 #   3. Set registry.username and image to your container registry account.
-#   4. Export KAMAL_REGISTRY_PASSWORD and POSTGRES_PASSWORD in your shell
-#      and make sure config/master.key exists (see .kamal/secrets).
+#   4. Sign in to 1Password (op signin --account my.1password.com); the
+#      Scorekeepr vault's Scorekeepr item holds all secrets (see .kamal/secrets).
 #   5. bin/kamal setup
 
 service: scorekeepr
@@ -19,7 +19,7 @@ image: kjeldahl/scorekeepr
 
 servers:
   web:
-    - 203.0.113.10 # TODO: Hetzner server IP
+    - 178.105.19.28 # Hetzner server 
 
 # kamal-proxy obtains a Let's Encrypt certificate and terminates TLS
 # (config/environments/production.rb already assumes an SSL-terminating
@@ -27,13 +27,13 @@ servers:
 # Health check is GET /up (Rails default, already routed).
 proxy:
   ssl: true
-  host: scorekeepr.example.com # TODO: your domain
+  host: scorekeepr.kjeldahl.it # your domain
 
 # ghcr.io works well with a GitHub personal access token (write:packages
 # scope) supplied as KAMAL_REGISTRY_PASSWORD. Any registry works.
 registry:
   server: ghcr.io
-  username: kjeldahl # TODO: your registry username
+  username: kjeldahl # your registry username
   password:
     - KAMAL_REGISTRY_PASSWORD
 
@@ -67,7 +67,7 @@ accessories:
   # it survives container replacement and upgrades.
   db:
     image: postgres:16
-    host: 203.0.113.10 # TODO: same Hetzner server IP
+    host: 178.105.19.28 # same Hetzner server IP
     env:
       clear:
         POSTGRES_USER: scorekeepr
@@ -83,7 +83,7 @@ accessories:
   # dumps. Restore procedure and off-site copy notes: docs/DEPLOYMENT.md.
   db-backup:
     image: prodrigestivill/postgres-backup-local:16
-    host: 203.0.113.10 # TODO: same Hetzner server IP
+    host: 178.105.19.28 # same Hetzner server IP
     env:
       clear:
         POSTGRES_HOST: scorekeepr-db

@@ -31,3 +31,7 @@
 /swarmforge/scripts
 .swarmforge/
 .worktrees/
+
+# Ignore key files for decrypting credentials and more.
+/config/*.key
+
