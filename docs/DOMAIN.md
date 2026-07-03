@@ -107,6 +107,8 @@ never feeds an append condition.
 | `LeagueClosed` | league_id, account_id | `league:{league_id}`, `account:{account_id}` |
 | `MatchRegistered` | match_id, league_id, account_id, home_player_ids, away_player_ids, home_score, away_score, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
 | `MatchResultCorrected` | match_id, league_id, account_id, home_score, away_score, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
+| `ImpersonationStarted` | impersonation_id, super_admin_user_id, impersonated_user_id, account_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}`, `impersonated_user:{impersonated_user_id}`, `account:{account_id}` |
+| `ImpersonationEnded` | impersonation_id, super_admin_user_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
 
 Emails are normalised (lowercased, stripped) before being used in data or
 tags. Uniqueness (e.g. one user per email, one membership per account) is
@@ -196,6 +198,36 @@ is idempotent: granting an existing super admin succeeds without appending.
 yet because no behaviour requires it; when it is needed, add the event to
 the table above and the status fold becomes latest-wins (like
 `MemberLeft` for membership).
+
+### Impersonation
+
+Impersonation is the **one deliberate, audited exception** to super admin
+being read-only. A super admin may *impersonate* a member of an account and
+then act as that member:
+
+- The entry point is an **"Impersonate" button on each member row of an
+  account's members list**, shown only to a super admin (never to an
+  ordinary member) and never on the super admin's own row. Starting
+  impersonation is the only new command that consults super admin status;
+  attempting it as a non-super-admin is rejected with "only super admins can
+  impersonate players".
+- Once started, impersonation is a **whole-session identity**: the super
+  admin becomes that member everywhere until they escape, including in the
+  member's other accounts. Every page shows a clear notification of who is
+  being impersonated with a "Stop impersonating" button next to it; escaping
+  ends the session and restores the super admin's own (read-only) identity.
+- While impersonating, **every action is performed with the impersonated
+  member's privileges and attributed to that member** — the member-gated
+  commands are unchanged and still see the member as the actor (they never
+  consult super admin status). A super admin therefore gains no privilege of
+  their own; they borrow the member's. All the read-only guarantees above
+  still hold for a super admin acting *as themselves*.
+- Impersonation is **audited**. Starting and ending a session are the
+  `ImpersonationStarted` / `ImpersonationEnded` events above. Every write
+  performed while impersonating is also recorded against the real super
+  admin behind it; the exact representation (a dedicated audit event per
+  action vs. attribution carried on the action events) is an open
+  implementation choice. There is no in-app view of the audit trail yet.
 
 ## Slices
 
