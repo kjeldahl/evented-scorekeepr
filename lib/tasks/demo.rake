@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 namespace :demo do
+  desc "Delete all data (development only)"
+  task clear: :environment do
+    raise "demo:clear only runs in development (current env: #{Rails.env})" unless Rails.env.development?
+
+    EventStore.reset!
+    puts "Cleared all data."
+  end
+
   desc "Seed demo users, an account, a league and a few matches"
   task seed: :environment do
     seeder = DemoSeeder.new
@@ -22,6 +30,7 @@ namespace :demo do
   # repeatedly (re-runs fail the duplicate-email guard and are reported).
   class DemoSeeder
     PASSWORD = "secret123"
+    SUPER_USER = "Superman"
     PLAYERS = %w[Alice Bob Carol Dave].freeze
     MATCHES = [
       { home: %w[Alice], away: %w[Bob], score: [ 21, 8 ] },
@@ -34,6 +43,7 @@ namespace :demo do
       register_players
       return unless @user_ids
 
+      grant_super_admin
       create_account
       invite_members
       create_league
@@ -43,19 +53,32 @@ namespace :demo do
     def summary
       return "Demo data already present (alice@example.com is registered) - nothing seeded." unless @user_ids
 
-      "Seeded #{PLAYERS.join(', ')} (password '#{PASSWORD}'), account 'Office', " \
-        "league 'Foosball Spring' with #{MATCHES.size} matches."
+      [
+        "Seeded account 'Office', league 'Foosball Spring' with #{MATCHES.size} matches.",
+        "Login (password '#{PASSWORD}'):",
+        *login_lines
+      ].join("\n")
     end
 
     private
 
     def register_players
-      results = PLAYERS.to_h do |name|
+      results = [ SUPER_USER, *PLAYERS ].to_h do |name|
         [ name, Identity::RegisterUser.call(name: name, email: email_for(name), password: PASSWORD) ]
       end
       return if results.values.any?(&:failure?)
 
       @user_ids = results.transform_values(&:value)
+    end
+
+    def grant_super_admin
+      Identity::GrantSuperAdmin.call(user_id: @user_ids.fetch(SUPER_USER))
+    end
+
+    def login_lines
+      [ [ SUPER_USER, "super admin" ], *PLAYERS.map { |name| [ name, "player" ] } ].map do |name, role|
+        "  #{email_for(name)} (#{name}, #{role})"
+      end
     end
 
     def email_for(name) = "#{name.downcase}@example.com"
@@ -129,12 +152,23 @@ namespace :demo do
     def summary
       return "Account '#{@account_name}' is already populated (#{email_for(PLAYERS.first)} is registered) - nothing seeded." unless @user_ids
 
-      "Populated account '#{@account_name}' with #{PLAYERS.size} players (#{PLAYERS.join(', ')}, password '#{PASSWORD}'), " \
-        "#{LEAGUES.size} leagues (#{LEAGUES.map { |league| league[:name] }.join(', ')}), " \
-        "#{@matches_per_league} random matches per league and a pending invitation for #{email_for(PENDING_PLAYER)}."
+      [
+        "Populated account '#{@account_name}' with #{PLAYERS.size} players, " \
+          "#{LEAGUES.size} leagues (#{LEAGUES.map { |league| league[:name] }.join(', ')}), " \
+          "#{@matches_per_league} random matches per league and a pending invitation for #{email_for(PENDING_PLAYER)}.",
+        "Login (password '#{PASSWORD}'):",
+        *login_lines
+      ].join("\n")
     end
 
     private
+
+    def login_lines
+      players = PLAYERS.map { |name| [ name, name == PLAYERS.first ? "owner" : "player" ] }
+      [ *players, [ PENDING_PLAYER, "pending invitation" ] ].map do |name, role|
+        "  #{email_for(name)} (#{name}, #{role})"
+      end
+    end
 
     def email_for(name) = "#{name.downcase}@#{account_slug}.example.com"
 
