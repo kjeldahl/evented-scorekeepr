@@ -73,6 +73,12 @@ Then("{string} is not signed in") do |_name|
   expect_signed_out
 end
 
+Then("{string} sees the sign-in form") do |_name|
+  visit "/login"
+  expect(page).to have_field("Email")
+  expect(page).to have_button("Sign in")
+end
+
 When("{string} signs out") do |_name|
   sign_out
 end

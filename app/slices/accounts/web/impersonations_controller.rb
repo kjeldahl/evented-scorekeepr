@@ -22,8 +22,8 @@ module Accounts
     end
 
     def destroy
-      StopImpersonation.call(super_admin_user_id: session[:user_id], impersonation_id: session[:impersonation_id])
-      end_session
+      ImpersonationSession.stop(super_admin_user_id: session[:user_id], impersonation_id: session[:impersonation_id])
+      forget_impersonation
       redirect_to root_path, notice: "Stopped impersonating."
     end
 
@@ -32,11 +32,6 @@ module Accounts
     def start_session(impersonation_id, impersonated_user_id)
       session[:impersonation_id] = impersonation_id
       session[:impersonated_user_id] = impersonated_user_id
-    end
-
-    def end_session
-      session.delete(:impersonation_id)
-      session.delete(:impersonated_user_id)
     end
   end
 end

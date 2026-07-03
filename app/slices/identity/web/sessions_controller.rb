@@ -15,6 +15,14 @@ module Identity
     end
 
     def destroy
+      # Signing out ends the super admin's own login, so it must also end any
+      # impersonation session (docs/DOMAIN.md § Impersonation): otherwise the
+      # layout would render the impersonation notice for a signed-out (nil)
+      # user. Ending is recorded in the audit trail before the keys are dropped.
+      if impersonating?
+        ImpersonationSession.stop(super_admin_user_id: session[:user_id], impersonation_id: session[:impersonation_id])
+        forget_impersonation
+      end
       session.delete(:user_id)
       redirect_to login_path, notice: "Signed out."
     end

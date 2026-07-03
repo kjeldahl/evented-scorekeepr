@@ -217,6 +217,8 @@ then act as that member:
   member's other accounts. Every page shows a clear notification of who is
   being impersonated with a "Stop impersonating" button next to it; escaping
   ends the session and restores the super admin's own (read-only) identity.
+  Signing out also ends the impersonation session (it ends the super admin's
+  own login), so a signed-out user never keeps the impersonation notice.
 - While impersonating, **every action is performed with the impersonated
   member's privileges and attributed to that member** — the member-gated
   commands are unchanged and still see the member as the actor (they never
