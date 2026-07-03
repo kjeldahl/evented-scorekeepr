@@ -138,22 +138,4 @@ RSpec.describe Accounts::Events do
       )
     end
   end
-
-  describe ".impersonation_ended" do
-    subject(:event) do
-      described_class.impersonation_ended(impersonation_id: "imp-1", super_admin_user_id: "root-1")
-    end
-
-    it "has the ImpersonationEnded type" do
-      expect(event.type).to eq("ImpersonationEnded")
-    end
-
-    it "carries the impersonation and super admin as data" do
-      expect(event.data).to eq(impersonation_id: "imp-1", super_admin_user_id: "root-1")
-    end
-
-    it "is tagged with the impersonation and the super admin" do
-      expect(event.tags).to contain_exactly("impersonation:imp-1", "user:root-1")
-    end
-  end
 end

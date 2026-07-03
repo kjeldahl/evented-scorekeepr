@@ -56,6 +56,14 @@ class ApplicationController < ActionController::Base
       end
   end
 
+  # Drops the impersonation keys from the session. Pure session teardown (no
+  # domain logic) shared by the escape button and sign-out; ending the session
+  # in the audit trail is ImpersonationSession.stop, called by those actions.
+  def forget_impersonation
+    session.delete(:impersonation_id)
+    session.delete(:impersonated_user_id)
+  end
+
   def require_authentication
     return if signed_in?
 

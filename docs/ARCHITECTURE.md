@@ -19,7 +19,7 @@ The app is built in five slices under `app/slices/`:
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
 | `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
-| `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start/stop impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted`, `ImpersonationEnded` |
+| `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register and correct match results | `MatchRegistered`, `MatchResultCorrected` |
 | `scoreboards` | `Scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version (`Scoreboards::LeagueVersion`) | *(none — read only)* |
@@ -392,13 +392,21 @@ end
 - **Impersonation** (see `docs/DOMAIN.md` § Impersonation) is the one audited
   exception to super admin being read-only, and it spans the accounts slice
   and root infrastructure:
-  - The **feature** lives in the accounts slice: the `StartImpersonation` /
-    `StopImpersonation` commands and their `ImpersonationStarted` /
-    `ImpersonationEnded` events, `Accounts::ImpersonationsController`, and the
-    "Impersonate" button on each member row of the account page (rendered only
-    when the slice's own `SuperAdmin` fold says the viewer is a super admin,
-    and never on their own row). `StartImpersonation` is the sole command that
-    consults super admin status.
+  - **Starting** lives in the accounts slice: the `StartImpersonation` command
+    and its `ImpersonationStarted` event, `Accounts::ImpersonationsController`,
+    and the "Impersonate" button on each member row of the account page
+    (rendered only when the slice's own `SuperAdmin` fold says the viewer is a
+    super admin, and never on their own row). `StartImpersonation` is the sole
+    command that consults super admin status.
+  - **Ending** is root infrastructure — `ImpersonationSession.stop`
+    (`lib/impersonation_session.rb`), which owns the `ImpersonationEnded`
+    event. Ending is triggered from *two* slices — the accounts escape button
+    (`Accounts::ImpersonationsController#destroy`) and identity sign-out
+    (`Identity::SessionsController#destroy`, so a signed-out user never keeps
+    an impersonation notice) — and packwerk forbids one slice appending
+    another's event, so the single builder lives in the root package both can
+    reach. Both actions also drop the impersonation session keys via the shared
+    `ApplicationController#forget_impersonation` (pure session teardown).
   - The **session identity + audit** is root infrastructure, because it is
     cross-cutting and must stay slice-agnostic. The controller keeps the real
     login in `session[:user_id]` and records the impersonated member in

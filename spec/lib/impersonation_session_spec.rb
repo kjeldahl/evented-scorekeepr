@@ -1,8 +1,8 @@
 require "rails_helper"
 
-RSpec.describe Accounts::StopImpersonation do
+RSpec.describe ImpersonationSession do
   def call(super_admin_user_id: "root-1", impersonation_id: "imp-1")
-    described_class.call(super_admin_user_id:, impersonation_id:)
+    described_class.stop(super_admin_user_id:, impersonation_id:)
   end
 
   def ended_events
@@ -11,7 +11,7 @@ RSpec.describe Accounts::StopImpersonation do
     )
   end
 
-  describe "ending a session", :event_store do
+  describe ".stop", :event_store do
     it "returns success with the impersonation id" do
       expect(call).to eq(Result.success("imp-1"))
     end

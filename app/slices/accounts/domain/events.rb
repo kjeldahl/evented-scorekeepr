@@ -66,14 +66,8 @@ module Accounts
       )
     end
 
-    # Ending an impersonation session; tagged with the impersonation and the
-    # super admin so the session boundary is auditable against the real user.
-    def impersonation_ended(impersonation_id:, super_admin_user_id:)
-      DcbEventStore::Event.new(
-        type: "ImpersonationEnded",
-        data: { impersonation_id:, super_admin_user_id: },
-        tags: [ "impersonation:#{impersonation_id}", "user:#{super_admin_user_id}" ]
-      )
-    end
+    # Ending a session (ImpersonationEnded) is triggered from two slices (the
+    # accounts escape button and identity sign-out), so it is owned by root
+    # infrastructure — ImpersonationSession — not this slice.
   end
 end
