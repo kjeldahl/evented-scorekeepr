@@ -58,6 +58,19 @@
   property tests only when explicitly requested.
 - `bin/rails zeitwerk:check` must pass.
 
+## Self-Logging Rake Tasks
+- Every quality rake task self-logs via the shared Rakefile helpers
+  (`run_logged`/`sh_logged`): it tees full output to a timestamped file under
+  `tmp/logs/` (e.g. `tmp/logs/mutant-2026-05-21T14:43:34.log`) and prints
+  `log: tmp/logs/<file>` as the last line of stdout. Keep this in the shared
+  helpers so every task inherits it - callers add no shell redirection of their
+  own.
+- To inspect results, read or grep the printed log file. Never wrap a task in
+  shell redirection, `tee`, or a logging subagent, and never re-run a task just
+  to read a single number.
+- For threshold gates (crap4r CRAP, mutant coverage), parse the metric from the
+  logged file rather than trusting exit status.
+
 ## Local Configuration
 - Preserve project-local SwarmForge configuration under `swarmforge/`.
 - Keep swarm state local under `.swarmforge/`, worktrees under `.worktrees/`,
