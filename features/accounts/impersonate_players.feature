@@ -92,3 +92,23 @@ Feature: Impersonate players
     Given "Root" is a member of the "Office" account
     Then "Root" sees an impersonate button for the member "Bob" in the "Office" account
     But "Root" sees no impersonate button for the member "Root" in the "Office" account
+
+  # impersonate_players-9
+  Scenario: Signing out while impersonating clears impersonation and signs the super admin out
+    # Sign out ends the super admin's own login, so it must also clear the
+    # impersonation session. Otherwise the layout still tries to render the
+    # impersonation notice for a signed-out (nil) user and the page crashes.
+    Given "Root" impersonates the member "Bob" in the "Office" account
+    When "Root" signs out
+    Then "Root" is not signed in
+    And "Root" sees the sign-in form
+    And "Root" sees no impersonation notice
+
+  # impersonate_players-10
+  Scenario: Signing out ends the impersonation session in the audit trail
+    # Ending impersonation by signing out is still ending it, so the audit
+    # trail stays complete: the session's start is paired with an end.
+    Given "Root" impersonates the member "Bob" in the "Office" account
+    When "Root" signs out
+    Then the audit trail records that "Root" started impersonating "Bob"
+    And the audit trail records that "Root" stopped impersonating "Bob"
