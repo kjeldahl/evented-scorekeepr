@@ -109,6 +109,7 @@ never feeds an append condition.
 | `MatchResultCorrected` | match_id, league_id, account_id, home_score, away_score, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
 | `ImpersonationStarted` | impersonation_id, super_admin_user_id, impersonated_user_id, account_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}`, `impersonated_user:{impersonated_user_id}`, `account:{account_id}` |
 | `ImpersonationEnded` | impersonation_id, super_admin_user_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
+| `ImpersonatedActionRecorded` | impersonation_id, super_admin_user_id, impersonated_user_id, actions (each `{type, tags}`) | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
 
 Emails are normalised (lowercased, stripped) before being used in data or
 tags. Uniqueness (e.g. one user per email, one membership per account) is
@@ -225,9 +226,12 @@ then act as that member:
 - Impersonation is **audited**. Starting and ending a session are the
   `ImpersonationStarted` / `ImpersonationEnded` events above. Every write
   performed while impersonating is also recorded against the real super
-  admin behind it; the exact representation (a dedicated audit event per
-  action vs. attribution carried on the action events) is an open
-  implementation choice. There is no in-app view of the audit trail yet.
+  admin behind it as a **dedicated `ImpersonatedActionRecorded` audit event**
+  (the open choice resolved in favour of a per-action audit event over
+  attribution carried on the action events, so the member-gated commands stay
+  unchanged and impersonation-agnostic). It captures the appended action(s)
+  (each event's type and tags) tagged with the impersonation and the super
+  admin. There is no in-app view of the audit trail yet.
 
 ## Slices
 

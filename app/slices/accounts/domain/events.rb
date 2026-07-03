@@ -52,5 +52,28 @@ module Accounts
         tags: [ "account:#{account_id}", "user:#{user_id}" ]
       )
     end
+
+    # Starting a super admin's impersonation session (docs/DOMAIN.md
+    # § Impersonation). Tagged with the impersonation, the super admin behind
+    # it (user:), the impersonated member (impersonated_user:) and the account
+    # the session was started from.
+    def impersonation_started(impersonation_id:, super_admin_user_id:, impersonated_user_id:, account_id:)
+      DcbEventStore::Event.new(
+        type: "ImpersonationStarted",
+        data: { impersonation_id:, super_admin_user_id:, impersonated_user_id:, account_id: },
+        tags: [ "impersonation:#{impersonation_id}", "user:#{super_admin_user_id}",
+                "impersonated_user:#{impersonated_user_id}", "account:#{account_id}" ]
+      )
+    end
+
+    # Ending an impersonation session; tagged with the impersonation and the
+    # super admin so the session boundary is auditable against the real user.
+    def impersonation_ended(impersonation_id:, super_admin_user_id:)
+      DcbEventStore::Event.new(
+        type: "ImpersonationEnded",
+        data: { impersonation_id:, super_admin_user_id: },
+        tags: [ "impersonation:#{impersonation_id}", "user:#{super_admin_user_id}" ]
+      )
+    end
   end
 end

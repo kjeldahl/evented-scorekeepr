@@ -112,4 +112,48 @@ RSpec.describe Accounts::Events do
       expect(event.tags).to contain_exactly("account:acc-1", "user:user-2")
     end
   end
+
+  describe ".impersonation_started" do
+    subject(:event) do
+      described_class.impersonation_started(
+        impersonation_id: "imp-1", super_admin_user_id: "root-1",
+        impersonated_user_id: "bob-1", account_id: "acc-1"
+      )
+    end
+
+    it "has the ImpersonationStarted type" do
+      expect(event.type).to eq("ImpersonationStarted")
+    end
+
+    it "carries the impersonation, super admin, impersonated member and account as data" do
+      expect(event.data).to eq(
+        impersonation_id: "imp-1", super_admin_user_id: "root-1",
+        impersonated_user_id: "bob-1", account_id: "acc-1"
+      )
+    end
+
+    it "is tagged with the impersonation, super admin, impersonated member and account" do
+      expect(event.tags).to contain_exactly(
+        "impersonation:imp-1", "user:root-1", "impersonated_user:bob-1", "account:acc-1"
+      )
+    end
+  end
+
+  describe ".impersonation_ended" do
+    subject(:event) do
+      described_class.impersonation_ended(impersonation_id: "imp-1", super_admin_user_id: "root-1")
+    end
+
+    it "has the ImpersonationEnded type" do
+      expect(event.type).to eq("ImpersonationEnded")
+    end
+
+    it "carries the impersonation and super admin as data" do
+      expect(event.data).to eq(impersonation_id: "imp-1", super_admin_user_id: "root-1")
+    end
+
+    it "is tagged with the impersonation and the super admin" do
+      expect(event.tags).to contain_exactly("impersonation:imp-1", "user:root-1")
+    end
+  end
 end

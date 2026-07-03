@@ -37,6 +37,7 @@ matcher:
     - Accounts::InvitationDeclinesController*
     - Accounts::InvitationRevocationsController*
     - Accounts::InvitationsController*
+    - Accounts::ImpersonationsController*
     - Accounts::OnBehalfAcceptancesController*
     - Accounts::PendingInvitationsController*
     - Leagues::BaseController*

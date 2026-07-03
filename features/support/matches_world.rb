@@ -65,6 +65,13 @@ module MatchesWorld
     EventStore.read(query)
   end
 
+  # The MatchRegistered event from the most recent registration attempt (for
+  # asserting who a match was attributed to).
+  def last_registered_match_event
+    match_events(last_match_attempt[:league]).last or
+      raise "no match was registered in #{last_match_attempt[:league].inspect}"
+  end
+
   def last_match_registered?
     expected = last_match_attempt
     match_events(expected[:league]).any? { |event| event_matches_attempt?(event, expected) }

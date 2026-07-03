@@ -32,11 +32,22 @@
   <h2>Members</h2>
   <table class="members">
     <thead>
-      <tr><th>Name</th></tr>
+      <tr><th>Name</th><% if @super_admin %><th></th><% end %></tr>
     </thead>
     <tbody>
       <% @members.each do |member| %>
-        <tr><td><%= member.name %></td></tr>
+        <tr>
+          <td><%= member.name %></td>
+          <%# A super admin may impersonate any member but themselves
+              (docs/DOMAIN.md § Impersonation); ordinary members see no button. %>
+          <% if @super_admin %>
+            <td class="actions">
+              <% unless member.user_id == current_user.id %>
+                <%= button_to "Impersonate", impersonate_account_member_path(@account.id, member.user_id) %>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
       <% end %>
     </tbody>
   </table>

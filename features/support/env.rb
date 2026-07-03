@@ -14,4 +14,7 @@ EventStore.reset!
 
 Before do
   EventStore.reset!
+  # Impersonation context is request-scoped (CurrentAttributes); clear any
+  # residue so it never leaks across scenarios into the audit hook.
+  Current.reset
 end

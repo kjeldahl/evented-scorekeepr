@@ -34,6 +34,17 @@
       </div>
     </header>
 
+    <% if impersonating? %>
+      <div class="impersonation-banner" role="status">
+        <span class="container impersonation-banner__inner">
+          <span class="impersonation-notice">
+            Impersonating <%= current_user.handle.presence || current_user.name %>
+          </span>
+          <%= button_to "Stop impersonating", impersonation_path, method: :delete, class: "nav-button" %>
+        </span>
+      </div>
+    <% end %>
+
     <main class="container">
       <% if flash[:notice].present? %>
         <p class="flash flash--notice"><%= flash[:notice] %></p>
