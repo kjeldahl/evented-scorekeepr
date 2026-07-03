@@ -1,0 +1,100 @@
+# Kamal deployment configuration for Scorekeepr.
+#
+# Topology: a single Hetzner server runs the web app, the PostgreSQL event
+# store (accessory "db") and a scheduled backup container (accessory
+# "db-backup"). All three share Kamal's docker network, so the app and the
+# backup job reach PostgreSQL by container name (scorekeepr-db) - the
+# database is never exposed on a public port.
+#
+# Before the first deploy (see docs/DEPLOYMENT.md for the full walkthrough):
+#   1. Replace the placeholder IPs below with your Hetzner server's IP.
+#   2. Replace proxy.host with your domain (DNS A record -> server IP).
+#   3. Set registry.username and image to your container registry account.
+#   4. Sign in to 1Password (op signin --account my.1password.com); the
+#      Scorekeepr vault's Scorekeepr item holds all secrets (see .kamal/secrets).
+#   5. bin/kamal setup
+
+service: scorekeepr
+image: kjeldahl/scorekeepr
+
+servers:
+  web:
+    - 178.105.19.28 # Hetzner server 
+
+# kamal-proxy obtains a Let's Encrypt certificate and terminates TLS
+# (config/environments/production.rb already assumes an SSL-terminating
+# proxy), forwarding to Thruster on port 80 inside the app container.
+# Health check is GET /up (Rails default, already routed).
+proxy:
+  ssl: true
+  host: scorekeepr.kjeldahl.it # your domain
+
+# ghcr.io works well with a GitHub personal access token (write:packages
+# scope) supplied as KAMAL_REGISTRY_PASSWORD. Any registry works.
+registry:
+  server: ghcr.io
+  username: kjeldahl # your registry username
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64 # Hetzner x86 (CX/CCX) servers; use arm64 for CAX (Ampere)
+
+env:
+  clear:
+    # The DCB event store connection (config/event_store.yml) - points at
+    # the "db" accessory below via its container name.
+    EVENT_STORE_HOST: scorekeepr-db
+    EVENT_STORE_PORT: 5432
+    EVENT_STORE_USER: scorekeepr
+    EVENT_STORE_DATABASE: scorekeepr_production
+    # ActionCable uses the in-process async adapter (config/cable.yml), so
+    # production must stay a single Puma process. Scale threads, not
+    # workers; switch cable.yml to redis before raising this.
+    WEB_CONCURRENCY: 1
+  secret:
+    - RAILS_MASTER_KEY
+    - EVENT_STORE_PASSWORD
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs --follow
+
+accessories:
+  # PostgreSQL backing the DCB event store - the app's only persistence.
+  # Data lives in a bind-mounted host directory (~/scorekeepr-db/data) so
+  # it survives container replacement and upgrades.
+  db:
+    image: postgres:16
+    host: 178.105.19.28 # same Hetzner server IP
+    env:
+      clear:
+        POSTGRES_USER: scorekeepr
+        POSTGRES_DB: scorekeepr_production
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+
+  # Scheduled logical backups of the event store: pg_dump on a cron
+  # schedule with rotation, written to ~/scorekeepr-db-backup/backups on
+  # the host. Daily at 02:00 UTC, keeping 7 daily, 4 weekly and 6 monthly
+  # dumps. Restore procedure and off-site copy notes: docs/DEPLOYMENT.md.
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:16
+    host: 178.105.19.28 # same Hetzner server IP
+    env:
+      clear:
+        POSTGRES_HOST: scorekeepr-db
+        POSTGRES_DB: scorekeepr_production
+        POSTGRES_USER: scorekeepr
+        SCHEDULE: "0 2 * * *"
+        BACKUP_KEEP_DAYS: "7"
+        BACKUP_KEEP_WEEKS: "4"
+        BACKUP_KEEP_MONTHS: "6"
+        HEALTHCHECK_PORT: "8080"
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - backups:/backups

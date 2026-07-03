@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ]; then
+    LD_PRELOAD=$(find /usr/lib -name libjemalloc.so.2 -print -quit)
+    export LD_PRELOAD
+fi
+
+# This app has no ActiveRecord; the only persistence is the DCB event store.
+# event_store:prepare creates the database (if missing), the events table and
+# supporting functions, and is idempotent - the no-AR equivalent of db:prepare.
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  ./bin/rails event_store:prepare
+fi
+
+exec "${@}"
