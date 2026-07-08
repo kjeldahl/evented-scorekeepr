@@ -36,19 +36,24 @@ RSpec.describe Matches::MatchDetails do
       expect(projection.fold([])).to be_nil
     end
 
-    it "is nil again once the match is deleted" do
-      expect(projection.fold([ match_registered, match_deleted ])).to be_nil
+    it "stays nil when a delete arrives before any registration" do
+      expect(projection.fold([ match_deleted ])).to be_nil
     end
 
-    it "is nil for a match deleted after a correction" do
-      expect(projection.fold([ match_registered, match_corrected, match_deleted ])).to be_nil
+    it "marks the match deleted once MatchDeleted lands" do
+      expect(projection.fold([ match_registered, match_deleted ])).to be_deleted
     end
 
-    it "folds MatchRegistered into the sides, league, account and score" do
+    it "marks a corrected match deleted once MatchDeleted lands" do
+      expect(projection.fold([ match_registered, match_corrected, match_deleted ])).to be_deleted
+    end
+
+    it "folds MatchRegistered into the sides, league, account and score, not deleted" do
       details = projection.fold([ match_registered ])
       expect(details).to eq(Matches::MatchDetails::Details.new(
         match_id: "m-1", league_id: "league-1", account_id: "acc-1",
-        home_player_ids: %w[alice carol], away_player_ids: %w[bob dave], home_score: 21, away_score: 8
+        home_player_ids: %w[alice carol], away_player_ids: %w[bob dave], home_score: 21, away_score: 8,
+        deleted: false
       ))
     end
 

@@ -18,7 +18,7 @@ module Matches
 
     def rejection(states, league_id:, account_id:, user_id:, action:)
       match = states.fetch(:match)
-      return Result.failure("the match was not found") unless match && match.league_id == league_id && match.account_id == account_id
+      return Result.failure("the match was not found") unless match && !match.deleted? && match.league_id == league_id && match.account_id == account_id
       return Result.failure("only players in the match can #{action} it") unless match.players.include?(user_id)
       return Result.failure("the league was not found") if states.fetch(:league).nil?
 
