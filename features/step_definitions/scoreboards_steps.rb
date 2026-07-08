@@ -132,11 +132,13 @@ Then("the TV dashboard for {string} reports a newer version") do |league|
 end
 
 # The test cable adapter records every broadcast; a new entry on the league's
-# "events:league:{id}" stream is the live update pushed to watching TVs.
+# "events:league:{id}" stream is the live update pushed to watching TVs. The
+# payload names the event that triggered it, so it matches the league's latest
+# event (MatchRegistered, MatchDeleted, ...).
 Then("a live update is pushed to the {string} TV dashboard") do |league|
   broadcasts = tv_stream_broadcasts(league)
   expect(broadcasts.size).to be > @tv_broadcasts_before
-  expect(JSON.parse(broadcasts.last)).to eq("type" => "MatchRegistered")
+  expect(JSON.parse(broadcasts.last)).to eq("type" => last_league_event_type(league))
 end
 
 Then("{string} can see the TV dashboard for the {string} league") do |viewer, league|

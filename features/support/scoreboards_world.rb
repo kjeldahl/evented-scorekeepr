@@ -93,6 +93,19 @@ module ScoreboardsWorld
   def tv_stream_broadcasts(league_name)
     ActionCable.server.pubsub.broadcasts("events:league:#{league_for(league_name).id}")
   end
+
+  # The type of the league's most recent versioned event — what the live
+  # update's payload names (a match registered, corrected or deleted, or a
+  # league lifecycle change).
+  def last_league_event_type(league_name)
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(
+        event_types: %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered MatchResultCorrected MatchDeleted],
+        tags: [ "league:#{league_for(league_name).id}" ]
+      )
+    ])
+    EventStore.read(query).last&.type
+  end
 end
 
 World(ScoreboardsWorld)

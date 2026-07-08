@@ -1,8 +1,9 @@
 # The statistics slice's own fold of the matches slice's match events (the
 # cross-slice contract - docs/ARCHITECTURE.md): the league's matches in
 # registration order, oldest first, as Statistics::Match values. A later
-# MatchResultCorrected replaces its match's score in place, keeping league
-# order so the stake ledger and every per-player figure re-derive.
+# MatchResultCorrected replaces its match's score in place, and a MatchDeleted
+# drops its match entirely - both keep league order so the stake ledger and
+# every per-player figure re-derive as if the change had always been so.
 module Statistics
   module LeagueMatches
     extend self
@@ -16,10 +17,11 @@ module Statistics
         initial_state: [],
         handlers: {
           "MatchRegistered" => ->(state, event) { state + [ match(event) ] },
-          "MatchResultCorrected" => ->(state, event) { correct(state, event) }
+          "MatchResultCorrected" => ->(state, event) { correct(state, event) },
+          "MatchDeleted" => ->(state, event) { delete(state, event) }
         },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: %w[MatchRegistered MatchResultCorrected], tags: "league:#{league_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[MatchRegistered MatchResultCorrected MatchDeleted], tags: "league:#{league_id}")
         )
       )
     end
@@ -38,6 +40,10 @@ module Statistics
 
         match.with(home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score))
       end
+    end
+
+    def delete(matches, event)
+      matches.reject { |match| match.match_id == event.data.fetch(:match_id) }
     end
   end
 end

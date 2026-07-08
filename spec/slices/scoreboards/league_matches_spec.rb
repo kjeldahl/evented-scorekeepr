@@ -20,6 +20,14 @@ RSpec.describe Scoreboards::LeagueMatches do
     )
   end
 
+  def match_deleted(match_id: "m-1", league_id: "league-1")
+    DcbEventStore::Event.new(
+      type: "MatchDeleted",
+      data: { match_id:, league_id:, account_id: "acc-1", deleted_by_user_id: "b" },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:acc-1" ]
+    )
+  end
+
   describe ".projection" do
     subject(:projection) { described_class.projection("league-1") }
 
@@ -56,9 +64,26 @@ RSpec.describe Scoreboards::LeagueMatches do
       expect(matches.sole.home_score).to eq(21)
     end
 
-    it "queries both match event types scoped to the league" do
+    it "drops a deleted match, keeping the others in league order" do
+      matches = projection.fold([
+        match_registered(match_id: "m-1"),
+        match_registered(match_id: "m-2", home_score: 3, away_score: 5),
+        match_deleted(match_id: "m-1")
+      ])
+      expect(matches.map(&:match_id)).to eq([ "m-2" ])
+    end
+
+    it "leaves other matches untouched by a deletion" do
+      matches = projection.fold([
+        match_registered(match_id: "m-1"),
+        match_deleted(match_id: "m-2")
+      ])
+      expect(matches.sole.match_id).to eq("m-1")
+    end
+
+    it "queries all three match event types scoped to the league" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected])
+      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected MatchDeleted])
       expect(item.tags).to eq([ "league:league-1" ])
     end
   end

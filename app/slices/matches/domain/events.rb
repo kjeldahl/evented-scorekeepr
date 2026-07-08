@@ -29,5 +29,18 @@ module Matches
         tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
       )
     end
+
+    # A deletion removes the match from the league as if it never happened; it
+    # carries no score or sides and is tagged with the match, league and
+    # account (docs/DOMAIN.md). Scoreboards and statistics drop the matching
+    # match and re-derive every later standing; MatchDetails folds it to gone,
+    # so the match can no longer be deleted or edited.
+    def match_deleted(match_id:, league_id:, account_id:, deleted_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "MatchDeleted",
+        data: { match_id:, league_id:, account_id:, deleted_by_user_id: },
+        tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
+      )
+    end
   end
 end

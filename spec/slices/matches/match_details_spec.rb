@@ -21,11 +21,27 @@ RSpec.describe Matches::MatchDetails do
     )
   end
 
+  def match_deleted(match_id: "m-1", league_id: "league-1", account_id: "acc-1")
+    DcbEventStore::Event.new(
+      type: "MatchDeleted",
+      data: { match_id:, league_id:, account_id:, deleted_by_user_id: "bob" },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
+    )
+  end
+
   describe ".projection (pure fold)" do
     subject(:projection) { described_class.projection(match_id: "m-1") }
 
     it "is nil for a match that was never registered" do
       expect(projection.fold([])).to be_nil
+    end
+
+    it "is nil again once the match is deleted" do
+      expect(projection.fold([ match_registered, match_deleted ])).to be_nil
+    end
+
+    it "is nil for a match deleted after a correction" do
+      expect(projection.fold([ match_registered, match_corrected, match_deleted ])).to be_nil
     end
 
     it "folds MatchRegistered into the sides, league, account and score" do
@@ -49,7 +65,7 @@ RSpec.describe Matches::MatchDetails do
 
     it "queries the match's own events by the match tag" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected])
+      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected MatchDeleted])
       expect(item.tags).to eq([ "match:m-1" ])
     end
   end
@@ -70,6 +86,11 @@ RSpec.describe Matches::MatchDetails do
 
     it "is nil for an unknown match" do
       expect(described_class.find(match_id: "missing")).to be_nil
+    end
+
+    it "is nil once the match is deleted" do
+      EventStore.append([ match_registered, match_deleted ])
+      expect(described_class.find(match_id: "m-1")).to be_nil
     end
   end
 end

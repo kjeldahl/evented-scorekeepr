@@ -181,6 +181,46 @@ module MatchesWorld
   rescue ActionDispatch::MissingController, ActionController::RoutingError
     nil
   end
+
+  # --- Deleting matches --------------------------------------------------
+  #   delete_match!(deleter, league:, winners:, losers:, winner_score:,
+  #                 loser_score:)  # deletes through the edit form's button
+  #   attempt_delete(deleter, league:, winners:, losers:, winner_score:,
+  #                  loser_score:)  # raw DELETE (rejection paths)
+  #   deletions_after_last_delete_attempt  # deletions stored since the attempt
+
+  def delete_match!(deleter, league:, winners:, losers:, winner_score:, loser_score:)
+    event = find_registered_match(league, winners:, losers:, winner_score:, loser_score:)
+    sign_in(deleter) unless signed_in_as?(deleter)
+    visit edit_match_path(league, event.data.fetch(:match_id))
+    submit_form "Delete match"
+  end
+
+  def attempt_delete(deleter, league:, winners:, losers:, winner_score:, loser_score:)
+    event = find_registered_match(league, winners:, losers:, winner_score:, loser_score:)
+    @last_delete = { league:, match_id: event.data.fetch(:match_id) }
+    @deletions_before = deletion_events(league).count
+    sign_in(deleter) unless signed_in_as?(deleter)
+    league_record = league_for(league)
+    submit_delete("/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{@last_delete[:match_id]}")
+  end
+
+  def deletions_after_last_delete_attempt
+    deletion_events(@last_delete.fetch(:league)).count - @deletions_before
+  end
+
+  def deletion_events(league_name)
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(event_types: %w[MatchDeleted], tags: [ "league:#{league_id_for(league_name)}" ])
+    ])
+    EventStore.read(query)
+  end
+
+  def submit_delete(path, params = {})
+    page.driver.submit :delete, path, params
+  rescue ActionDispatch::MissingController, ActionController::RoutingError
+    nil
+  end
 end
 
 World(MatchesWorld)

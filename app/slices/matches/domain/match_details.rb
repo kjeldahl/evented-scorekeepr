@@ -1,9 +1,10 @@
 # Decision-model and form projection over a single match, folded from its
-# own MatchRegistered (and any later MatchResultCorrected) by the match tag.
-# Returns nil until the match exists, then a Details value carrying the
-# fixed sides, the league/account it belongs to and the current score. The
-# edit form reads it to prefill the score, and EditMatch reads it to check
-# the editor is one of the match's players before correcting it.
+# own MatchRegistered (and any later MatchResultCorrected/MatchDeleted) by the
+# match tag. Returns nil until the match exists — and nil again once it is
+# deleted — otherwise a Details value carrying the fixed sides, the
+# league/account it belongs to and the current score. The edit form reads it
+# to prefill the score, and EditMatch/DeleteMatch read it to check the actor
+# is one of the match's players and the match still exists.
 module Matches
   module MatchDetails
     Details = Data.define(:match_id, :league_id, :account_id, :home_player_ids, :away_player_ids,
@@ -22,11 +23,12 @@ module Matches
         initial_state: nil,
         handlers: {
           "MatchRegistered" => ->(_state, event) { registered(match_id, event) },
-          "MatchResultCorrected" => ->(state, event) { state&.with(home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score)) }
+          "MatchResultCorrected" => ->(state, event) { state&.with(home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score)) },
+          "MatchDeleted" => ->(_state, _event) { nil }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(
-            event_types: %w[MatchRegistered MatchResultCorrected], tags: "match:#{match_id}"
+            event_types: %w[MatchRegistered MatchResultCorrected MatchDeleted], tags: "match:#{match_id}"
           )
         )
       )

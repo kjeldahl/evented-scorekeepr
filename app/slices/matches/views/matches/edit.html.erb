@@ -33,6 +33,13 @@
     </div>
   <% end %>
 
+  <div class="match-delete">
+    <p class="muted">Deleting removes the match and re-derives every later standing.</p>
+    <%= button_to "Delete match",
+                  account_league_match_path(params[:account_id], params[:league_id], @match.match_id),
+                  method: :delete %>
+  </div>
+
   <p class="muted">
     <%= link_to "Back to scoreboard",
                 account_league_scoreboard_path(params[:account_id], params[:league_id]) %>

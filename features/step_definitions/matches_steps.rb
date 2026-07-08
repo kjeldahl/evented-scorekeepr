@@ -112,3 +112,38 @@ Then("the edit is rejected because {string}") do |reason|
   expect(page).to have_css(".flash--alert", text: reason)
   expect(corrections_after_last_edit_attempt).to eq(0)
 end
+
+# --- Deleting matches (features/matches/delete_match.feature) ---------------
+# Delete helpers (delete_match!, attempt_delete, ...) live in
+# features/support/matches_world.rb. The happy path drives the real edit
+# form's "Delete match" button; rejection paths DELETE directly (a
+# non-player never sees the form's button).
+
+When("{string} deletes the match where {string} beats {string} {int}-{int} in {string}") \
+do |deleter, winner, loser, winner_score, loser_score, league|
+  delete_match!(deleter, league:, winners: [ winner ], losers: [ loser ], winner_score:, loser_score:)
+end
+
+When("{string} deletes the match where {string} and {string} beat {string} and {string} {int}-{int} in {string}") \
+do |deleter, winner_1, winner_2, loser_1, loser_2, winner_score, loser_score, league|
+  delete_match!(deleter, league:, winners: [ winner_1, winner_2 ], losers: [ loser_1, loser_2 ],
+                         winner_score:, loser_score:)
+end
+
+When("{string} attempts to delete the match where {string} beats {string} {int}-{int} in {string}") \
+do |deleter, winner, loser, winner_score, loser_score, league|
+  attempt_delete(deleter, league:, winners: [ winner ], losers: [ loser ], winner_score:, loser_score:)
+end
+
+Then("{string} sees a delete button for the match where {string} beats {string} {int}-{int} in {string}") \
+do |viewer, winner, loser, winner_score, loser_score, league|
+  event = find_registered_match(league, winners: [ winner ], losers: [ loser ], winner_score:, loser_score:)
+  sign_in(viewer) unless signed_in_as?(viewer)
+  visit edit_match_path(league, event.data.fetch(:match_id))
+  expect(page).to have_button("Delete match")
+end
+
+Then("the delete is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+  expect(deletions_after_last_delete_attempt).to eq(0)
+end

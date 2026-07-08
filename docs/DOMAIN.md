@@ -54,6 +54,20 @@ Editing is authorised by match participation (a non-participant, member or
 not, is rejected with "only players in the match can edit it"), never by a
 separate membership check.
 
+### Deleting a match result
+
+Any player who took part in a match can also delete it while the league is
+open, mirroring editing. A deletion is a `MatchDeleted` event folded onto its
+`MatchRegistered` (matched by `match:{match_id}`), so the whole league
+re-folds in order as if the match had never been registered: it vanishes from
+the recent matches and every later standing re-derives, and a player who only
+ever appeared in the deleted match drops out of the standings entirely. A
+deleted match is gone: it can no longer be deleted or edited (both are
+rejected with "the match was not found"). Like editing, deleting is authorised
+by match participation (a non-participant, member or not, is rejected with
+"only players in the match can delete it"), never by a separate membership
+check; and it is refused in a closed league ("the league is closed").
+
 ## Standings & statistics (per league)
 
 For each player: rank (by points, ties share order by name), points, matches
@@ -78,11 +92,11 @@ that page, members and super admins alike). It shows:
 - The latest 5 matches, newest first.
 
 The page auto-refreshes: updates are **pushed over a websocket** whenever a
-league event is appended — i.e. whenever a match is registered or corrected
-or the league is renamed or closed. The per-league **version** - a monotonic
-count of the league's events (`LeagueCreated`, `LeagueRenamed`,
-`LeagueClosed`, `MatchRegistered`, `MatchResultCorrected` tagged
-`league:{id}`) - remains the catch-up contract:
+league event is appended — i.e. whenever a match is registered, corrected or
+deleted or the league is renamed or closed. The per-league **version** - a
+monotonic count of the league's events (`LeagueCreated`, `LeagueRenamed`,
+`LeagueClosed`, `MatchRegistered`, `MatchResultCorrected`, `MatchDeleted`
+tagged `league:{id}`) - remains the catch-up contract:
 on websocket (re)connect the page fetches it once and reloads when it
 differs from the version it last rendered, covering updates missed while
 disconnected. The version is a pure read-model fold and the push is
@@ -107,6 +121,7 @@ never feeds an append condition.
 | `LeagueClosed` | league_id, account_id | `league:{league_id}`, `account:{account_id}` |
 | `MatchRegistered` | match_id, league_id, account_id, home_player_ids, away_player_ids, home_score, away_score, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
 | `MatchResultCorrected` | match_id, league_id, account_id, home_score, away_score, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
+| `MatchDeleted` | match_id, league_id, account_id, deleted_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
 | `ImpersonationStarted` | impersonation_id, super_admin_user_id, impersonated_user_id, account_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}`, `impersonated_user:{impersonated_user_id}`, `account:{account_id}` |
 | `ImpersonationEnded` | impersonation_id, super_admin_user_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
 | `ImpersonatedActionRecorded` | impersonation_id, super_admin_user_id, impersonated_user_id, actions (each `{type, tags}`) | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
@@ -242,6 +257,6 @@ then act as that member:
 | `identity` | sign up, sign in / out, super admin grant |
 | `accounts` | create account, invite players, accept invitations, membership |
 | `leagues` | create / close leagues |
-| `matches` | register match results (optimised for fast input) and correct them |
+| `matches` | register match results (optimised for fast input), correct and delete them |
 | `scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version |
 | `statistics` | per-player league statistics: form, head-to-head, history |

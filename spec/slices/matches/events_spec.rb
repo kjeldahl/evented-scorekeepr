@@ -60,4 +60,26 @@ RSpec.describe Matches::Events do
       expect(build.tags).to contain_exactly("match:match-1", "league:league-1", "account:acc-1")
     end
   end
+
+  describe ".match_deleted" do
+    def build
+      described_class.match_deleted(
+        match_id: "match-1", league_id: "league-1", account_id: "acc-1", deleted_by_user_id: "bob-1"
+      )
+    end
+
+    it "has the MatchDeleted type" do
+      expect(build.type).to eq("MatchDeleted")
+    end
+
+    it "carries the match, league, account and the deleter as data" do
+      expect(build.data).to eq(
+        match_id: "match-1", league_id: "league-1", account_id: "acc-1", deleted_by_user_id: "bob-1"
+      )
+    end
+
+    it "tags only the match, league and account - the sides are gone" do
+      expect(build.tags).to contain_exactly("match:match-1", "league:league-1", "account:acc-1")
+    end
+  end
 end

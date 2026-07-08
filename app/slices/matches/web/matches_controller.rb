@@ -1,8 +1,9 @@
 module Matches
   class MatchesController < BaseController
-    # Registering is member-gated; editing is authorised by match
-    # participation in the EditMatch command (a non-member is simply not a
-    # player), so it needs no membership before_action - only sign-in.
+    # Registering is member-gated; editing and deleting are authorised by
+    # match participation in the EditMatch/DeleteMatch commands (a non-member
+    # is simply not a player), so they need no membership before_action - only
+    # sign-in.
     before_action :require_account_member!, only: %i[new create]
     before_action :load_form
 
@@ -34,10 +35,21 @@ module Matches
       end
     end
 
+    def destroy
+      result = DeleteMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
+      if result.success?
+        redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
+                    notice: "Match deleted"
+      else
+        render_edit_error(result.error)
+      end
+    end
+
     private
 
-    # A failed edit re-renders the form with the error; a match that has since
-    # vanished sends the editor back to the scoreboard instead.
+    # A failed edit or delete re-renders the edit form (which hosts both
+    # actions) with the error; a match that has since vanished sends the
+    # player back to the scoreboard instead.
     def render_edit_error(message)
       return unless load_match
 
@@ -46,8 +58,11 @@ module Matches
     end
 
     def edit_params
-      { league_id: params[:league_id], account_id: params[:account_id],
-        home_score: params[:home_score], away_score: params[:away_score] }
+      match_scope.merge(home_score: params[:home_score], away_score: params[:away_score])
+    end
+
+    def match_scope
+      { league_id: params[:league_id], account_id: params[:account_id] }
     end
 
     # The edit form shows the fixed sides by name and prefills the score;
