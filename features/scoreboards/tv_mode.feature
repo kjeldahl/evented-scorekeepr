@@ -13,8 +13,9 @@ Feature: TV mode / live dashboard
     nobody has a winning streak of 2 or more, the spotlight is absent.
 
   The page self-refreshes via websocket push: when a league event is appended
-  (a match result is registered, the league is renamed or closed), a live
-  update is pushed over ActionCable to every TV screen watching that league,
+  (a match result is registered or deleted, the league is renamed or closed),
+  a live update is pushed over ActionCable to every TV screen watching that
+  league,
   and the page refreshes itself immediately. A screen that reconnects after a
   network drop compares the league's current version against the version it
   last saw and refreshes if it missed anything. The version is a monotonic
@@ -167,6 +168,20 @@ Feature: TV mode / live dashboard
   Scenario: Registering a new match result pushes a live update to TV dashboards
     Given "Alice" is watching the TV dashboard for the "Foosball Spring" league
     When "Alice" registers a match in "Foosball Spring" where "Alice" beats "Bob" 21-8
+    Then a live update is pushed to the "Foosball Spring" TV dashboard
+
+  Scenario: Deleting a match result advances the TV version
+    # A deletion re-derives the standings, so a screen that missed it must
+    # refresh: deleting a match advances the version just like registering one.
+    Given "Alice" registers a match in "Foosball Spring" where "Alice" beats "Bob" 21-8
+    And "Alice" is watching the TV dashboard for the "Foosball Spring" league
+    When "Bob" deletes the match where "Alice" beats "Bob" 21-8 in "Foosball Spring"
+    Then the TV dashboard for "Foosball Spring" reports a newer version
+
+  Scenario: Deleting a match result pushes a live update to TV dashboards
+    Given "Alice" registers a match in "Foosball Spring" where "Alice" beats "Bob" 21-8
+    And "Alice" is watching the TV dashboard for the "Foosball Spring" league
+    When "Bob" deletes the match where "Alice" beats "Bob" 21-8 in "Foosball Spring"
     Then a live update is pushed to the "Foosball Spring" TV dashboard
 
   # ---------------------------------------------------------------------------
