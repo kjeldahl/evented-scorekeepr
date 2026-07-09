@@ -44,5 +44,5 @@ You are the architect.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` files to the coder and refactorer using `priority: 00` when they have follow-up work to review.
   - Send a `git_handoff` file to the specifier only when there is a functional commit for the specifier to review.
-  - Do not send completion notes or `note` handoffs to the specifier.
   - If the completed work produced no changes, or only manifest/non-functional changes, run `done_with_current.sh` and take the next queued task or batch without forwarding it.
+  - After `done_with_current.sh`, if there is no next queued task or batch (`NO_TASK`), send a `note` handoff to the specifier saying the job is complete, even when the last task had no functional commit - the specifier waits on this to merge and cannot infer completion on its own.
