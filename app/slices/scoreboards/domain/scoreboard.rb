@@ -7,7 +7,10 @@ module Scoreboards
 
     def rows(league)
       matches = LeagueMatches.for_league(league.league_id)
-      names = PlayerNames.for(matches.flat_map(&:players))
+      # All players (including those from deleted matches) need names so the
+      # scoreboard can display players who remain at their starting points.
+      all_player_ids = matches.flat_map(&:players).uniq
+      names = PlayerNames.for(all_player_ids)
       Standings.new(starting_points: league.starting_points, stake_percentage: league.stake_percentage,
                     match_type: league.match_type, game_type: league.game_type)
                .table(matches, names:)

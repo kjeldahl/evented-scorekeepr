@@ -24,7 +24,7 @@ module Scoreboards
 
       def won(scored, conceded) = played_match(scored, conceded, wins: wins + 1, streak: streak.advance("W"))
       def lost(scored, conceded) = played_match(scored, conceded, losses: losses + 1, streak: streak.advance("L"))
-      def win_percentage = (100.0 * wins / played).round
+      def win_percentage = played.zero? ? 0 : (100.0 * wins / played).round
 
       private
 
@@ -46,7 +46,7 @@ module Scoreboards
     # Returns ranked rows, best first.
     def table(matches, names:)
       stats = matches.reduce({}) { |folded, match| apply(folded, match) }
-      rank(stats, names)
+      rank(stats.reject { |_id, s| s.played.zero? }, names)
     end
 
     private
@@ -63,6 +63,8 @@ module Scoreboards
     end
 
     def apply_multi(stats, match)
+      return seed(stats, match.players) if match.deleted?
+
       record_multi_results(settle_multi_points(seed(stats, match.players), match), match)
     end
 
@@ -100,9 +102,9 @@ module Scoreboards
         is_winner = game_score == best_score
         updated.merge(player_id => if is_winner
                                       player_stats.won(game_score, 0)
-                                    else
+                                   else
                                       player_stats.lost(0, game_score)
-                                    end)
+                                   end)
       end
       result
     end
@@ -122,11 +124,11 @@ module Scoreboards
 
     def engine
       @engine ||= case @match_type
-                  when "multiplayer"
+      when "multiplayer"
                     MultiplayerScoringEngine.new(stake_percentage: @stake_percentage, game_type: @game_type)
-                  else
+      else
                     ScoringEngine.new(stake_percentage: @stake_percentage)
-                  end
+      end
       @engine
     end
   end

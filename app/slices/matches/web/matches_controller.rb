@@ -15,7 +15,7 @@ module Matches
       if @league.multiplayer_league?
         result = RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params)
       else
-        result = RegisterMatch.call(user_id: current_user.id, **match_params)
+        result = RegisterMatch.call(user_id: current_user.id, **register_match_params)
       end
       if result.success?
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
@@ -28,11 +28,13 @@ module Matches
 
     def edit
       load_match or return
-      @multiplayer = @match.is_a?(Scoreboards::MultiplayerMatch)
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
     end
 
     def update
-      if @multiplayer
+      load_match or return
+      multi = @match.is_a?(MultiplayerMatchDetails::Details)
+      if multi
         result = CorrectMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **correct_multi_params)
       else
         result = EditMatch.call(match_id: params[:id], user_id: current_user.id, **edit_params)
@@ -46,7 +48,9 @@ module Matches
     end
 
     def destroy
-      if @multiplayer
+      load_match or return
+      multi = @match.is_a?(MultiplayerMatchDetails::Details)
+      if multi
         result = DeleteMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
       else
         result = DeleteMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
@@ -68,6 +72,7 @@ module Matches
       return unless load_match
 
       flash.now[:alert] = message
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
       render :edit, status: :unprocessable_entity
     end
 
@@ -99,6 +104,27 @@ module Matches
       player_scores = scores_hash.to_h { |k, v| [ k.to_s, v ] }
       { league_id: params[:league_id], account_id: params[:account_id],
         user_id: current_user.id, player_ids:, player_scores: }
+    end
+
+    def multiplayer_scores_params
+    raw = params[:scores] || {}
+    h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
+    h.to_h { |k, v| [ k.to_s, v ] }
+  end
+
+  def register_match_params
+      match_scope.merge(home_player_ids: home_player_ids,
+                        away_player_ids: away_player_ids,
+                        home_score: params[:home_score],
+                        away_score: params[:away_score])
+    end
+
+    def home_player_ids
+      [ params[:home_player_1_id], params[:home_player_2_id] ].compact
+    end
+
+    def away_player_ids
+      [ params[:away_player_1_id], params[:away_player_2_id] ].compact
     end
 
     def match_scope

@@ -223,17 +223,17 @@ module MatchesWorld
   end
 end
 
-# --- Multiplayer matches -------------------------------------------------
-#   register_multiplayer_match(registrar, league, player_names, scores; via_ui:)
-#     # Registers a multiplayer match through the UI (via_ui: true) or raw POST.
-#     # player_names / scores are arrays of display names / numeric scores.
-#   register_multiplayer_match!(...)  # same, but raises on failure
-#   correct_multiplayer_match(editor, league, player_names, scores; via_ui:)
-#     # Corrects a multiplayer match through the UI or raw PATCH.
-#   correct_multiplayer_match!(...)  # same, but raises on failure
-#   delete_multiplayer_match(deleter, league; via_ui:)
-#     # Deletes a multiplayer match through the UI or raw DELETE.
-#   delete_multiplayer_match!(...)  # same, but raises on failure
+  # --- Multiplayer matches -------------------------------------------------
+  #   register_multiplayer_match(registrar, league, player_names, scores; via_ui:)
+  #     # Registers a multiplayer match through the UI (via_ui: true) or raw POST.
+  #     # player_names / scores are arrays of display names / numeric scores.
+  #   register_multiplayer_match!(...)  # same, but raises on failure
+  #   correct_multiplayer_match(editor, league, player_names, scores; via_ui:)
+  #     # Corrects a multiplayer match through the UI or raw PATCH.
+  #   correct_multiplayer_match!(...)  # same, but raises on failure
+  #   delete_multiplayer_match(deleter, league; via_ui:)
+  #     # Deletes a multiplayer match through the UI or raw DELETE.
+  #   delete_multiplayer_match!(...)  # same, but raises on failure
 
   def last_multiplayer_league
     @last_multiplayer_league or raise "no multiplayer league created yet"
@@ -306,10 +306,12 @@ end
       raise "no multiplayer match found in #{league.inspect}"
     match_id = match_event.data.fetch(:match_id)
     visit "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}/edit"
-    # The multiplayer edit form uses scores[player_id] inputs
+    # The multiplayer edit form uses scores[player_id] number inputs.
+    # Capybara's fill_in does not handle bracketed names on number inputs
+    # reliably, so we set the value directly.
     player_names.zip(scores).each do |(name, score)|
       uid = user_id_for(name)
-      fill_in "scores[#{uid}]", with: score
+      find("input[name=\"scores[#{uid}]\"]").set(score)
     end
     submit_form "Save match"
   end

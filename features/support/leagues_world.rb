@@ -35,10 +35,10 @@ module LeaguesWorld
     Leagues::League.find(league_id_for(league_name))
   end
 
-  def create_league(creator, name, account:, game_type:, starting_points: 1000, stake: 10)
+  def create_league(creator, name, account:, game_type:, starting_points: 1000, stake: 10, match_type: nil)
     result = Leagues::CreateLeague.call(
       account_id: account_id_for(account), user_id: user_id_for(creator),
-      name:, game_type:, starting_points:, stake_percentage: stake
+      name:, game_type:, starting_points:, stake_percentage: stake, match_type:
     )
     raise "could not create league #{name}: #{result.error}" if result.failure?
 
@@ -76,6 +76,7 @@ module LeaguesWorld
     fill_in "Starting points", with: starting_points if starting_points
     fill_in "Stake percentage", with: stake if stake
     submit_form "Create league"
+    remember_league(league_name, find_league_id(league_name))
   end
 
   # POSTs the create route directly: invalid settings re-render the form and

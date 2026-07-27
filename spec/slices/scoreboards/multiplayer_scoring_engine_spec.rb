@@ -8,7 +8,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
   describe "ranking direction" do
     it "ranks ascending for Golf (lowest score is 1st)" do
       points = { "alice" => 1000, "bob" => 1000, "carol" => 1000 }
-      players = [{ id: "bob", score: 0 }, { id: "alice", score: 5 }, { id: "carol", score: 0 }]
+      players = [ { id: "bob", score: 0 }, { id: "alice", score: 5 }, { id: "carol", score: 0 } ]
 
       settled = engine(game_type: "Golf").settle(points, players)
 
@@ -20,7 +20,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
 
     it "ranks descending for Foosball (highest score is 1st)" do
       points = { "alice" => 1000, "bob" => 1000 }
-      players = [{ id: "alice", score: 21 }, { id: "bob", score: 15 }]
+      players = [ { id: "alice", score: 21 }, { id: "bob", score: 15 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
 
@@ -32,7 +32,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
   describe "single player" do
     it "returns points unchanged for a single-player match" do
       points = { "alice" => 1000 }
-      players = [{ id: "alice", score: 5 }]
+      players = [ { id: "alice", score: 5 } ]
 
       settled = engine.settle(points, players)
       expect(settled).to eq({ "alice" => 1000 })
@@ -42,7 +42,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
   describe "two players" do
     it "stakes 100% for 2nd place" do
       points = { "alice" => 1000, "bob" => 1000 }
-      players = [{ id: "alice", score: 10 }, { id: "bob", score: 5 }]
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
       expect(settled).to eq({ "alice" => 1100, "bob" => 900 })
@@ -50,7 +50,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
 
     it "uses the stake percentage" do
       points = { "alice" => 1000, "bob" => 1000 }
-      players = [{ id: "alice", score: 10 }, { id: "bob", score: 5 }]
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
 
       settled = engine(game_type: "Foosball", stake_percentage: 20).settle(points, players)
       expect(settled).to eq({ "alice" => 1200, "bob" => 800 })
@@ -63,7 +63,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
       # Bob stakes 3.75% of 1000 = 37, Carol stakes 6.25% of 1000 = 62, pot = 99
       # Alice gets 99 -> 1099
       points = { "alice" => 1000, "bob" => 1000, "carol" => 1000 }
-      players = [{ id: "alice", score: 10 }, { id: "bob", score: 5 }, { id: "carol", score: 0 }]
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 }, { id: "carol", score: 0 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
 
@@ -78,7 +78,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
       # Alice stakes 50, Bob stakes 50, pot = 100
       # Carol (sole winner) gets all 100 -> 1100
       points = { "alice" => 1000, "bob" => 1000, "carol" => 1000 }
-      players = [{ id: "carol", score: 0 }, { id: "alice", score: 10 }, { id: "bob", score: 10 }]
+      players = [ { id: "carol", score: 0 }, { id: "alice", score: 10 }, { id: "bob", score: 10 } ]
 
       settled = engine(game_type: "Golf").settle(points, players)
 
@@ -89,7 +89,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
 
     it "uses descending ranking for Foosball" do
       points = { "alice" => 1000, "bob" => 1000, "carol" => 1000 }
-      players = [{ id: "alice", score: 21 }, { id: "bob", score: 15 }, { id: "carol", score: 8 }]
+      players = [ { id: "alice", score: 21 }, { id: "bob", score: 15 }, { id: "carol", score: 8 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
 
@@ -106,7 +106,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
       # 2nd: 1000*0.25*10/100=25, 3rd: 1000*0.40*10/100=40, 4th: 1000*0.35*10/100=35, pot=100
       # 1st gets 100 -> 1100
       points = { "a" => 1000, "b" => 1000, "c" => 1000, "d" => 1000 }
-      players = [{ id: "a", score: 20 }, { id: "b", score: 15 }, { id: "c", score: 10 }, { id: "d", score: 5 }]
+      players = [ { id: "a", score: 20 }, { id: "b", score: 15 }, { id: "c", score: 10 }, { id: "d", score: 5 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
 
@@ -120,8 +120,8 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
   describe "zero-sum" do
     it "the total points never change" do
       points = { "a" => 1000, "b" => 1000, "c" => 1000, "d" => 1000, "e" => 1000 }
-      players = [{ id: "a", score: 50 }, { id: "b", score: 40 }, { id: "c", score: 30 },
-                 { id: "d", score: 20 }, { id: "e", score: 10 }]
+      players = [ { id: "a", score: 50 }, { id: "b", score: 40 }, { id: "c", score: 30 },
+                 { id: "d", score: 20 }, { id: "e", score: 10 } ]
 
       settled = engine(game_type: "Foosball").settle(points, players)
       expect(settled.values.sum).to eq(points.values.sum)
@@ -133,7 +133,7 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
       # Golf ascending: Bob -50 (1st/0% stake), Alice 10 (2nd/37), Carol 30 (3rd/62)
       # Pot = 37 + 62 = 99. Bob gets 99 -> 1099.
       points = { "bob" => 1000, "alice" => 1000, "carol" => 1000 }
-      players = [{ id: "bob", score: -50 }, { id: "alice", score: 10 }, { id: "carol", score: 30 }]
+      players = [ { id: "bob", score: -50 }, { id: "alice", score: 10 }, { id: "carol", score: 30 } ]
 
       settled = engine(game_type: "Golf").settle(points, players)
 

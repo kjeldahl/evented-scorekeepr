@@ -14,9 +14,13 @@ module Scoreboards
 
     def entries(league_id, game_type: "Foosball")
       matches = LeagueMatches.for_league(league_id).last(LIMIT).reverse
-      names = PlayerNames.for(matches.flat_map(&:players))
-      matches.map { |match| Entry.new(match_id: match.match_id, line: line_with_game_type(match, names, game_type),
-                                      player_ids: match.players) }
+      active = matches.reject { |m| m.respond_to?(:deleted?) && m.deleted? }
+      # All players (including those from deleted matches) need names so the
+      # `names` map covers players whose stats still appear on the scoreboard.
+      all_player_ids = matches.flat_map(&:players).uniq
+      names = PlayerNames.for(all_player_ids)
+      active.map { |match| Entry.new(match_id: match.match_id, line: line_with_game_type(match, names, game_type),
+                                     player_ids: match.players) }
     end
 
     def lines(league_id, game_type: "Foosball")

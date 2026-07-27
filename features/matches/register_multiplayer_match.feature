@@ -71,12 +71,12 @@ Feature: Register a multiplayer match
     # basis-points for 3 players: [0, 3750, 6250]
     # Ascending ranking: Carol 0 (1st), Alice 10 & Bob 10 (tied 2nd/3rd)
     # Tied players share average basis-points: (3750 + 6250) / 2 = 5000
-    # Each stakes: 5000 * 10 * 1000 / 10_000_000 = 50
-    # Carol (1st) stakes 0. Pot = 50 + 50 = 100; split evenly: 50 each.
-    # Carol: 1000 + 50 = 1050, Alice: 1000 - 50 = 950, Bob: 1000 - 50 = 950
+    # Each stakes: 1000 * 5000 * 10 / 1_000_000 = 50
+    # Carol (1st) stakes 0. Pot = 50 + 50 = 100; Carol is sole winner.
+    # Carol: 1000 + 100 = 1100, Alice: 1000 - 50 = 950, Bob: 1000 - 50 = 950
     When the "Office" account has an open league "Tied Golf" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" registers a multiplayer match in "Tied Golf" where "Carol" scores 0, "Alice" scores 10, and "Bob" scores 10
-    Then "Carol" has 1050 points in "Tied Golf"
+    Then "Carol" has 1100 points in "Tied Golf"
     And "Alice" has 950 points in "Tied Golf"
     And "Bob" has 950 points in "Tied Golf"
 

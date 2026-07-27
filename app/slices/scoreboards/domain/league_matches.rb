@@ -50,7 +50,8 @@ module Scoreboards
       MultiplayerMatch.new(
         match_id: event.data.fetch(:match_id),
         player_ids: event.data.fetch(:player_ids),
-        player_scores: event.data.fetch(:player_scores)
+        player_scores: event.data.fetch(:player_scores),
+        deleted: false
       )
     end
 
@@ -77,7 +78,10 @@ module Scoreboards
     end
 
     def delete_multi(matches, event)
-      matches.reject { |match| match.is_a?(MultiplayerMatch) && match.match_id == event.data.fetch(:match_id) }
+      matches.map do |match|
+        next match unless match.is_a?(MultiplayerMatch)
+        match.match_id == event.data.fetch(:match_id) ? match.with(deleted: true) : match
+      end
     end
   end
 end

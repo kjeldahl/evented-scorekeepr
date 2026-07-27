@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+BARE_NUM = /[-+]?\d+(?:\.\d+)?/
+QUOTED_NAME = /"([^"]+)"/
+
 # Multiplayer match step definitions.
 #
 # These steps cover the new multiplayer domain (N-player matches, proportional
@@ -23,31 +26,32 @@ end
 
 When("{string} registers a multiplayer match in {string} where {string} scores {int}") \
   do |registrar, league, p1, s1|
-  register_multiplayer_match!(registrar, league, [p1], [s1.to_i])
+  register_multiplayer_match!(registrar, league, [ p1 ], [ s1.to_i ])
 end
 
 When("{string} registers a multiplayer match in {string} " \
      "where {string} scores {int}, {string} scores {int}") \
   do |registrar, league, p1, s1, p2, s2|
-  register_multiplayer_match!(registrar, league, [p1, p2], [s1.to_i, s2.to_i])
+  register_multiplayer_match!(registrar, league, [ p1, p2 ], [ s1.to_i, s2.to_i ])
 end
 
 When("{string} registers a multiplayer match in {string} " \
      "where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
   do |registrar, league, p1, s1, p2, s2, p3, s3|
-  register_multiplayer_match!(registrar, league, [p1, p2, p3], [s1.to_i, s2.to_i, s3.to_i])
+  register_multiplayer_match!(registrar, league, [ p1, p2, p3 ], [ s1.to_i, s2.to_i, s3.to_i ])
 end
 
-When("{string} attempts to register a multiplayer match in {string} " \
-     "where {string} scores {int} and {string} scores {int}") \
-  do |registrar, league, p1, s1, p2, s2|
-  register_multiplayer_match(registrar, league, [p1, p2], [s1.to_s, s2.to_s], via_ui: false)
-end
-
+# Uses {string} (not {int}/{float}) because Cucumber cannot distinguish
+# integer tokens from float tokens — "2" matches both patterns, causing
+# ambiguity.  Validation of integer-only scores is handled by the command.
 When("{string} attempts to register a multiplayer match in {string} " \
      "where {string} scores {string} and {string} scores {string}") \
   do |registrar, league, p1, score1, p2, score2|
-  register_multiplayer_match(registrar, league, [p1, p2], [score1, score2], via_ui: false)
+  register_multiplayer_match(registrar, league, [ p1, p2 ], [ score1, score2 ], via_ui: false)
+end
+
+When(/^#{QUOTED_NAME} attempts to register a multiplayer match in #{QUOTED_NAME} where #{QUOTED_NAME} scores (#{BARE_NUM}) and #{QUOTED_NAME} scores (#{BARE_NUM})$/) do |registrar, league, p1, score1, p2, score2|
+  register_multiplayer_match(registrar, league, [ p1, p2 ], [ score1, score2 ], via_ui: false)
 end
 
 When("{string} attempts to register a multiplayer match in {string} with fewer than {int} players") \
@@ -55,41 +59,57 @@ When("{string} attempts to register a multiplayer match in {string} with fewer t
   attempt_multiplayer_registration(registrar, league, [], [], via_ui: false)
 end
 
+
+# Deletion step — delete the first (oldest) multiplayer match in the league
+When("{string} deletes the first match") do |deleter|
+  league = last_multiplayer_league
+  league_record = league_for(league)
+  match_event = multiplayer_match_events(league).first or
+    raise "no multiplayer match found in #{league.inspect}"
+  match_id = match_event.data.fetch(:match_id)
+  sign_in(deleter) unless signed_in_as?(deleter)
+  submit_delete("/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}")
+end
+
 # --- Registration Givens ------------------------------------------------
 
 Given("{string} has already registered a multiplayer match in {string} " \
       "where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
   do |registrar, league, p1, s1, p2, s2, p3, s3|
-  register_multiplayer_match!(registrar, league, [p1, p2, p3], [s1.to_i, s2.to_i, s3.to_i])
+  register_multiplayer_match!(registrar, league, [ p1, p2, p3 ], [ s1.to_i, s2.to_i, s3.to_i ])
 end
 
 Given("{string} has registered a multiplayer match in {string} " \
       "where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
   do |registrar, league, p1, s1, p2, s2, p3, s3|
-  register_multiplayer_match!(registrar, league, [p1, p2, p3], [s1.to_i, s2.to_i, s3.to_i])
+  register_multiplayer_match!(registrar, league, [ p1, p2, p3 ], [ s1.to_i, s2.to_i, s3.to_i ])
 end
 
 # --- Correction steps ----------------------------------------------------
+# Use {string} for scores so {int} and {float} patterns don't create ambiguity.
+# Integer scores like "2" match {string} fine; floats like "7.5" also match {string}.
 
-When("{string} corrects the match where {string} scores {string}, {string} scores {string}, and {string} scores {string}") \
+When("{string} corrects the match where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
   do |editor, p1, s1, p2, s2, p3, s3|
-  correct_multiplayer_match!(editor, last_multiplayer_league, [p1, p2, p3], [s1, s2, s3])
+  # Use direct PATCH to avoid form-filling ambiguity with bracketed input names
+  correct_multiplayer_match(editor, last_multiplayer_league, [ p1, p2, p3 ],
+                           [ s1.to_s, s2.to_s, s3.to_s ], via_ui: false)
 end
 
-When("{string} corrects the match where {string} scores {string} and {string} scores {string}") \
+When("{string} corrects the match where {string} scores {int} and {string} scores {int}") \
   do |editor, p1, s1, p2, s2|
-  correct_multiplayer_match!(editor, last_multiplayer_league, [p1, p2], [s1, s2])
+  correct_multiplayer_match!(editor, last_multiplayer_league, [ p1, p2 ], [ s1, s2 ])
 end
 
-When("{string} attempts to correct the match where {string} scores {string} and {string} scores {string}") \
-  do |editor, p1, s1, p2, s2|
-  correct_multiplayer_match(editor, last_multiplayer_league, [p1, p2], [s1, s2], via_ui: false)
+# Uses raw regex to match bare numbers (int or float), avoiding {int}/{float}
+# ambiguity since Cucumber treats "2" as matching both patterns.
+# Validation of integer-only scores is handled by the command.
+When(/^#{QUOTED_NAME} attempts to correct the match where #{QUOTED_NAME} scores (#{BARE_NUM}) and #{QUOTED_NAME} scores (#{BARE_NUM})$/) do |editor, p1, s1, p2, s2|
+  correct_multiplayer_match(editor, last_multiplayer_league, [ p1, p2 ], [ s1, s2 ], via_ui: false)
 end
 
-Given("{string} corrects the match where {string} scores {string}, {string} scores {string}, and {string} scores {string}") \
-  do |editor, p1, s1, p2, s2, p3, s3|
-  correct_multiplayer_match!(editor, last_multiplayer_league, [p1, p2, p3], [s1, s2, s3])
-end
+# Note: the Given variant of "corrects the match..." uses When pattern
+# (Cucumber treats identical patterns with different keywords as ambiguous).
 
 # --- Deletion steps ------------------------------------------------------
 
@@ -133,11 +153,6 @@ end
 Then("{string} is not listed in the {string} standings") do |player, league|
   visit_scoreboard_as_member(league)
   expect(page).not_to have_css("table.scoreboard td", text: player)
-end
-
-Then("the {string} scoreboard shows:") do |league, table|
-  visit_scoreboard_as_member(league)
-  expect_scoreboard(table)
 end
 
 # --- Multiplayer match events query (for assertions on event data) -------
