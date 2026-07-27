@@ -4,6 +4,12 @@ Feature: Create league
   at once, also for the same game type. League names must be present,
   starting points must be positive and the stake must be between 1 and 99.
 
+  A league is either a match league (traditional 1v1 / 2v2 head-to-head) or
+  a multiplayer league (all participants play independently; the winner is
+  determined by ranking each participant's score and awarding points
+  proportionally). A league's mode is selected explicitly when creating it;
+  existing leagues created without a mode are match leagues.
+
   Background:
     Given "Alice" is a registered user with email "alice@example.com" and password "secret123"
     And "Alice" owns the "Office" account
@@ -18,6 +24,14 @@ Feature: Create league
     When "Alice" creates a league "TT Masters" for "Table Tennis" in the "Office" account with starting points 1500 and stake 20%
     Then the league creation is accepted
     And the "TT Masters" league has starting points 1500 and stake 20%
+
+  Scenario: A match league uses traditional 1v1 / 2v2 scoring
+    When "Alice" creates a league "Foosball Spring" for "Foosball" in the "Office" account as a match league
+    Then the "Foosball Spring" league is a match league
+
+  Scenario: A multiplayer league uses rank-based scoring
+    When "Alice" creates a league "Golf Championship" for "Golf" in the "Office" account as a multiplayer league
+    Then the "Golf Championship" league is a multiplayer league
 
   Scenario: Several leagues can run in the same account at once, even for the same game type
     Given the "Office" account has an open league "Foosball Spring" for "Foosball" with starting points 1000 and stake 10%
@@ -54,3 +68,9 @@ Feature: Create league
     Given "Carol" is a registered user with email "carol@example.com" and password "secret123"
     When "Carol" attempts to create a league "Carol's League" for "Foosball" in the "Office" account with starting points 1000 and stake 10%
     Then the league creation is rejected because "only members can create leagues"
+
+  Scenario: A multiplayer league is marked as multiplayer in its configuration
+    When "Alice" creates a league "Golf Championship" for "Golf" in the "Office" account as a multiplayer league
+    And the league "Golf Championship" is a multiplayer league
+    When "Alice" creates a league "Foosball Spring" for "Foosball" in the "Office" account as a multiplayer league
+    And the league "Foosball Spring" is a multiplayer league

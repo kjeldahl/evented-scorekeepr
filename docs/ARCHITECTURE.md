@@ -21,7 +21,7 @@ The app is built in five slices under `app/slices/`:
 | `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
-| `matches` | `Matches` | register, correct and delete match results | `MatchRegistered`, `MatchResultCorrected`, `MatchDeleted` |
+| `matches` | `Matches` | register, correct and delete match results | `MatchRegistered`, `MatchResultCorrected`, `MatchDeleted`, `MultiplayerMatchRegistered`, `MultiplayerMatchResultCorrected`, `MultiplayerMatchDeleted` |
 | `scoreboards` | `Scoreboards` | league page + TV dashboard: standings, statistics, recent matches, live version (`Scoreboards::LeagueVersion`) | *(none — read only)* |
 
 ### Slice layout

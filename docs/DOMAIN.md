@@ -68,6 +68,34 @@ by match participation (a non-participant, member or not, is rejected with
 "only players in the match can delete it"), never by a separate membership
 check; and it is refused in a closed league ("the league is closed").
 
+### Multiplayer matches
+
+A league may be a **multiplayer league** (its `LeagueCreated` event carries
+`match_type: "multiplayer"`). In a multiplayer league, a `MultiplayerMatch`
+is registered instead of a `Match`: each participant enters one score (integer,
+can be negative), participants are ranked by score in the order the league's
+game type specifies (ascending or descending), and each finishing position
+(payments) is determined by the internal distribution table (position 1 =
+0%, position N = highest percentage). A player's stake is
+`floor(current_points * ratio[position] * stake_percentage / 100)`; the pot
+(sum of all stakes) is distributed to the 1st-place winner(s) with integer
+division, remainder handed out one point at a time. Tied players share the
+average ratio of their positions.
+
+A multiplayer match can have 1 to N players (N per the game type's max). A
+single-player match is accepted but is a no-op (no stakes, no gains).
+
+Editing and deleting follow the same pattern as regular matches:
+`MultiplayerMatchResultCorrected` folds onto `MultiplayerMatchRegistered`
+(matched by `match:{match_id}`), and `MultiplayerMatchDeleted` drops the match
+entirely. Edit and delete are authorised by match participation (same as
+regular matches), refused in closed leagues, and rejected when the match was
+not found.
+
+Existing leagues created without a `match_type` field are **match leagues**
+(the default). They continue to work exactly as before — only `Match` events
+are folded. Multiplayer leagues fold only `MultiplayerMatch` events.
+
 ## Standings & statistics (per league)
 
 For each player: rank (by points, ties share order by name), points, matches
@@ -101,7 +129,10 @@ on websocket (re)connect the page fetches it once and reloads when it
 differs from the version it last rendered, covering updates missed while
 disconnected. The version is a pure read-model fold and the push is
 infrastructure, not an event: no new events are introduced and the version
-never feeds an append condition.
+never feeds an append condition. The version counts `LeagueCreated`,
+`LeagueRenamed`, `LeagueClosed`, `MatchRegistered`, `MatchResultCorrected`,
+`MatchDeleted`, `MultiplayerMatchRegistered`, `MultiplayerMatchResultCorrected`,
+and `MultiplayerMatchDeleted` tagged `league:{id}`.
 
 ## Events
 
@@ -116,12 +147,15 @@ never feeds an append condition.
 | `InvitationRevoked` | invitation_id, account_id, revoked_by_user_id | `invitation:{invitation_id}`, `account:{account_id}` |
 | `InvitationDeclined` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}` |
 | `MemberLeft` | account_id, user_id | `account:{account_id}`, `user:{user_id}` |
-| `LeagueCreated` | league_id, account_id, name, game_type, starting_points, stake_percentage | `league:{league_id}`, `account:{account_id}` |
+| `LeagueCreated` | league_id, account_id, name, game_type, starting_points, stake_percentage, match_type | `league:{league_id}`, `account:{account_id}` |
 | `LeagueRenamed` | league_id, account_id, name | `league:{league_id}`, `account:{account_id}` |
 | `LeagueClosed` | league_id, account_id | `league:{league_id}`, `account:{account_id}` |
 | `MatchRegistered` | match_id, league_id, account_id, home_player_ids, away_player_ids, home_score, away_score, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
 | `MatchResultCorrected` | match_id, league_id, account_id, home_score, away_score, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
 | `MatchDeleted` | match_id, league_id, account_id, deleted_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
+| `MultiplayerMatchRegistered` | match_id, league_id, account_id, player_ids, player_scores, registered_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}`, `player:{id}` per player |
+| `MultiplayerMatchResultCorrected` | match_id, league_id, account_id, player_scores, corrected_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
+| `MultiplayerMatchDeleted` | match_id, league_id, account_id, deleted_by_user_id | `match:{match_id}`, `league:{league_id}`, `account:{account_id}` |
 | `ImpersonationStarted` | impersonation_id, super_admin_user_id, impersonated_user_id, account_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}`, `impersonated_user:{impersonated_user_id}`, `account:{account_id}` |
 | `ImpersonationEnded` | impersonation_id, super_admin_user_id | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
 | `ImpersonatedActionRecorded` | impersonation_id, super_admin_user_id, impersonated_user_id, actions (each `{type, tags}`) | `impersonation:{impersonation_id}`, `user:{super_admin_user_id}` |
