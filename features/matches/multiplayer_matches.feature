@@ -45,8 +45,8 @@ and points are distributed based on finishing position.
   descending), minimum players, maximum players.
 - **Position** — a player's rank within a multiplayer match (1st, 2nd, 3rd…).
   Tied players share the same position treatment (equal ratio).
-- **Stake** — a player pays `current_points * ratio[position] * stake_percentage / 100`
-  (integer division). Position 1 pays 0.
+- **Stake** — a player pays `floor_points * basis_points * stake_percentage / 10_000_000`
+  (pure integer arithmetic). Position 1 pays 0.
 - **Pot** — the sum of all stakes. Distributed to the winner(s).
 
 ## Predefined Game Type Table
@@ -61,47 +61,65 @@ GAME_TYPES = {
 
 Unknown game types default to: `ranking: :desc, min_players: 2, max_players: 4`.
 
-## Distribution Table (proportional ratios 0..1)
+## Distribution Table (integer basis-points, 0..10000)
+
+Ratios are stored as integers (×10000) so that **all arithmetic is integer
+only** — no floats, no rounding drift, no loss or creation of points.
+Each row sums to exactly 10000.
 
 ```ruby
 DISTRIBUTION = {
-  2 => [0.0,  1.0],
-  3 => [0.0,  0.375, 0.625],
-  4 => [0.0,  0.25,  0.40,  0.35],
-  5 => [0.0,  0.18,  0.27,  0.33,  0.22],
-  6 => [0.0,  0.15,  0.23,  0.28,  0.22,  0.12],
-  7 => [0.0,  0.13,  0.19,  0.23,  0.20,  0.15,  0.10],
-  8 => [0.0,  0.11,  0.17,  0.21,  0.19,  0.16,  0.12,  0.04],
+  2 => [    0, 10000],
+  3 => [    0,  3750, 6250],
+  4 => [    0,  2500, 4000, 3500],
+  5 => [    0,  1800, 2700, 3300, 2200],
+  6 => [    0,  1500, 2300, 2800, 2200, 1200],
+  7 => [    0,  1300, 1900, 2300, 2000, 1500, 1000],
+  8 => [    0,  1100, 1700, 2100, 1900, 1600, 1200,  400],
 }.freeze
 ```
 
-For a league with stake_percentage `s` and player count `n`:
-- Position `i`'s ratio is `DISTRIBUTION[n][i]` (0-indexed, position 1 = index 0).
-- Each player at position `i` stakes: `floor(current_points * ratio * s / 100)`.
+Formula (purely integer arithmetic, Ruby `Integer#/` truncates toward zero):
+
+```ruby
+stake = player_points * basis_points * stake_percentage / 10_000_000
+```
+
+Example: 3 players, stake 10, position 2 (basis_points = 3750):
+`1000 * 3750 * 10 / 10_000_000 = 375_000_000 / 10_000_000 = 37`.
+
+No float operations appear anywhere in the scoring path. The pot (sum of all
+stakes) equals the total deducted from losers. Winners receive exactly the
+pot via integer `divmod` with 1-point remainder distribution. The total
+points across all players is invariant — zero-sum.
 
 ## Scoring for Multiplayer Matches
 
 1. Players are ranked by score using the game type's `ranking` direction.
-2. Positions are determined (ties share the average ratio of their positions).
+2. Positions are determined (ties share the average of the basis-points for
+   their shared positions).
 3. Each player at position `i` (i > 0, i.e. not 1st) stakes:
-   `floor(points * DISTRIBUTION[player_count][i] * stake_percentage / 100)`.
+   `player_points * DISTRIBUTION[player_count][i] * stake_percentage / 10_000_000`
+   (pure integer arithmetic).
 4. Pot = sum of all stakes.
 5. Winner(s) = player(s) at position 0 (rank 1).
-6. Pot is split equally among winners (integer division); remainder distributed
+6. Pot is split equally among winners (integer `divmod`); remainder distributed
    one point at a time in rank order.
 7. If only 1 player, no stakes are taken and no points are awarded (trivial).
 
 ### Tied players
 
 Tied players (same score) receive **equal treatment**: they all pay (or gain)
-the **average** of the ratios for their shared positions.
+the **average basis-points** of their shared positions.
 
 Example: 3 players, Alice 10 and Bob 10 tied for 2nd/3rd, Carol 0 is 1st.
-- Positions 2 and 3 have ratios 0.375 and 0.625.
-- Average = (0.375 + 0.625) / 2 = 0.5.
-- Alice and Bob each stake: `floor(points * 0.5 * stake_percentage / 100)`.
+- Positions 2 and 3 have basis-points 3750 and 6250.
+- Average = (3750 + 6250) / 2 = 5000.
+- Alice and Bob each stake: `1000 * 5000 * 10 / 10_000_000 = 50`.
 - Carol (position 0) stakes 0.
-- Pot split between Alice and Bob equally.
+- Pot = 100; split evenly: 50 each.
+- Carol gains 50, Alice and Bob each lose 50.
+- Total points before = 3000, after = 3000 (zero-sum invariant preserved).
 
 ## Events
 
@@ -210,12 +228,13 @@ module Scoreboards
       @game_type = game_type
     end
 
+    # points: { player_id => points } covering every player.
     # players: [{id:, score:}]
     # Returns { player_id => points_after }
     def settle(points, players)
       ranked = rank(players)
-      positions = compute_positions(ranked)
-      stakes = compute_stakes(ranked, positions, points)
+      basis_points = compute_positions(ranked)
+      stakes = compute_stakes(basis_points, points)
       pot = stakes.values.sum
       award(points, stakes, pot, ranked)
     end
@@ -225,18 +244,19 @@ module Scoreboards
     def rank(players)
       game_type_config = GameType.find(@game_type)
       direction = game_type_config.ranking
-      # Sort by score in the specified direction
       players.sort_by { |p| p[:score] }
              .reverse_if(direction == :desc)
              .map.with_index { |p, i| p.merge(position: i) }
     end
 
+    # Handle ties: tied players share average basis-points.
+    # Returns { player_id => basis_points }.
     def compute_positions(ranked)
-      # Handle ties: tied players share average ratio
-      # Returns { player_id => ratio }
+      # ...
     end
 
-    def compute_stakes(ranked, positions, points)
+    # Pure integer: points * basis_points * stake_percentage / 10_000_000.
+    def compute_stakes(basis_points, points)
       # { player_id => stake_amount }
     end
   end
@@ -359,7 +379,8 @@ New files:
 - `app/slices/matches/domain/game_type.rb`
 - `app/slices/matches/domain/distribution.rb`
 - `app/slices/matches/domain/multiplayer_match_score.rb` (integer validation,
-  allows negative scores; distinct from MatchScore which enforces non-negative)
+  allows negative scores; distinct from MatchScore which enforces non-negative).
+  Scores must be integers — reject floats/strings that parse as floats.
 - `app/slices/matches/domain/events.rb` (update: add 3 constructors)
 - `app/slices/scoreboards/domain/multiplayer_scoring_engine.rb`
 - `app/slices/scoreboards/domain/multiplayer_match.rb` (new: separate struct)
@@ -382,8 +403,9 @@ Modified files:
 - `app/slices/scoreboards/domain/match.rb` (extend to multiplayer shape)
 - `app/slices/statistics/domain/match.rb` (extend to multiplayer shape)
 - `app/slices/statistics/domain/multiplayer_match.rb` (new: separate struct)
-- `app/slices/statistics/domain/scoring_engine.rb` (new engine — refactor to
-  extract common scoring logic or keep separate)
+- `app/slices/statistics/domain/scoring_engine.rb` (keep as-is — uses the
+  existing integer-based zero-sum engine. New `MultiplayerScoringEngine` is
+  separate. Both use purely integer arithmetic.)
 - `app/slices/statistics/domain/stake_ledger.rb` (use correct engine per mode)
 - `app/slices/statistics/domain/match_history.rb` (format multiplayer lines)
 - `app/slices/statistics/domain/player_page.rb` (pass mode)
