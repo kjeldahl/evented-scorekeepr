@@ -34,7 +34,7 @@ module Scoreboards
     private
 
     def rank(players)
-      config = Matches::GameType.find(@game_type)
+      config = Scoreboards::MultiplayerGameType.find(@game_type)
       direction = config[:ranking]
       players
         .sort_by { |p| p[:score] }
@@ -58,7 +58,7 @@ module Scoreboards
           # This tie group includes 1st place: all are winners
           acc[id] = 0
         else
-          avg_bp = tied_group.sum { |p| Matches::Distribution.basis_point_for(player_count, positions.fetch(p[:id])) } / tied_group.size
+          avg_bp = tied_group.sum { |p| Scoreboards::MultiplayerDistribution.basis_point_for(player_count, positions.fetch(p[:id])) } / tied_group.size
           acc[id] = avg_bp
         end
       end

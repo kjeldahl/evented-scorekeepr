@@ -107,12 +107,12 @@ module Matches
     end
 
     def multiplayer_scores_params
-    raw = params[:scores] || {}
-    h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
-    h.to_h { |k, v| [ k.to_s, v ] }
-  end
+      raw = params[:scores] || {}
+      h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
+      h.to_h { |k, v| [ k.to_s, v ] }
+    end
 
-  def register_match_params
+    def register_match_params
       match_scope.merge(home_player_ids: home_player_ids,
                         away_player_ids: away_player_ids,
                         home_score: params[:home_score],
@@ -134,7 +134,7 @@ module Matches
     # The form needs the league's name for its heading and the account's
     # members for the player selects; both render again on a failed create.
     def load_form
-      @league = Leagues::League.find(params[:league_id])
+      @league = Matches::League.find(league_id: params[:league_id], account_id: params[:account_id])
       return if @league
 
       redirect_to account_path(params[:account_id]), alert: "the league was not found"

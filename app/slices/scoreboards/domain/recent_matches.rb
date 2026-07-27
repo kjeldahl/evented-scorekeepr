@@ -47,7 +47,7 @@ module Scoreboards
     end
 
     def multiplayer_line(match, names, game_type = "Foosball")
-      config = Matches::GameType.find(game_type)
+      config = Scoreboards::MultiplayerGameType.find(game_type)
       ranking = config&.fetch(:ranking, :desc)
 
       ranked = match.player_ids.sort_by { |id| match.player_scores[id] }
