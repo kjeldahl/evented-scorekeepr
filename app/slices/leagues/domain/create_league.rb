@@ -11,7 +11,7 @@ module Leagues
     DEFAULT_STAKE_PERCENTAGE = 10
 
     def self.call(account_id:, user_id:, name:, game_type:,
-                  starting_points: nil, stake_percentage: nil)
+                  starting_points: nil, stake_percentage: nil, match_type: "match")
       name = name.to_s.strip
       starting_points = coerce(starting_points, DEFAULT_STARTING_POINTS)
       stake_percentage = coerce(stake_percentage, DEFAULT_STAKE_PERCENTAGE)
@@ -22,7 +22,7 @@ module Leagues
       return Result.failure("only members can create leagues") unless decision.states.fetch(:member)
 
       append_league(decision, account_id:, name:, game_type: game_type.to_s.strip,
-                              starting_points:, stake_percentage:)
+                              starting_points:, stake_percentage:, match_type: match_type.to_s.strip)
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the account changed while you were working — please retry")
     end
@@ -45,10 +45,10 @@ module Leagues
     end
     private_class_method :invalid_settings
 
-    def self.append_league(decision, account_id:, name:, game_type:, starting_points:, stake_percentage:)
+    def self.append_league(decision, account_id:, name:, game_type:, starting_points:, stake_percentage:, match_type:)
       league_id = SecureRandom.uuid
       event = Events.league_created(league_id:, account_id:, name:, game_type:,
-                                    starting_points:, stake_percentage:)
+                                    starting_points:, stake_percentage:, match_type:)
       EventStore.append(event, decision.append_condition)
       Result.success(league_id)
     end

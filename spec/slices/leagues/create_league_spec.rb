@@ -139,7 +139,8 @@ RSpec.describe Leagues::CreateLeague do
       expect(event.type).to eq("LeagueCreated")
       expect(event.data).to eq(
         league_id: result.value, account_id: "acc-1", name: "Foosball Spring",
-        game_type: "Foosball", starting_points: 1500, stake_percentage: 20
+        game_type: "Foosball", starting_points: 1500, stake_percentage: 20,
+        match_type: "match"
       )
       expect(event.tags).to contain_exactly("league:#{result.value}", "account:acc-1")
     end

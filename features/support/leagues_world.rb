@@ -46,6 +46,18 @@ module LeaguesWorld
     result.value
   end
 
+  def create_multiplayer_league(creator, name, account:, game_type:, starting_points: 1000, stake: 10)
+    @last_multiplayer_league = name
+    result = Leagues::CreateLeague.call(
+      account_id: account_id_for(account), user_id: user_id_for(creator),
+      name:, game_type:, starting_points:, stake_percentage: stake, match_type: "multiplayer"
+    )
+    raise "could not create multiplayer league #{name}: #{result.error}" if result.failure?
+
+    remember_league(name, result.value)
+    result.value
+  end
+
   # Looks up the id of a league created through the UI (scan LeagueCreated
   # events by name, as the page redirects into the not-yet-built scoreboard).
   def find_league_id(league_name)

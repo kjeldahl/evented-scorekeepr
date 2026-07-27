@@ -1,0 +1,45 @@
+<% content_for :title, "Register multiplayer match — #{@league.name} — Scorekeepr" %>
+
+<div class="card match-form">
+  <h1><%= @league.name %></h1>
+  <p class="muted">Register a multiplayer match result — select each player and enter their score.</p>
+
+  <%= form_with url: account_league_matches_path(params[:account_id], params[:league_id]) do |form| %>
+    <% player_options = members.map { |member| [ member.name, member.user_id ] } %>
+
+    <div class="multiplayer-scores">
+      <table>
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th class="num">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% form_players.each do |form_player| %>
+            <tr>
+              <td>
+                <%= form.select "player_ids[]", options_for_select(player_options, form_player[:player_id]),
+                                { include_blank: "Select player" }, required: true,
+                                data: { player_id: form_player[:player_id] } %>
+              </td>
+              <td>
+                <%= form.number_field "scores[#{form_player[:player_id]}]", value: form_player[:score],
+                                      required: true, placeholder: "0", step: 1 %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <%= form.submit "Register match" %>
+    </div>
+  <% end %>
+
+  <p class="muted">
+    <%= link_to "Back to scoreboard",
+                account_league_scoreboard_path(params[:account_id], params[:league_id]) %>
+  </p>
+</div>

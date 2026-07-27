@@ -7,7 +7,7 @@ module Scoreboards
       return redirect_to account_path(params[:account_id]), alert: "the league was not found" unless @league
 
       @rows = Scoreboard.rows(@league)
-      @recent_matches = RecentMatches.entries(@league.league_id)
+      @recent_matches = RecentMatches.entries(@league.league_id, game_type: @league.game_type)
     end
 
     private

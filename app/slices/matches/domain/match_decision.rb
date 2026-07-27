@@ -12,14 +12,25 @@ module Matches
     def read(match_id:, league_id:, account_id:)
       EventStore.decide(
         match: MatchDetails.projection(match_id:),
+        multiplayer_match: MultiplayerMatchDetails.projection(match_id:),
         league: League.projection(league_id:, account_id:)
       )
     end
 
     def rejection(states, league_id:, account_id:, user_id:, action:)
       match = states.fetch(:match)
-      return Result.failure("the match was not found") unless match && !match.deleted? && match.league_id == league_id && match.account_id == account_id
-      return Result.failure("only players in the match can #{action} it") unless match.players.include?(user_id)
+      multi_match = states.fetch(:multiplayer_match, nil)
+      active_match = match && !match.deleted? ? match : nil
+      active_multi = multi_match && !multi_match.deleted? ? multi_match : nil
+
+      return Result.failure("the match was not found") unless active_match || active_multi
+      if active_match
+        return Result.failure("only players in the match can #{action} it") unless active_match.players.include?(user_id)
+        return Result.failure("the match was not found") unless active_match.league_id == league_id && active_match.account_id == account_id
+      else
+        return Result.failure("only players in the match can #{action} it") unless active_multi.player_ids.include?(user_id)
+        return Result.failure("the match was not found") unless active_multi.league_id == league_id && active_multi.account_id == account_id
+      end
       return Result.failure("the league was not found") if states.fetch(:league).nil?
 
       Result.failure("the league is closed") if states.fetch(:league).closed?

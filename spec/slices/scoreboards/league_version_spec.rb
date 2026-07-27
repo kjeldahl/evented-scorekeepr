@@ -49,7 +49,7 @@ RSpec.describe Scoreboards::LeagueVersion do
     it "queries exactly the six versioned event types scoped to the league's tag" do
       expect(projection.query.items).to contain_exactly(
         DcbEventStore::QueryItem.new(
-          event_types: %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered MatchResultCorrected MatchDeleted],
+          event_types: %w[LeagueCreated LeagueRenamed LeagueClosed MatchRegistered MatchResultCorrected MatchDeleted MultiplayerMatchRegistered MultiplayerMatchResultCorrected MultiplayerMatchDeleted],
           tags: [ "league:league-1" ]
         )
       )

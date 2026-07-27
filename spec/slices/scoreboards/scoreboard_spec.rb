@@ -1,10 +1,10 @@
 require "rails_helper"
 
 RSpec.describe Scoreboards::Scoreboard, :event_store do
-  def league
+  def league(match_type: "match")
     Scoreboards::LeagueOverview::Summary.new(
       league_id: "league-1", account_id: "acc-1", name: "Foosball Spring", game_type: "Foosball",
-      starting_points: 1000, stake_percentage: 10, status: :open
+      starting_points: 1000, stake_percentage: 10, status: :open, match_type:
     )
   end
 
@@ -45,7 +45,7 @@ RSpec.describe Scoreboards::Scoreboard, :event_store do
       user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
       match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8)
     ])
-    rows = described_class.rows(league.with(starting_points: 1015, stake_percentage: 10))
+    rows = described_class.rows(league.with(starting_points: 1015, stake_percentage: 10, match_type: "match"))
     expect(rows.map(&:points)).to eq([ 1116, 914 ])
   end
 

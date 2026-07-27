@@ -8,7 +8,8 @@ module Scoreboards
     def rows(league)
       matches = LeagueMatches.for_league(league.league_id)
       names = PlayerNames.for(matches.flat_map(&:players))
-      Standings.new(starting_points: league.starting_points, stake_percentage: league.stake_percentage)
+      Standings.new(starting_points: league.starting_points, stake_percentage: league.stake_percentage,
+                    match_type: league.match_type, game_type: league.game_type)
                .table(matches, names:)
     end
   end

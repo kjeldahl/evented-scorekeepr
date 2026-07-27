@@ -4,10 +4,12 @@ module Leagues
   module Events
     extend self
 
-    def league_created(league_id:, account_id:, name:, game_type:, starting_points:, stake_percentage:)
+    def league_created(league_id:, account_id:, name:, game_type:, starting_points:, stake_percentage:,
+                       match_type: "match")
       DcbEventStore::Event.new(
         type: "LeagueCreated",
-        data: { league_id:, account_id:, name:, game_type:, starting_points:, stake_percentage: },
+        data: { league_id:, account_id:, name:, game_type:, starting_points:, stake_percentage:,
+                match_type: },
         tags: [ "league:#{league_id}", "account:#{account_id}" ]
       )
     end

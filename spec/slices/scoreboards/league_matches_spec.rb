@@ -83,7 +83,7 @@ RSpec.describe Scoreboards::LeagueMatches do
 
     it "queries all three match event types scoped to the league" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected MatchDeleted])
+      expect(item.event_types).to eq(%w[MatchRegistered MatchResultCorrected MatchDeleted MultiplayerMatchRegistered MultiplayerMatchResultCorrected MultiplayerMatchDeleted])
       expect(item.tags).to eq([ "league:league-1" ])
     end
   end

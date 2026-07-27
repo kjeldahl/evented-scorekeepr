@@ -15,8 +15,13 @@
       enforcement stays in the member gates and command invariants. %>
   <% if @league.open? && @member %>
     <div class="actions">
-      <%= link_to "Register match",
-                  new_account_league_match_path(@league.account_id, @league.league_id) %>
+      <% if @league.match_league? %>
+        <%= link_to "Register match",
+                    new_account_league_match_path(@league.account_id, @league.league_id) %>
+      <% elsif @league.multiplayer_league? %>
+        <%= link_to "Register multiplayer match",
+                    new_account_league_match_path(@league.account_id, @league.league_id) %>
+      <% end %>
       <%= button_to "Close league",
                     close_account_league_path(@league.account_id, @league.league_id) %>
     </div>
