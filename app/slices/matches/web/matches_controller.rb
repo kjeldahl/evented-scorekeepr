@@ -107,6 +107,7 @@ module Matches
     end
 
     def multiplayer_scores_params
+    def multiplayer_scores_params
       raw = params[:scores] || {}
       h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
       h.to_h { |k, v| [ k.to_s, v ] }
