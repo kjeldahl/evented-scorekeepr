@@ -57,6 +57,12 @@ end
 
 # --- Registration Givens ------------------------------------------------
 
+Given("{string} has already registered a multiplayer match in {string} " \
+      "where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
+  do |registrar, league, p1, s1, p2, s2, p3, s3|
+  register_multiplayer_match!(registrar, league, [p1, p2, p3], [s1.to_i, s2.to_i, s3.to_i])
+end
+
 Given("{string} has registered a multiplayer match in {string} " \
       "where {string} scores {int}, {string} scores {int}, and {string} scores {int}") \
   do |registrar, league, p1, s1, p2, s2, p3, s3|

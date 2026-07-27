@@ -22,6 +22,7 @@ Feature: Register a multiplayer match
     And "Carol" is a member of the "Office" account
     And "Dave" is a member of the "Office" account
     And "Eve" is a member of the "Office" account
+    And the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
 
   Scenario: Ranking direction depends on game type
     # A game with ascending ranking: lowest score is 1st place
