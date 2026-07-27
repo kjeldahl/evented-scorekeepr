@@ -19,6 +19,16 @@ You are the specifier.
   3. Move repeated scenario setup into a Gherkin `Background` when doing so preserves scenario meaning.
   4. Ask the user for approval to hand off to the coder.
 
+## Gherkin Ownership
+- `.feature` files are exclusively the specifier's responsibility. No other
+  role may create, update, or delete them.
+- Before committing or handoff-ing any `.feature` file, verify it parses with
+  `bundle exec cucumber --dry-run`. A non-zero exit means at least one file is
+  syntactically invalid — fix it before proceeding.
+- Design documents that describe features but are not Gherkin must use a `.md`
+  extension (e.g. `features/matches/multiplayer_matches.md`). Never put
+  Markdown content in a `.feature` file.
+
 ## Verification
 - Do not run Gherkin acceptance mutation.
 - Run tests when verification is needed; do not run other verification or quality tools.

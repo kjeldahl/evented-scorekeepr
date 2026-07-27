@@ -38,25 +38,25 @@
 - Demo data: `bin/rails demo:seed` (or `demo:populate` for larger sets).
 
 ## Acceptance Pipeline
-- Acceptance is **Cucumber**: `bundle exec cucumber`, with `features/*.feature`
+- Acceptance is **Cucumber**: `bin/rails quality:features`, with `features/*.feature`
   and step definitions per slice. Do **not** install or build the APS
   `gherkin-parser`/`gherkin-mutator` tooling or a separate acceptance
   entrypoint generator. Cucumber is the pipeline for now.
 - There is no Gherkin acceptance mutation in this project. Do not run it.
 
-## Quality Gates (all must stay green)
-- `bundle exec rspec`: unit specs (mutation-tested).
-- `bundle exec cucumber`: the behaviour spec.
-- `bundle exec rubocop`: omakase style.
+## Quality Gates (all must stay green - use rake tasks with `sh_logged`)
+- `bin/rails quality:spec`: unit specs (mutation-tested).
+- `bin/rails quality:features`: the behaviour spec.
+- `bin/rails quality:rubocop`: omakase style.
 - `bin/rails quality:packwerk`: no cross-slice constant references.
 - `bin/rails quality:crap`: crap4r, **CRAP threshold 8** (exit 0 required).
 - `bin/rails quality:mutant`: mutant, 100% domain coverage (incremental;
   `quality:mutant:full` for the full run). Use **jobs 4** on the in-memory
   store; **jobs 1** if you force `EVENT_STORE_ADAPTER=postgres`.
-- DRY tool: dry4r (github.com/Kjeldahl/dry4r). Use it to reduce duplication
-  where reasonable. There is no separate property-testing framework; add
-  property tests only when explicitly requested.
-- `bin/rails zeitwerk:check` must pass.
+- `bin/rails quality:dry`: dry4r (github.com/Kjeldahl/dry4r). Use it to reduce
+  duplication where reasonable. There is no separate property-testing framework;
+  add property tests only when explicitly requested.
+- `bin/rails quality:zeitwerk`: autoload consistency check.
 
 ## Self-Logging Rake Tasks
 - Every quality rake task self-logs via the shared Rakefile helpers

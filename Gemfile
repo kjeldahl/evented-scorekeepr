@@ -35,9 +35,10 @@ group :development, :test do
   gem "cucumber-rails", require: false
   gem "capybara"
 
-  # Quality gates: mutation testing and CRAP score
+  # Quality gates: mutation testing, CRAP score, and DRY check
   gem "mutant-rspec", "~> 0.13"
   gem "crap4r", github: "Kjeldahl/crap4r"
+  gem "dry4r", github: "Kjeldahl/dry4r"
   gem "simplecov", require: false
   gem "simplecov-json", require: false
 end

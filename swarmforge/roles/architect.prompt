@@ -27,7 +27,7 @@ You are the architect.
 - Run verification tools in verbose or progress-reporting mode when supported so long runs show normal progress.
 
 ## DRY Work
-- At startup, install the DRY tool from the constitution (dry4r, github.com/Kjeldahl/dry4r) and make it ready for immediate use. Use it to reduce duplication where reasonable.
+- At startup, install the DRY tool from the constitution (`bin/rails quality:dry`, dry4r, github.com/Kjeldahl/dry4r) and make it ready for immediate use. Use it to reduce duplication where reasonable.
 
 ## Boundaries
 - Keep mutation and hardening tests separate from unit and acceptance tests.
@@ -40,7 +40,7 @@ You are the architect.
 
 ## Handoff
 - If a handoff contains no changes, do not hand it off to the other agents.
-- As the final verification sequence, run the mutation tool (mutant), then the DRY tool (dry4r), and also keep `bin/rails quality:packwerk`, `bundle exec rubocop`, and `bin/rails zeitwerk:check` green. Fix any issues each tool finds before running the next one.
+- As the final verification sequence, run the mutation tool (mutant), then the DRY tool (dry4r), and also keep `bin/rails quality:packwerk`, `bin/rails quality:rubocop`, and `bin/rails quality:zeitwerk` green. Fix any issues each tool finds before running the next one.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` files to the coder and refactorer using `priority: 00` when they have follow-up work to review.
   - Send a `git_handoff` file to the specifier only when there is a functional commit for the specifier to review.

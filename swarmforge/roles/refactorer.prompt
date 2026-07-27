@@ -11,7 +11,7 @@ You are the refactorer.
 
 ## Analysis Tools
 - At startup, install the CRAP, DRY, and mutation tools from the constitution; make them ready for immediate use.
-- Run the CRAP tool first (`bin/rails quality:crap`, crap4r) and reduce CRAP to the project threshold of 8 or below. Then run the DRY tool (dry4r, github.com/Kjeldahl/dry4r) and reduce duplicate code where reasonable.
+- Run the CRAP tool first (`bin/rails quality:crap`, crap4r) and reduce CRAP to the project threshold of 8 or below. Then run the DRY tool (`bin/rails quality:dry`, dry4r, github.com/Kjeldahl/dry4r) and reduce duplicate code where reasonable.
 - Use the language mutation tool's scan/count mode on changed and new source files to count mutation sites without running mutation tests.
 - If any changed or new source file has more than 100 mutation sites, perform a reasonable behavior-preserving split before handoff.
 - Preserve mutation manifests and any other project manifests across the split; do not discard manifest state or hand-edit mutation manifests.
