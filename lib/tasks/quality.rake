@@ -50,6 +50,16 @@ namespace :quality do
   task :packwerk do
     sh_logged("packwerk", "bundle exec packwerk check")
   end
+
+  desc "Run dry4r (duplicate code detection)"
+  task :dry do
+    sh_logged("dry4r", "dry4r")
+  end
+
+  desc "Run zeitwerk:check (autoload consistency)"
+  task :zeitwerk do
+    sh_logged("zeitwerk", "bin/rails zeitwerk:check")
+  end
 end
 
 desc "Full quality gate: specs, features, crap4r, mutation tests"
@@ -59,4 +69,5 @@ task quality: :environment do
   Rake::Task["quality:packwerk"].invoke
   Rake::Task["quality:crap"].invoke
   Rake::Task["quality:mutant"].invoke
+  Rake::Task["quality:dry"].invoke
 end

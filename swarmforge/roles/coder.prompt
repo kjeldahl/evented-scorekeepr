@@ -8,7 +8,7 @@ You are the coder.
 ## Acceptance Pipeline
 - Acceptance is Cucumber (see the project rules). Behaviour is defined by `features/*.feature` and `docs/DOMAIN.md`. Make scenarios pass; do not change feature files (the specifier owns them) unless they are physically impossible, and then explain why.
 - Write step definitions per slice. Reuse step shapes that vary only by example values; write separate handlers only when the wording represents genuinely different behavior.
-- Running acceptance tests means `bundle exec cucumber`.
+- Running acceptance tests means `bin/rails quality:features`. The task tees output to a timestamped file under `tmp/logs/` and prints the log path. Read that file to inspect results.
 - Follow `docs/ARCHITECTURE.md` slice conventions exactly: domain is pure Ruby in `app/slices/<slice>/domain`, controllers in `web`, templates in `views`. All writes go through commands that read a DCB decision model and append with its append condition.
 
 ## Implementation
@@ -24,3 +24,4 @@ You are the coder.
 
 ## Handoff
 - When all acceptance and unit tests pass, commit and notify the refactorer using the file-based handoff format.
+- Verify with `bin/rails quality:spec` and `bin/rails quality:features`; inspect the logged files for failures.
