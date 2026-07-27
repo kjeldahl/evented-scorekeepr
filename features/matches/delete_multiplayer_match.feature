@@ -38,8 +38,8 @@ Feature: Delete a multiplayer match result
   Scenario: Deleting a match re-derives later standings
     # After deleting match 1, all three are at starting points (1000).
     # Match 2: Bob 0 (1st), Alice 5 (2nd), Carol 10 (3rd)
-    # Alice stakes: floor(1000 * 0.375 * 10 / 100) = 37, Carol stakes: floor(1000 * 0.625 * 10 / 100) = 62
-    # Pot = 99. Bob gets 99 -> 1099, Alice 1000 - 37 = 963, Carol 1000 - 62 = 938.
+    # Alice stakes floor(1000 * 0.0375) = 37, Carol stakes floor(1000 * 0.625) = 62, pot = 99.
+    # Bob gets 99 -> 1099, Alice 1000 - 37 = 963, Carol 1000 - 62 = 938.
     Given the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" has registered a multiplayer match in "Golf Cup" where "Bob" scores 0, "Alice" scores 5, and "Carol" scores 10
     And "Alice" has registered a multiplayer match in "Golf Cup" where "Bob" scores 0, "Alice" scores 5, and "Carol" scores 10
