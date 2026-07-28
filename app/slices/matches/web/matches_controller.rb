@@ -21,7 +21,6 @@ module Matches
 
     def edit
       load_match or return
-      @multiplayer = @match.multiplayer?
     end
 
     # The two forms the edit page hosts submit different fields, so the form
@@ -38,8 +37,14 @@ module Matches
 
     private
 
+    # The registration form for this league's match type; both the initial
+    # GET and a rejected POST render it.
+    def new_view
+      @multiplayer ? :new_multiplayer : :new
+    end
+
     def registration
-      return RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params) if @league.multiplayer_league?
+      return RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params) if @multiplayer
 
       RegisterMatch.call(user_id: current_user.id, **register_match_params)
     end
@@ -50,15 +55,9 @@ module Matches
       EditMatch.call(match_id: @match.match_id, user_id: current_user.id, **edit_params)
     end
 
-    # The two match kinds have their own register form; the league's type
-    # picks which one both the initial GET and a rejected POST render.
-    def new_view
-      @multiplayer ? :new_multiplayer : :new
-    end
-
     # A failed registration re-renders the register form it came from.
     def handle_registration(result)
-      return redirect_to_scoreboard("Match registered") if result.success?
+      return redirect_to_scoreboard(notice: "Match registered") if result.success?
 
       flash.now[:alert] = result.error
       render new_view, status: :unprocessable_entity
@@ -66,14 +65,9 @@ module Matches
 
     # A failed correction or deletion re-renders the edit form instead.
     def handle_result(result, notice)
-      return redirect_to_scoreboard(notice) if result.success?
+      return redirect_to_scoreboard(notice: notice) if result.success?
 
       render_edit_error(result.error)
-    end
-
-    # Every command in this controller ends on the league's scoreboard.
-    def redirect_to_scoreboard(notice)
-      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]), notice: notice
     end
 
     # A failed edit or delete re-renders the edit form (which hosts both
@@ -83,17 +77,26 @@ module Matches
       return unless load_match
 
       flash.now[:alert] = message
-      @multiplayer = @match.multiplayer?
       render :edit, status: :unprocessable_entity
     end
 
+    # Loads the match under edit and records its type for the views; a match
+    # that is gone redirects to the scoreboard and answers nil.
     def load_match
       @match = find_match(params[:id])
-      return @match if @match
+      return missing_match unless @match
 
-      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                  alert: "the match was not found"
+      @multiplayer = @match.multiplayer?
+      @match
+    end
+
+    def missing_match
+      redirect_to_scoreboard(alert: "the match was not found")
       nil
+    end
+
+    def redirect_to_scoreboard(**flash_message)
+      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]), **flash_message
     end
 
     def find_match(match_id)
