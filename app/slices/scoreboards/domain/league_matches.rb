@@ -46,14 +46,13 @@ module Scoreboards
       MultiplayerMatch.new(
         match_id: event.data.fetch(:match_id),
         player_ids: event.data.fetch(:player_ids),
-        player_scores: event.data.fetch(:player_scores),
-        deleted: false
+        player_scores: event.data.fetch(:player_scores)
       )
     end
 
     def correct(matches, event)
       matches.map do |match|
-        next match unless match.is_a?(Match)
+        next match unless match.instance_of?(Match)
         next match unless match.match_id == event.data.fetch(:match_id)
 
         match.with(home_score: event.data.fetch(:home_score), away_score: event.data.fetch(:away_score))
@@ -62,8 +61,7 @@ module Scoreboards
 
     def correct_multi(matches, event)
       matches.map do |match|
-        next match unless match.is_a?(MultiplayerMatch)
-        next match if match.deleted?
+        next match unless match.instance_of?(MultiplayerMatch)
         next match unless match.match_id == event.data.fetch(:match_id)
 
         match.with(player_scores: event.data.fetch(:player_scores))
@@ -71,11 +69,11 @@ module Scoreboards
     end
 
     def delete(matches, event)
-      matches.reject { |match| match.is_a?(Match) && match.match_id == event.data.fetch(:match_id) }
+      matches.reject { |match| match.instance_of?(Match) && match.match_id == event.data.fetch(:match_id) }
     end
 
     def delete_multi(matches, event)
-      matches.reject { |match| match.is_a?(MultiplayerMatch) && match.match_id == event.data.fetch(:match_id) }
+      matches.reject { |match| match.instance_of?(MultiplayerMatch) && match.match_id == event.data.fetch(:match_id) }
     end
   end
 end

@@ -12,29 +12,20 @@ module Scoreboards
 
     LIMIT = 5
 
-    def entries(league_id, game_type: "Foosball")
+    def entries(league_id, game_type:)
       matches = LeagueMatches.for_league(league_id).last(LIMIT).reverse
-      active = matches.reject { |m| m.respond_to?(:deleted?) && m.deleted? }
-      # All players (including those from deleted matches) need names so the
-      # `names` map covers players whose stats still appear on the scoreboard.
-      all_player_ids = matches.flat_map(&:players).uniq
-      names = PlayerNames.for(all_player_ids)
-      active.map { |match| Entry.new(match_id: match.match_id, line: line_with_game_type(match, names, game_type),
-                                     player_ids: match.players) }
+      names = PlayerNames.for(matches.flat_map(&:players))
+      matches.map { |match| Entry.new(match_id: match.match_id, line: line(match, names, game_type),
+                                      player_ids: match.players) }
     end
 
-    def lines(league_id, game_type: "Foosball")
+    def lines(league_id, game_type:)
       entries(league_id, game_type:).map(&:line)
     end
 
-    def line(match, names)
-      case match
-      when Match then head_to_head_line(match, names)
-      when MultiplayerMatch then multiplayer_line(match, names)
-      end
-    end
-
-    def line_with_game_type(match, names, game_type)
+    # The game type only reaches the multiplayer phrasing, which ranks by it;
+    # a head-to-head line reads the same in every game.
+    def line(match, names, game_type)
       case match
       when Match then head_to_head_line(match, names)
       when MultiplayerMatch then multiplayer_line(match, names, game_type)
@@ -46,14 +37,19 @@ module Scoreboards
         "#{match.winner_score}-#{match.loser_score}"
     end
 
-    def multiplayer_line(match, names, game_type = "Foosball")
-      config = Scoreboards::MultiplayerGameType.find(game_type)
-      ranking = config&.fetch(:ranking, :desc)
+    def multiplayer_line(match, names, game_type)
+      ranked = match.player_ids.sort_by { |id| score_of(match, id) }
+      ranked = ranked.reverse if MultiplayerGameType.find(game_type).fetch(:ranking) == :desc
 
-      ranked = match.player_ids.sort_by { |id| match.player_scores[id] }
-      ranked = ranked.reverse if ranking == :desc
+      ranked.map { |id| "#{names.fetch(id, id)} (#{score_of(match, id)})" }.join(", ")
+    end
 
-      ranked.map { |id| "#{names.fetch(id, id)} (#{match.player_scores[id]})" }.join(", ")
+    # Player ids are strings while the stored scores round-trip out of the
+    # event store symbol-keyed, so the score is always read by symbol (the
+    # same boundary Standings applies). Every player of a multiplayer match
+    # has a score; a missing one is a corrupt registration, not a zero.
+    def score_of(match, player_id)
+      match.player_scores.fetch(player_id.to_sym)
     end
 
     def side(player_ids, names)
