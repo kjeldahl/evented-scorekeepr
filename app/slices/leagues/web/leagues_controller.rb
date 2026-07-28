@@ -1,7 +1,7 @@
 module Leagues
   class LeaguesController < BaseController
     before_action :require_account_member!
-    before_action :set_game_types, only: %i[new create]
+    before_action :set_form_choices, only: %i[new create]
 
     def new
     end
@@ -44,13 +44,15 @@ module Leagues
 
     private
 
-    def set_game_types
+    def set_form_choices
       @game_types = Leagues::GameType::TYPES
+      @modes = Leagues::LeagueMode::MODES
     end
 
     def league_params
       { account_id: params[:account_id], name: params[:name], game_type: params[:game_type],
-        starting_points: params[:starting_points], stake_percentage: params[:stake_percentage] }
+        starting_points: params[:starting_points], stake_percentage: params[:stake_percentage],
+        match_type: params[:match_type] }
     end
 
     # Membership is enforced per slice with its own fold (docs/ARCHITECTURE.md):
