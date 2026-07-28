@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(command -v swarm_handoff.sh ready_for_next.sh done_with_current.sh)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(swarm_handoff.sh *)",
+      "Bash(ready_for_next.sh *)",
+      "Bash(command -v merge_and_process merge_and_process.sh)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(git merge *)",
+      "Bash(mise current *)",
+      "Bash(mise exec *)",
+      "Read(//Users/jacob/Dev/tries/2026-06-19-scorekeepr/.bundle/**)",
+      "Bash(env)",
+      "Read(//Users/jacob/.local/share/mise/installs/ruby/4.0.5/**)",
+      "Read(//Users/jacob/Dev/tries/2026-06-19-scorekeepr/vendor/**)",
+      "Bash(bundle install *)",
+      "Bash(bundle exec *)",
+      "Bash(ruby -e 'f=\"spec/slices/scoreboards/match_spec.rb\";c=File.read\\(f\\);n=c.gsub\\(\"described_class.new\\(home_player_ids:\",\"described_class.new\\(match_id: \\\\\"m-1\\\\\", home_player_ids:\"\\);File.write\\(f,n\\);puts n.scan\\(/described_class.new\\\\\\(match_id/\\).length.to_s+\" updated\"')",
+      "Bash(cd *)"
+    ]
+  }
+}

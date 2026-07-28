@@ -7,9 +7,11 @@
 module Scoreboards
   module LeagueOverview
     Summary = Data.define(:league_id, :account_id, :name, :game_type,
-                          :starting_points, :stake_percentage, :status) do
+                          :starting_points, :stake_percentage, :status, :match_type) do
       def open? = status == :open
       def closed? = status == :closed
+      def match_league? = match_type == "match"
+      def multiplayer_league? = match_type == "multiplayer"
     end
 
     extend self
@@ -40,7 +42,8 @@ module Scoreboards
         league_id: event.data.fetch(:league_id), account_id: event.data.fetch(:account_id),
         name: event.data.fetch(:name), game_type: event.data.fetch(:game_type),
         starting_points: event.data.fetch(:starting_points),
-        stake_percentage: event.data.fetch(:stake_percentage), status: :open
+        stake_percentage: event.data.fetch(:stake_percentage), status: :open,
+        match_type: event.data.fetch(:match_type, "match")
       )
     end
   end

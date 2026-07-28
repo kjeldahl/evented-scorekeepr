@@ -6,9 +6,11 @@
 # from it makes registering a match race-free against a concurrent close.
 module Matches
   module League
-    Summary = Data.define(:name, :status) do
+    Summary = Data.define(:name, :status, :match_type) do
       def open? = status == :open
       def closed? = status == :closed
+      def match_league? = match_type == "match"
+      def multiplayer_league? = match_type == "multiplayer"
     end
 
     extend self
@@ -21,7 +23,10 @@ module Matches
       DcbEventStore::Projection.new(
         initial_state: nil,
         handlers: {
-          "LeagueCreated" => ->(_state, event) { Summary.new(name: event.data.fetch(:name), status: :open) },
+          "LeagueCreated" => ->(_state, event) {
+            Summary.new(name: event.data.fetch(:name), status: :open,
+                        match_type: event.data.fetch(:match_type, "match"))
+          },
           "LeagueRenamed" => ->(state, event) { state&.with(name: event.data.fetch(:name)) },
           "LeagueClosed" => ->(state, _event) { state&.with(status: :closed) }
         },

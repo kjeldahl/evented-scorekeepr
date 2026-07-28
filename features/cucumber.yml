@@ -1,0 +1,2 @@
+default: --require features/support --order defined
+tags: --require features/support --order defined

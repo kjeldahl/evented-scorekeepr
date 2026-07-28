@@ -16,7 +16,8 @@ RSpec.describe Leagues::Events do
     it "carries the league settings as data" do
       expect(event.data).to eq(
         league_id: "league-1", account_id: "acc-1", name: "Foosball Spring",
-        game_type: "Foosball", starting_points: 1000, stake_percentage: 10
+        game_type: "Foosball", starting_points: 1000, stake_percentage: 10,
+        match_type: "match"
       )
     end
 

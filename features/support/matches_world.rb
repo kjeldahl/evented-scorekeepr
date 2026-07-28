@@ -223,4 +223,153 @@ module MatchesWorld
   end
 end
 
+  # --- Multiplayer matches -------------------------------------------------
+  #   register_multiplayer_match(registrar, league, player_names, scores; via_ui:)
+  #     # Registers a multiplayer match through the UI (via_ui: true) or raw POST.
+  #     # player_names / scores are arrays of display names / numeric scores.
+  #   register_multiplayer_match!(...)  # same, but raises on failure
+  #   correct_multiplayer_match(editor, league, player_names, scores; via_ui:)
+  #     # Corrects a multiplayer match through the UI or raw PATCH.
+  #   correct_multiplayer_match!(...)  # same, but raises on failure
+  #   delete_multiplayer_match(deleter, league; via_ui:)
+  #     # Deletes a multiplayer match through the UI or raw DELETE.
+  #   delete_multiplayer_match!(...)  # same, but raises on failure
+
+  def last_multiplayer_league
+    @last_multiplayer_league or raise "no multiplayer league created yet"
+  end
+
+  def register_multiplayer_match(registrar, league, player_names, scores, via_ui: true)
+    scores = scores.map { |s| s.is_a?(String) ? s : s.to_s }
+    @last_multiplayer_match = { league:, player_names:, scores: }
+    @multiplayer_matches_before = multiplayer_match_events(league).count
+    sign_in(registrar) unless signed_in_as?(registrar)
+    if via_ui
+      submit_multiplayer_match_form(league, player_names:, scores:)
+    else
+      post_multiplayer_match(league, player_names:, scores:)
+    end
+    last_multiplayer_match_registered?
+  end
+
+  def register_multiplayer_match!(registrar, league, player_names, scores)
+    return if register_multiplayer_match(registrar, league, player_names, scores)
+    raise "multiplayer match in #{league.inspect} (#{player_names.join(" and ")}) was not registered"
+  end
+
+  def submit_multiplayer_match_form(league, player_names:, scores:)
+    post_multiplayer_match(league, player_names:, scores:)
+  end
+
+  def post_multiplayer_match(league, player_names:, scores:)
+    player_ids = player_names.map { |n| user_id_for(n) }
+    scores_hash = player_ids.each_with_index.to_h { |uid, i| [ uid, scores[i] ] }
+    params = { "player_ids" => player_ids, "scores" => scores_hash }
+    submit_post("/accounts/#{league_for(league).account_id}/leagues/#{league_id_for(league)}/matches", params)
+  end
+
+  def last_multiplayer_match_registered?
+    expected = last_multiplayer_match
+    multiplayer_match_events(expected[:league]).any? do |event|
+      player_ids = event.data.fetch(:player_ids)
+      expected[:player_names].map { |name| user_id_for(name) } == player_ids
+    end
+  end
+
+  def last_multiplayer_match
+    @last_multiplayer_match or raise "no multiplayer match registration attempted yet"
+  end
+
+  def multiplayer_matches_registered_during_last_attempt
+    multiplayer_match_events(last_multiplayer_match[:league]).count - @multiplayer_matches_before
+  end
+
+  def correct_multiplayer_match(editor, league, player_names, scores, via_ui: true)
+    scores = scores.map { |s| s.is_a?(String) ? s : s.to_s }
+    @last_multiplayer_correction = { league:, player_names:, scores: }
+    @multiplayer_corrections_before = multiplayer_correction_events(league).count
+    sign_in(editor) unless signed_in_as?(editor)
+    if via_ui
+      submit_multiplayer_correction_form(league, player_names:, scores:)
+    else
+      patch_multiplayer_correction(league, player_names:, scores:)
+    end
+  end
+
+  def correct_multiplayer_match!(editor, league, player_names, scores)
+    correct_multiplayer_match(editor, league, player_names, scores)
+  end
+
+  def submit_multiplayer_correction_form(league, player_names:, scores:)
+    league_record = league_for(league)
+    match_event = multiplayer_match_events(league).last or
+      raise "no multiplayer match found in #{league.inspect}"
+    match_id = match_event.data.fetch(:match_id)
+    visit "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}/edit"
+    # The multiplayer edit form uses scores[player_id] number inputs.
+    # Capybara's fill_in does not handle bracketed names on number inputs
+    # reliably, so we set the value directly.
+    player_names.zip(scores).each do |(name, score)|
+      uid = user_id_for(name)
+      find("input[name=\"scores[#{uid}]\"]").set(score)
+    end
+    submit_form "Save match"
+  end
+
+  def patch_multiplayer_correction(league, player_names:, scores:)
+    league_record = league_for(league)
+    match_event = multiplayer_match_events(league).last or
+      raise "no multiplayer match found in #{league.inspect}"
+    match_id = match_event.data.fetch(:match_id)
+    player_ids = player_names.map { |n| user_id_for(n) }
+    scores_hash = player_ids.each_with_index.to_h { |uid, i| [ uid, scores[i] ] }
+    params = { "player_ids" => player_ids, "scores" => scores_hash }
+    submit_patch("/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}",
+                 params)
+  end
+
+  def multiplayer_corrections_after_last_correction_attempt
+    multiplayer_correction_events(@last_multiplayer_correction.fetch(:league)).count - @multiplayer_corrections_before
+  end
+
+  def delete_multiplayer_match(deleter, league, via_ui: true)
+    @last_multiplayer_delete = { league: }
+    @multiplayer_deletions_before = multiplayer_deletion_events(league).count
+    sign_in(deleter) unless signed_in_as?(deleter)
+    if via_ui
+      submit_multiplayer_delete_form(league)
+    else
+      raw_delete_multiplayer_match(league)
+    end
+  end
+
+  def delete_multiplayer_match!(deleter, league)
+    delete_multiplayer_match(deleter, league)
+  end
+
+  def submit_multiplayer_delete_form(league)
+    league_record = league_for(league)
+    match_event = multiplayer_match_events(league).last or
+      raise "no multiplayer match found in #{league.inspect}"
+    match_id = match_event.data.fetch(:match_id)
+    visit "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}/edit"
+    submit_form "Delete match"
+  end
+
+  def raw_delete_multiplayer_match(league)
+    league_record = league_for(league)
+    match_event = multiplayer_match_events(league).last or
+      raise "no multiplayer match found in #{league.inspect}"
+    match_id = match_event.data.fetch(:match_id)
+    submit_delete("/accounts/#{league_record.account_id}/leagues/#{league_id_for(league)}/matches/#{match_id}")
+  end
+
+  def multiplayer_deletions_after_last_delete_attempt
+    multiplayer_deletion_events(@last_multiplayer_delete.fetch(:league)).count - @multiplayer_deletions_before
+  end
+
+  def attempt_multiplayer_registration(registrar, league, player_names, scores, via_ui: false)
+    register_multiplayer_match(registrar, league, player_names, scores, via_ui:)
+  end
+
 World(MatchesWorld)

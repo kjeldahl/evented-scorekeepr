@@ -16,9 +16,9 @@ Feature: Delete a multiplayer match result
     And "Alice" has registered a multiplayer match in "Golf Cup" where "Bob" scores 0, "Alice" scores 5, and "Carol" scores 10
     When "Alice" deletes the match
     Then the deletion is accepted
-    And "Alice" has 1000 points in "Golf Cup"
-    And "Bob" has 1000 points in "Golf Cup"
-    And "Carol" has 1000 points in "Golf Cup"
+    And "Alice" is not listed in the "Golf Cup" standings
+    And "Bob" is not listed in the "Golf Cup" standings
+    And "Carol" is not listed in the "Golf Cup" standings
 
   Scenario: Only players in the match can delete it
     Given the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
@@ -53,3 +53,5 @@ Feature: Delete a multiplayer match result
     And "Alice" has registered a multiplayer match in "Golf Cup" where "Bob" scores 0, "Alice" scores 5, and "Carol" scores 10
     When "Alice" deletes the match
     Then "Alice" is not listed in the "Golf Cup" standings
+    And "Bob" is not listed in the "Golf Cup" standings
+    And "Carol" is not listed in the "Golf Cup" standings

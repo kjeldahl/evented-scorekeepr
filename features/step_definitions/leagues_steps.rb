@@ -88,3 +88,50 @@ Then("the {string} account lists the league {string}") do |account_name, league_
   visit "/accounts/#{account_id_for(account_name)}"
   expect(page).to have_css(".league-list li", text: league_name)
 end
+
+Then("the {string} league is a match league") do |league_name|
+  league = league_for(league_name)
+  event = EventStore.read(DcbEventStore::Query.new([
+    DcbEventStore::QueryItem.new(
+      event_types: %w[LeagueCreated],
+      tags: "league:#{league.id}"
+    )
+  ])).last
+  expect(event.data.fetch(:match_type)).to eq("match")
+end
+
+# The feature uses both Given and Then for this phrase; Cucumber treats
+# Given/When/Then as synonyms, so having two definitions with the same
+# pattern is ambiguous.  We keep the Then variant and add an explicit
+# Given variant with a slightly different regex so they don't collide.
+When(/^the league "(.*)" is a multiplayer league$/) do |league_name|
+  league = league_for(league_name)
+  event = EventStore.read(DcbEventStore::Query.new([
+    DcbEventStore::QueryItem.new(
+      event_types: %w[LeagueCreated],
+      tags: "league:#{league.id}"
+    )
+  ])).last
+  expect(event.data.fetch(:match_type)).to eq("multiplayer")
+end
+
+Given(/^the "(.*)" league is a multiplayer league$/) do |league_name|
+  league = league_for(league_name)
+  event = EventStore.read(DcbEventStore::Query.new([
+    DcbEventStore::QueryItem.new(
+      event_types: %w[LeagueCreated],
+      tags: "league:#{league.id}"
+    )
+  ])).last
+  expect(event.data.fetch(:match_type)).to eq("multiplayer")
+end
+
+# League creation with explicit match_type (via domain command, not UI —
+# the form currently has no match_type selector).
+When("{string} creates a league {string} for {string} in the {string} account as a match league") do |actor, league, game_type, account|
+  create_league(actor, league, account:, game_type:, match_type: "match")
+end
+
+When("{string} creates a league {string} for {string} in the {string} account as a multiplayer league") do |actor, league, game_type, account|
+  create_multiplayer_league(actor, league, account:, game_type:)
+end

@@ -42,5 +42,40 @@ module Matches
         tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
       )
     end
+
+    # A multiplayer match result is registered: each player enters a score
+    # (integer, can be negative). Tagged with the match, league, account and
+    # one player tag per participant (docs/DOMAIN.md).
+    def multiplayer_match_registered(match_id:, league_id:, account_id:, player_ids:, player_scores:,
+                                     registered_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "MultiplayerMatchRegistered",
+        data: { match_id:, league_id:, account_id:, player_ids:, player_scores:, registered_by_user_id: },
+        tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}",
+                *player_ids.map { |player_id| "player:#{player_id}" } ]
+      )
+    end
+
+    # A correction changes only the scores; the participants are fixed, so the
+    # event carries no player ids and is tagged with the match, league and
+    # account (docs/DOMAIN.md).
+    def multiplayer_match_result_corrected(match_id:, league_id:, account_id:, player_scores:,
+                                           corrected_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "MultiplayerMatchResultCorrected",
+        data: { match_id:, league_id:, account_id:, player_scores:, corrected_by_user_id: },
+        tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
+      )
+    end
+
+    # A deletion removes the multiplayer match from the league as if it never
+    # happened; tagged with the match, league and account (docs/DOMAIN.md).
+    def multiplayer_match_deleted(match_id:, league_id:, account_id:, deleted_by_user_id:)
+      DcbEventStore::Event.new(
+        type: "MultiplayerMatchDeleted",
+        data: { match_id:, league_id:, account_id:, deleted_by_user_id: },
+        tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}" ]
+      )
+    end
   end
 end

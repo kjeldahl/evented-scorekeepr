@@ -8,10 +8,15 @@ module Matches
     before_action :load_form
 
     def new
+      @multiplayer = @league.multiplayer_league?
     end
 
     def create
-      result = RegisterMatch.call(user_id: current_user.id, **match_params)
+      if @league.multiplayer_league?
+        result = RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params)
+      else
+        result = RegisterMatch.call(user_id: current_user.id, **register_match_params)
+      end
       if result.success?
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
                     notice: "Match registered"
@@ -23,10 +28,17 @@ module Matches
 
     def edit
       load_match or return
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
     end
 
     def update
-      result = EditMatch.call(match_id: params[:id], user_id: current_user.id, **edit_params)
+      load_match or return
+      multi = @match.is_a?(MultiplayerMatchDetails::Details)
+      if multi
+        result = CorrectMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **correct_multi_params)
+      else
+        result = EditMatch.call(match_id: params[:id], user_id: current_user.id, **edit_params)
+      end
       if result.success?
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
                     notice: "Match updated"
@@ -36,7 +48,13 @@ module Matches
     end
 
     def destroy
-      result = DeleteMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
+      load_match or return
+      multi = @match.is_a?(MultiplayerMatchDetails::Details)
+      if multi
+        result = DeleteMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
+      else
+        result = DeleteMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
+      end
       if result.success?
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
                     notice: "Match deleted"
@@ -54,21 +72,12 @@ module Matches
       return unless load_match
 
       flash.now[:alert] = message
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
       render :edit, status: :unprocessable_entity
     end
 
-    def edit_params
-      match_scope.merge(home_score: params[:home_score], away_score: params[:away_score])
-    end
-
-    def match_scope
-      { league_id: params[:league_id], account_id: params[:account_id] }
-    end
-
-    # The edit form shows the fixed sides by name and prefills the score;
-    # an unknown match sends the editor back to the scoreboard.
     def load_match
-      @match = MatchDetails.find(match_id: params[:id])
+      @match = find_match(params[:id])
       return @match if @match
 
       redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
@@ -76,17 +85,56 @@ module Matches
       nil
     end
 
-    def match_params
+    def find_match(match_id)
+      MatchDetails.find(match_id:) || MultiplayerMatchDetails.find(match_id:)
+    end
+
+    def edit_params
+      match_scope.merge(home_score: params[:home_score], away_score: params[:away_score])
+    end
+
+    def correct_multi_params
+      match_scope.merge(player_scores: multiplayer_scores_params)
+    end
+
+    def multiplayer_params
+      player_ids = params[:player_ids] || []
+      scores_raw = params[:scores] || {}
+      scores_hash = scores_raw.is_a?(ActionController::Parameters) ? scores_raw.to_unsafe_h : scores_raw
+      player_scores = scores_hash.to_h { |k, v| [ k.to_s, v ] }
       { league_id: params[:league_id], account_id: params[:account_id],
-        home_player_ids: [ params[:home_player_1_id], params[:home_player_2_id] ],
-        away_player_ids: [ params[:away_player_1_id], params[:away_player_2_id] ],
-        home_score: params[:home_score], away_score: params[:away_score] }
+        user_id: current_user.id, player_ids:, player_scores: }
+    end
+
+    def multiplayer_scores_params
+      raw = params[:scores] || {}
+      h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
+      h.to_h { |k, v| [ k.to_s, v ] }
+    end
+
+    def register_match_params
+      match_scope.merge(home_player_ids: home_player_ids,
+                        away_player_ids: away_player_ids,
+                        home_score: params[:home_score],
+                        away_score: params[:away_score])
+    end
+
+    def home_player_ids
+      [ params[:home_player_1_id], params[:home_player_2_id] ].compact
+    end
+
+    def away_player_ids
+      [ params[:away_player_1_id], params[:away_player_2_id] ].compact
+    end
+
+    def match_scope
+      { league_id: params[:league_id], account_id: params[:account_id] }
     end
 
     # The form needs the league's name for its heading and the account's
     # members for the player selects; both render again on a failed create.
     def load_form
-      @league = League.find(league_id: params[:league_id], account_id: params[:account_id])
+      @league = Matches::League.find(league_id: params[:league_id], account_id: params[:account_id])
       return if @league
 
       redirect_to account_path(params[:account_id]), alert: "the league was not found"
@@ -96,6 +144,19 @@ module Matches
       @members ||= AccountMembers.for_account(params[:account_id])
     end
     helper_method :members
+
+    # The players shown in the multiplayer form: all account members, prefilled
+    # from a failed submission if present.
+    def form_players
+      @form_players ||= if params[:scores]
+        params[:scores].keys.map do |player_id|
+          { player_id:, score: params[:scores][player_id] }
+        end
+      else
+        members.map { |m| { player_id: m.user_id, score: nil } }
+      end
+    end
+    helper_method :form_players
 
     # Membership is enforced per slice with its own fold (docs/ARCHITECTURE.md):
     # non-members are sent back to the dashboard and never reach the form.

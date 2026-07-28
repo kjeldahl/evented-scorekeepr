@@ -11,7 +11,7 @@ module Scoreboards
       @rows = Scoreboard.rows(@league)
       @leader = TvSpotlights.leader(@rows)
       @hot_streak = TvSpotlights.hot_streak(@rows)
-      @recent_matches = RecentMatches.lines(@league.league_id)
+      @recent_matches = RecentMatches.lines(@league.league_id, game_type: @league.game_type)
       @version = LeagueVersion.version(league_id: @league.league_id)
     end
 

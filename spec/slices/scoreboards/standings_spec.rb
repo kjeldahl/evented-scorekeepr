@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Scoreboards::Standings do
-  subject(:standings) { described_class.new(starting_points: 1000, stake_percentage: 10) }
+  subject(:standings) { described_class.new(starting_points: 1000, stake_percentage: 10, game_type: "Foosball") }
 
   def names
     { "alice" => "Alice", "bob" => "Bob", "carol" => "Carol", "dave" => "Dave", "eve" => "Eve" }
