@@ -5,14 +5,20 @@
 # to 1000 starting points and a 10% stake; blank values fall back to the
 # defaults, while present values must be a positive integer (points) and an
 # integer between 1 and 99 (stake).
+#
+# The mode is chosen explicitly by the creator and is independent of the game
+# type: any game type can be run head-to-head or multiplayer. Anything other
+# than an explicit "multiplayer" choice (nothing chosen, a blank field, an
+# unknown value) creates a match league.
 module Leagues
   class CreateLeague
     DEFAULT_STARTING_POINTS = 1000
     DEFAULT_STAKE_PERCENTAGE = 10
 
     def self.call(account_id:, user_id:, name:, game_type:,
-                  starting_points: nil, stake_percentage: nil, match_type: "match")
+                  starting_points: nil, stake_percentage: nil, match_type: nil)
       name = name.to_s.strip
+      game_type = game_type.to_s.strip
       starting_points = coerce(starting_points, DEFAULT_STARTING_POINTS)
       stake_percentage = coerce(stake_percentage, DEFAULT_STAKE_PERCENTAGE)
       failure = invalid_settings(name, starting_points, stake_percentage)
@@ -21,8 +27,8 @@ module Leagues
       decision = EventStore.decide(member: Membership.projection(account_id:, user_id:))
       return Result.failure("only members can create leagues") unless decision.states.fetch(:member)
 
-      append_league(decision, account_id:, name:, game_type: game_type.to_s.strip,
-                              starting_points:, stake_percentage:, match_type: match_type.to_s.strip)
+      append_league(decision, account_id:, name:, game_type:, starting_points:, stake_percentage:,
+                              match_type: LeagueMode.chosen(match_type))
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the account changed while you were working — please retry")
     end

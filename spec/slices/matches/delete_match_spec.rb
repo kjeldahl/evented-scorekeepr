@@ -193,21 +193,21 @@ RSpec.describe Matches::DeleteMatch do
       register_multiplayer
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call(match_id: "mp-1", user_id: "alice"))
-        .to eq(Result.failure("the league changed while you were working - please retry"))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
     end
   end
 
   describe "concurrency conflict", :event_store do
     it "asks for a retry when the decision model's append condition fails" do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
-      expect(call).to eq(Result.failure("the league changed while you were working - please retry"))
+      expect(call).to eq(Result.failure("the league changed while you were working — please retry"))
     end
 
     it "loses the race against a league close that lands after the decision was read" do
       stale_decision = Matches::MatchDecision.read(match_id: "m-1", league_id: "league-1", account_id: "acc-1")
       close_league
       allow(EventStore).to receive(:decide).and_return(stale_decision)
-      expect(call).to eq(Result.failure("the league changed while you were working - please retry"))
+      expect(call).to eq(Result.failure("the league changed while you were working — please retry"))
       expect(deletions).to be_empty
     end
   end

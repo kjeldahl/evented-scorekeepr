@@ -173,6 +173,50 @@ RSpec.describe Leagues::CreateLeague do
     end
   end
 
+  describe "match_type chosen on creation", :event_store do
+    before { make_member }
+
+    it "records the chosen multiplayer mode" do
+      call(match_type: "multiplayer")
+      expect(league_events.sole.data[:match_type]).to eq("multiplayer")
+    end
+
+    it "records the chosen match mode" do
+      call(match_type: "match")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+
+    it "runs a game type usually played head-to-head as multiplayer when chosen" do
+      call(game_type: "Foosball", match_type: "multiplayer")
+      expect(league_events.sole.data[:match_type]).to eq("multiplayer")
+    end
+
+    it "runs a game type usually played multiplayer as a match league when chosen" do
+      call(game_type: "Golf", match_type: "match")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+
+    it "defaults to a match league when no mode is chosen" do
+      call(game_type: "Golf")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+
+    it "treats a blank mode (cleared form field) as a match league" do
+      call(match_type: " ")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+
+    it "strips surrounding whitespace from the chosen mode" do
+      call(match_type: " multiplayer ")
+      expect(league_events.sole.data[:match_type]).to eq("multiplayer")
+    end
+
+    it "treats an unknown mode as a match league" do
+      call(match_type: "knockout")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+  end
+
   describe "concurrency conflict", :event_store do
     it "maps ConditionNotMet to a retry failure" do
       make_member

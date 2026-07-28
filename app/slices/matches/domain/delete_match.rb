@@ -17,7 +17,7 @@ module Matches
 
       append_deletion(decision, match_id:, league_id:, account_id:, user_id:)
     rescue DcbEventStore::ConditionNotMet
-      Result.failure("the league changed while you were working - please retry")
+      Result.failure("the league changed while you were working — please retry")
     end
 
     def self.append_deletion(decision, match_id:, league_id:, account_id:, user_id:)
