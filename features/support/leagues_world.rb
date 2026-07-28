@@ -35,10 +35,10 @@ module LeaguesWorld
     Leagues::League.find(league_id_for(league_name))
   end
 
-  def create_league(creator, name, account:, game_type:, starting_points: 1000, stake: 10, match_type: nil)
+  def create_league(creator, name, account:, game_type:, starting_points: 1000, stake: 10)
     result = Leagues::CreateLeague.call(
       account_id: account_id_for(account), user_id: user_id_for(creator),
-      name:, game_type:, starting_points:, stake_percentage: stake, match_type:
+      name:, game_type:, starting_points:, stake_percentage: stake
     )
     raise "could not create league #{name}: #{result.error}" if result.failure?
 
@@ -50,7 +50,7 @@ module LeaguesWorld
     @last_multiplayer_league = name
     result = Leagues::CreateLeague.call(
       account_id: account_id_for(account), user_id: user_id_for(creator),
-      name:, game_type:, starting_points:, stake_percentage: stake, match_type: "multiplayer"
+      name:, game_type:, starting_points:, stake_percentage: stake
     )
     raise "could not create multiplayer league #{name}: #{result.error}" if result.failure?
 

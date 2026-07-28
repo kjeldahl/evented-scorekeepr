@@ -129,7 +129,7 @@ end
 # League creation with explicit match_type (via domain command, not UI —
 # the form currently has no match_type selector).
 When("{string} creates a league {string} for {string} in the {string} account as a match league") do |actor, league, game_type, account|
-  create_league(actor, league, account:, game_type:, match_type: "match")
+  create_league(actor, league, account:, game_type:)
 end
 
 When("{string} creates a league {string} for {string} in the {string} account as a multiplayer league") do |actor, league, game_type, account|
