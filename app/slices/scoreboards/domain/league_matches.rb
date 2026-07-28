@@ -1,14 +1,10 @@
 # The scoreboards slice's own fold of the matches slice's match events (the
 # cross-slice contract - docs/ARCHITECTURE.md): the league's matches in
-# registration order, oldest first, as Scoreboards::Match values. A later
-# MatchResultCorrected replaces its match's score in place, and a MatchDeleted
-# drops its match entirely - both keep league order so every later standing
-# re-derives as if the change had always been so.
-# The scoreboards slice's own fold of the matches slice's match events (the
-# cross-slice contract - docs/ARCHITECTURE.md): the league's matches in
 # registration order, oldest first, as Scoreboards::Match or
 # Scoreboards::MultiplayerMatch values. A later correction replaces its
-# match's score in place, and a deletion drops it entirely.
+# match's score in place, and a deletion drops its match entirely - both keep
+# league order so every later standing re-derives as if the change had always
+# been so.
 module Scoreboards
   module LeagueMatches
     extend self

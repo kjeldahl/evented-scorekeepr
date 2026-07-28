@@ -9,28 +9,16 @@ module Matches
 
     def new
       @multiplayer = @league.multiplayer_league?
-      render @multiplayer ? :new_multiplayer : :new
+      render new_view
     end
 
     def create
-      if @league.multiplayer_league?
-        result = RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params)
-      else
-        result = RegisterMatch.call(user_id: current_user.id, **register_match_params)
-      end
-      if result.success?
-        redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                    notice: "Match registered"
-      else
-        @multiplayer = @league.multiplayer_league?
-        flash.now[:alert] = result.error
-        render @multiplayer ? :new_multiplayer : :new, status: :unprocessable_entity
-      end
+      @multiplayer = @league.multiplayer_league?
+      handle_create_result(dispatch_register)
     end
 
     def edit
       load_match or return
-      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
     end
 
     def update
@@ -43,11 +31,33 @@ module Matches
 
     private
 
+    # The registration form for this league's match type; both the initial
+    # GET and a rejected POST render it.
+    def new_view
+      @multiplayer ? :new_multiplayer : :new
+    end
+
+    # Dispatches to the correct register command for the league's match type.
+    def dispatch_register
+      table = {
+        true => -> { RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params) },
+        false => -> { RegisterMatch.call(user_id: current_user.id, **register_match_params) }
+      }
+      table[@multiplayer].call
+    end
+
+    # Redirects on success; re-renders the registration form on failure.
+    def handle_create_result(result)
+      return redirect_to_scoreboard(notice: "Match registered") if result.success?
+
+      flash.now[:alert] = result.error
+      render new_view, status: :unprocessable_entity
+    end
+
     # Routes the action through the match-type-specific dispatcher,
     # then redirects or re-renders.
     def perform_match_action(action, notice)
       load_match or return
-      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
       handle_result(dispatch_command(action), notice)
     end
 
@@ -70,12 +80,9 @@ module Matches
 
     # Redirects on success; re-renders the edit form on failure.
     def handle_result(result, notice)
-      if result.success?
-        redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                    notice: notice
-      else
-        render_edit_error(result.error)
-      end
+      return redirect_to_scoreboard(notice: notice) if result.success?
+
+      render_edit_error(result.error)
     end
 
     # A failed edit or delete re-renders the edit form (which hosts both
@@ -85,17 +92,26 @@ module Matches
       return unless load_match
 
       flash.now[:alert] = message
-      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
       render :edit, status: :unprocessable_entity
     end
 
+    # Loads the match under edit and records its type for the views; a match
+    # that is gone redirects to the scoreboard and answers nil.
     def load_match
       @match = find_match(params[:id])
-      return @match if @match
+      return missing_match unless @match
 
-      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                  alert: "the match was not found"
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
+      @match
+    end
+
+    def missing_match
+      redirect_to_scoreboard(alert: "the match was not found")
       nil
+    end
+
+    def redirect_to_scoreboard(**flash_message)
+      redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]), **flash_message
     end
 
     def find_match(match_id)
@@ -111,18 +127,16 @@ module Matches
     end
 
     def multiplayer_params
-      player_ids = params[:player_ids] || []
-      scores_raw = params[:scores] || {}
-      scores_hash = scores_raw.is_a?(ActionController::Parameters) ? scores_raw.to_unsafe_h : scores_raw
-      player_scores = scores_hash.to_h { |k, v| [ k.to_s, v ] }
-      { league_id: params[:league_id], account_id: params[:account_id],
-        user_id: current_user.id, player_ids:, player_scores: }
+      match_scope.merge(user_id: current_user.id,
+                        player_ids: params[:player_ids] || [],
+                        player_scores: multiplayer_scores_params)
     end
 
+    # Scores arrive as a nested params hash keyed by player id; the commands
+    # take a plain string-keyed hash.
     def multiplayer_scores_params
-      raw = params[:scores] || {}
-      h = raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
-      h.to_h { |k, v| [ k.to_s, v ] }
+      scores = params.to_unsafe_h[:scores] || {}
+      scores.to_h { |k, v| [ k.to_s, v ] }
     end
 
     def register_match_params
