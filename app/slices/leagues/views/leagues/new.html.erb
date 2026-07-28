@@ -8,7 +8,7 @@
     <%= form.text_field :name, value: params[:name] %>
 
     <%= form.label :game_type, "Game type" %>
-    <%= form.select :game_type, params[:game_type], options_for_select(GameType::TYPES, params[:game_type]) %>
+    <%= form.select :game_type, options_for_select(@game_types, params[:game_type]), { include_blank: true } %>
 
     <%= form.label :starting_points, "Starting points" %>
     <%= form.number_field :starting_points, value: params.fetch(:starting_points, 1000), min: 1 %>

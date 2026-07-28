@@ -3,6 +3,7 @@ module Leagues
     before_action :require_account_member!
 
     def new
+      @game_types = Leagues::GameType::TYPES
     end
 
     def create
