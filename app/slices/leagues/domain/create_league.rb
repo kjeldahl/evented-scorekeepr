@@ -11,8 +11,9 @@ module Leagues
     DEFAULT_STAKE_PERCENTAGE = 10
 
     def self.call(account_id:, user_id:, name:, game_type:,
-                  starting_points: nil, stake_percentage: nil, match_type: "match")
+                  starting_points: nil, stake_percentage: nil)
       name = name.to_s.strip
+      game_type = game_type.to_s.strip
       starting_points = coerce(starting_points, DEFAULT_STARTING_POINTS)
       stake_percentage = coerce(stake_percentage, DEFAULT_STAKE_PERCENTAGE)
       failure = invalid_settings(name, starting_points, stake_percentage)
@@ -21,8 +22,9 @@ module Leagues
       decision = EventStore.decide(member: Membership.projection(account_id:, user_id:))
       return Result.failure("only members can create leagues") unless decision.states.fetch(:member)
 
-      append_league(decision, account_id:, name:, game_type: game_type.to_s.strip,
-                              starting_points:, stake_percentage:, match_type: match_type.to_s.strip)
+      match_type = GameType.multiplayer?(game_type) ? "multiplayer" : "match"
+      append_league(decision, account_id:, name:, game_type:,
+                              starting_points:, stake_percentage:, match_type:)
     rescue DcbEventStore::ConditionNotMet
       Result.failure("the account changed while you were working — please retry")
     end

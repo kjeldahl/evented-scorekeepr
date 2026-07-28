@@ -173,6 +173,20 @@ RSpec.describe Leagues::CreateLeague do
     end
   end
 
+  describe "match_type derived from game_type", :event_store do
+    before { make_member }
+
+    it "sets match_type to multiplayer for a multiplayer game type" do
+      call(game_type: "Norsk Rummy")
+      expect(league_events.sole.data[:match_type]).to eq("multiplayer")
+    end
+
+    it "sets match_type to match for a non-multiplayer game type" do
+      call(game_type: "Foosball")
+      expect(league_events.sole.data[:match_type]).to eq("match")
+    end
+  end
+
   describe "concurrency conflict", :event_store do
     it "maps ConditionNotMet to a retry failure" do
       make_member
