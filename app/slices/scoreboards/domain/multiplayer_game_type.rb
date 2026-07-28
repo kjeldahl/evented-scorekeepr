@@ -11,7 +11,8 @@ module Scoreboards
     CONFIG = {
       "Foosball"     => { ranking: :desc, min_players: 2, max_players: 4 }.freeze,
       "Table Tennis" => { ranking: :desc, min_players: 2, max_players: 4 }.freeze,
-      "Golf"         => { ranking: :asc, min_players: 1, max_players: 8 }.freeze
+      "Golf"         => { ranking: :asc, min_players: 1, max_players: 8 }.freeze,
+      "Norsk Rummy"  => { ranking: :asc, min_players: 2, max_players: 8 }.freeze
     }.freeze
 
     extend self

@@ -8,13 +8,7 @@
     <%= form.text_field :name, value: params[:name] %>
 
     <%= form.label :game_type, "Game type" %>
-    <%= form.text_field :game_type, value: params[:game_type], list: "game-type-suggestions" %>
-    <datalist id="game-type-suggestions">
-      <option value="Foosball"></option>
-      <option value="Table Tennis"></option>
-      <option value="Pool"></option>
-      <option value="Darts"></option>
-    </datalist>
+    <%= form.select :game_type, params[:game_type], options_for_select(GameType::TYPES, params[:game_type]) %>
 
     <%= form.label :starting_points, "Starting points" %>
     <%= form.number_field :starting_points, value: params.fetch(:starting_points, 1000), min: 1 %>
