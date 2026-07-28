@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Scoreboards::Standings do
-  subject(:standings) { described_class.new(starting_points: 1000, stake_percentage: 10, game_type: "Foosball") }
+  subject(:standings) { described_class.new(starting_points: 1000, stake_percentage: 10, game_type: "Foosball", match_type: "match") }
 
   def names
     { "alice" => "Alice", "bob" => "Bob", "carol" => "Carol", "dave" => "Dave", "eve" => "Eve" }
@@ -71,14 +71,14 @@ RSpec.describe Scoreboards::Standings do
 
   describe "custom league settings" do
     it "seeds players with the league's starting points and floors the stake" do
-      rows = described_class.new(starting_points: 1015, stake_percentage: 10)
+      rows = described_class.new(starting_points: 1015, stake_percentage: 10, game_type: "Foosball", match_type: "match")
                             .table([ match([ "alice" ], [ "bob" ], 21, 8) ], names:)
       expect(row_for(rows, "Alice").points).to eq(1116)
       expect(row_for(rows, "Bob").points).to eq(914)
     end
 
     it "uses the league's stake percentage" do
-      rows = described_class.new(starting_points: 1000, stake_percentage: 20)
+      rows = described_class.new(starting_points: 1000, stake_percentage: 20, game_type: "Foosball", match_type: "match")
                             .table([ match([ "alice" ], [ "bob" ], 21, 12) ], names:)
       expect(row_for(rows, "Alice").points).to eq(1200)
       expect(row_for(rows, "Bob").points).to eq(800)
@@ -192,6 +192,93 @@ RSpec.describe Scoreboards::Standings do
       rows = table(match(%w[alice carol], %w[bob dave], 10, 4))
       expect(row_for(rows, "Carol")).to have_attributes(points_for: 10, points_against: 4)
       expect(row_for(rows, "Dave")).to have_attributes(points_for: 4, points_against: 10)
+    end
+  end
+
+  # A multiplayer league folds MultiplayerMatch values instead of Match ones:
+  # everyone enters one score, the top scorer(s) win the game, and the
+  # multiplayer scoring engine settles the stakes.
+  describe "multiplayer matches" do
+    subject(:standings) do
+      described_class.new(starting_points: 1000, stake_percentage: 10,
+                          game_type: "Foosball", match_type: "multiplayer")
+    end
+
+    def multi(scores, match_id: "mp-1", deleted: false)
+      Scoreboards::MultiplayerMatch.new(match_id:, player_ids: scores.keys,
+                                        player_scores: scores.transform_keys(&:to_sym), deleted:)
+    end
+
+    it "credits the top scorer with the win and their own game score" do
+      # The best score sits in the middle, so first/last/lowest are all wrong.
+      rows = table(multi({ "alice" => 9, "bob" => 21, "carol" => 15 }))
+      expect(row_for(rows, "Bob"))
+        .to have_attributes(played: 1, wins: 1, losses: 0, points_for: 21, points_against: 0, streak: "W1")
+    end
+
+    it "records everyone else as having lost, conceding their own score" do
+      rows = table(multi({ "alice" => 9, "bob" => 21, "carol" => 15 }))
+      expect(row_for(rows, "Alice"))
+        .to have_attributes(played: 1, wins: 0, losses: 1, points_for: 0, points_against: 9, streak: "L1")
+      expect(row_for(rows, "Carol"))
+        .to have_attributes(played: 1, wins: 0, losses: 1, points_for: 0, points_against: 15)
+    end
+
+    it "counts everyone who ties the best score as a winner" do
+      rows = table(multi({ "alice" => 10, "bob" => 10, "carol" => 3 }))
+      expect(rows.map { |row| [ row.name, row.wins, row.losses ] })
+        .to contain_exactly([ "Alice", 1, 0 ], [ "Bob", 1, 0 ], [ "Carol", 0, 1 ])
+    end
+
+    it "settles the stakes: the loser's stake goes to the winner" do
+      rows = table(multi({ "alice" => 21, "bob" => 9 }))
+      expect(rows.map { |row| [ row.name, row.points ] }).to eq([ [ "Alice", 1100 ], [ "Bob", 900 ] ])
+    end
+
+    it "records a result only for the players of that match" do
+      rows = table(multi({ "alice" => 10, "bob" => 5 }, match_id: "mp-1"),
+                   multi({ "carol" => 8, "dave" => 2 }, match_id: "mp-2"))
+      expect(rows.map { |row| [ row.name, row.played ] })
+        .to contain_exactly([ "Alice", 1 ], [ "Bob", 1 ], [ "Carol", 1 ], [ "Dave", 1 ])
+    end
+
+    it "accumulates statistics for a player across several matches" do
+      rows = table(multi({ "alice" => 10, "bob" => 5 }, match_id: "mp-1"),
+                   multi({ "alice" => 3, "bob" => 7 }, match_id: "mp-2"))
+      expect(row_for(rows, "Alice"))
+        .to have_attributes(played: 2, wins: 1, losses: 1, points_for: 10, points_against: 3, streak: "L1")
+    end
+
+    it "leaves a deleted match out of the standings but keeps its players seeded" do
+      rows = table(multi({ "alice" => 10, "bob" => 5 }, match_id: "mp-1"),
+                   multi({ "alice" => 10, "carol" => 5 }, match_id: "mp-2", deleted: true))
+      expect(row_for(rows, "Alice")).to have_attributes(played: 1, wins: 1, points: 1100)
+      expect(rows.map(&:name)).not_to include("Carol")
+    end
+
+    it "is a no-op for a single-player match" do
+      rows = table(multi({ "alice" => 10 }))
+      expect(row_for(rows, "Alice")).to have_attributes(played: 1, wins: 1, points: 1000)
+    end
+
+    # Golf ranks ascending: the lowest score is 1st place. The win column and
+    # the points must name the same player.
+    describe "a game type that ranks ascending" do
+      subject(:standings) do
+        described_class.new(starting_points: 1000, stake_percentage: 10,
+                            game_type: "Golf", match_type: "multiplayer")
+      end
+
+      it "credits the lowest scorer with the win" do
+        rows = table(multi({ "alice" => 9, "bob" => 21, "carol" => 15 }))
+        expect(rows.map { |row| [ row.name, row.wins, row.losses ] })
+          .to contain_exactly([ "Alice", 1, 0 ], [ "Bob", 0, 1 ], [ "Carol", 0, 1 ])
+      end
+
+      it "pays the pot to the same player the win column names" do
+        rows = table(multi({ "alice" => 9, "bob" => 21 }))
+        expect(rows.first).to have_attributes(name: "Alice", wins: 1, points: 1100)
+      end
     end
   end
 

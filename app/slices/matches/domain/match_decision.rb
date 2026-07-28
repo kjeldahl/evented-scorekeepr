@@ -1,6 +1,8 @@
 # The shared decision model for the match commands that act on an existing
-# match (EditMatch, DeleteMatch): both read the match and its league in one go,
-# only a player who took part may act, and only while the league is open. The
+# match (EditMatch, CorrectMultiplayerMatch, DeleteMatch): a match id names a
+# head-to-head match or a multiplayer one, so the model reads both kinds and
+# the league in one go. Only a player who took part may act, and only while the
+# league is open. The
 # append condition on the returned decision covers both reads, so a concurrent
 # league close or racing change wins and the command is told to retry. The
 # rejected-action verb is the caller's ("edit"/"delete") so the messages match
@@ -17,34 +19,43 @@ module Matches
       )
     end
 
-    def rejection(states, league_id:, account_id:, user_id:, action:)
-      active_match = resolve_match(states)
-      active_multi = resolve_multiplayer_match(states)
+    # `multiplayer` names the kind of match the caller acts on (true, false, or
+    # nil for either kind): a live match of the other kind is not a match this
+    # command can act on, so it reads as "not found".
+    def rejection(states, league_id:, account_id:, user_id:, action:, multiplayer: nil)
+      match = actionable_match(states, multiplayer)
+      return Result.failure("the match was not found") unless match
 
-      target = active_match || active_multi
-      return Result.failure("the match was not found") unless target
-
-      return Result.failure("only players in the match can #{action} it") unless target_player_ids(target).include?(user_id)
-      return Result.failure("the match was not found") unless target.league_id == league_id && target.account_id == account_id
+      return Result.failure("only players in the match can #{action} it") unless match.players.include?(user_id)
+      return Result.failure("the match was not found") unless match.league_id == league_id && match.account_id == account_id
 
       return Result.failure("the league was not found") unless states.fetch(:league)
       Result.failure("the league is closed") if states.fetch(:league).closed?
     end
 
-    def target_player_ids(target)
-      target.respond_to?(:players) ? target.players : target.player_ids
+    # The live match the id names, of either kind, or nil. Commands whose
+    # appended event depends on the kind ask this after `rejection` passed.
+    def active_match(states)
+      resolve_match(states) || resolve_multiplayer_match(states)
     end
-    private_class_method :target_player_ids
 
+    def actionable_match(states, multiplayer)
+      match = active_match(states)
+      match if match && (multiplayer.nil? || match.multiplayer? == multiplayer)
+    end
+    private_class_method :actionable_match
+
+    # A deleted match reads as gone, so the fold's `deleted?` flag maps back to
+    # "no live match here" - the same boundary `find` applies to reads.
     def resolve_match(states)
       match = states.fetch(:match)
-      match && !match.deleted? ? match : nil
+      match unless match&.deleted?
     end
     private_class_method :resolve_match
 
     def resolve_multiplayer_match(states)
-      multi_match = states.fetch(:multiplayer_match, nil)
-      multi_match && !multi_match.deleted? ? multi_match : nil
+      multi_match = states.fetch(:multiplayer_match)
+      multi_match unless multi_match&.deleted?
     end
     private_class_method :resolve_multiplayer_match
   end

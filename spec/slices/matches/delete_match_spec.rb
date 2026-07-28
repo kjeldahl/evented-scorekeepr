@@ -30,6 +30,19 @@ RSpec.describe Matches::DeleteMatch do
     ) ])
   end
 
+  def register_multiplayer(match_id: "mp-1", league_id: "league-1", account_id: "acc-1",
+                           player_ids: %w[alice bob carol],
+                           player_scores: { "alice" => 10, "bob" => 5, "carol" => 3 })
+    EventStore.append([ DcbEventStore::Event.new(
+      type: "MultiplayerMatchRegistered",
+      data: { match_id:, league_id:, account_id:, player_ids:, player_scores:,
+              registered_by_user_id: player_ids.first },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:#{account_id}",
+              *player_ids.map { |player| "player:#{player}" } ]
+    ) ])
+    match_id
+  end
+
   def call(match_id: "m-1", league_id: "league-1", account_id: "acc-1", user_id: "bob")
     described_class.call(match_id:, league_id:, account_id:, user_id:)
   end
@@ -37,6 +50,12 @@ RSpec.describe Matches::DeleteMatch do
   def deletions
     EventStore.read(
       DcbEventStore::Query.new([ DcbEventStore::QueryItem.new(event_types: %w[MatchDeleted]) ])
+    )
+  end
+
+  def multiplayer_deletions
+    EventStore.read(
+      DcbEventStore::Query.new([ DcbEventStore::QueryItem.new(event_types: %w[MultiplayerMatchDeleted]) ])
     )
   end
 
@@ -123,6 +142,61 @@ RSpec.describe Matches::DeleteMatch do
     end
   end
 
+  # One command deletes either kind of match: the decision model says which
+  # match the id named, and that picks the event.
+  describe "multiplayer matches", :event_store do
+    it "rejects a deleter who did not play in the match" do
+      register_multiplayer
+      expect(call(match_id: "mp-1", user_id: "dave"))
+        .to eq(Result.failure("only players in the match can delete it"))
+    end
+
+    it "appends a MultiplayerMatchDeleted event, not a head-to-head one" do
+      register_multiplayer
+      call(match_id: "mp-1", user_id: "carol")
+      expect(multiplayer_deletions.sole.data).to eq(
+        match_id: "mp-1", league_id: "league-1", account_id: "acc-1", deleted_by_user_id: "carol"
+      )
+      expect(deletions).to be_empty
+    end
+
+    it "returns success with the match id" do
+      register_multiplayer
+      expect(call(match_id: "mp-1", user_id: "alice")).to eq(Result.success("mp-1"))
+    end
+
+    it "makes the match disappear from details" do
+      register_multiplayer
+      call(match_id: "mp-1", user_id: "alice")
+      expect(Matches::MultiplayerMatchDetails.find(match_id: "mp-1")).to be_nil
+    end
+
+    it "rejects an already-deleted match" do
+      register_multiplayer
+      call(match_id: "mp-1", user_id: "alice")
+      expect(call(match_id: "mp-1", user_id: "alice")).to eq(Result.failure("the match was not found"))
+    end
+
+    it "rejects a match reached through a different league (tenancy)" do
+      register_multiplayer
+      expect(call(match_id: "mp-1", league_id: "league-2", user_id: "alice"))
+        .to eq(Result.failure("the match was not found"))
+    end
+
+    it "rejects a delete in a closed league" do
+      register_multiplayer
+      close_league
+      expect(call(match_id: "mp-1", user_id: "alice")).to eq(Result.failure("the league is closed"))
+    end
+
+    it "asks for a retry when the append condition fails" do
+      register_multiplayer
+      allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
+      expect(call(match_id: "mp-1", user_id: "alice"))
+        .to eq(Result.failure("the league changed while you were working - please retry"))
+    end
+  end
+
   describe "concurrency conflict", :event_store do
     it "asks for a retry when the decision model's append condition fails" do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
@@ -130,10 +204,7 @@ RSpec.describe Matches::DeleteMatch do
     end
 
     it "loses the race against a league close that lands after the decision was read" do
-      stale_decision = EventStore.decide(
-        match: Matches::MatchDetails.projection(match_id: "m-1"),
-        league: Matches::League.projection(league_id: "league-1", account_id: "acc-1")
-      )
+      stale_decision = Matches::MatchDecision.read(match_id: "m-1", league_id: "league-1", account_id: "acc-1")
       close_league
       allow(EventStore).to receive(:decide).and_return(stale_decision)
       expect(call).to eq(Result.failure("the league changed while you were working — please retry"))

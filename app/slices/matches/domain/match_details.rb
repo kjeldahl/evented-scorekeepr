@@ -8,11 +8,16 @@
 # the read boundary. The edit form reads it to prefill the score, and
 # EditMatch/DeleteMatch read it to check the actor is one of the match's
 # players and the match still exists.
+#
+# Details answers the same `players` / `multiplayer?` / `deleted?` questions as
+# MultiplayerMatchDetails::Details, so callers acting on "whichever match this
+# id names" never have to ask which class they are holding.
 module Matches
   module MatchDetails
     Details = Data.define(:match_id, :league_id, :account_id, :home_player_ids, :away_player_ids,
                           :home_score, :away_score, :deleted) do
       def players = home_player_ids + away_player_ids
+      def multiplayer? = false
       def deleted? = deleted
     end
 

@@ -9,6 +9,13 @@ module Matches
       Integer(value.to_s, exception: false)
     end
 
+    # The scores as integers, for a command that has already accepted them.
+    # Commands append this rather than converting again themselves, so the
+    # rule for what an integer score is lives here only.
+    def parse_all(scores_by_name)
+      scores_by_name.transform_values { |score| parse(score) }
+    end
+
     # nil when every score parses as an integer; a Result.failure otherwise.
     def rejection(scores_by_name)
       scores_by_name.each do |name, raw|
