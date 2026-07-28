@@ -20,5 +20,12 @@ module Scoreboards
     def find(game_type)
       CONFIG.fetch(game_type, DEFAULT)
     end
+
+    # The score that wins the game: the lowest where the game ranks ascending
+    # (Golf), the highest otherwise. This is the 1st place the scoring engine
+    # pays the pot to, so standings and points agree on who won.
+    def best_score(game_type, scores)
+      find(game_type).fetch(:ranking) == :asc ? scores.min : scores.max
+    end
   end
 end

@@ -3,7 +3,9 @@
 # match obeys (docs/DOMAIN.md). Then the decision model reads the match and
 # its league in one go: only a player who took part may edit it, and only
 # while the league is open. The append condition covers both reads, so a
-# concurrent league close wins and the correction is told to retry.
+# concurrent league close wins and the correction is told to retry. This
+# command owns head-to-head matches only; a multiplayer match id reads as "the
+# match was not found" (CorrectMultiplayerMatch owns those).
 module Matches
   class EditMatch
     def self.call(match_id:, league_id:, account_id:, user_id:, home_score:, away_score:)
@@ -13,7 +15,8 @@ module Matches
       return failure if failure
 
       decision = MatchDecision.read(match_id:, league_id:, account_id:)
-      failure = MatchDecision.rejection(decision.states, league_id:, account_id:, user_id:, action: "edit")
+      failure = MatchDecision.rejection(decision.states, league_id:, account_id:, user_id:, action: "edit",
+                                        multiplayer: false)
       return failure if failure
 
       append_correction(decision, match_id:, league_id:, account_id:, home_score:, away_score:, user_id:)

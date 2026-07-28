@@ -55,7 +55,7 @@ module Matches
       match_id = SecureRandom.uuid
       event = Events.multiplayer_match_registered(
         match_id:, league_id:, account_id:, player_ids:,
-        player_scores: player_scores.transform_values { |v| v.to_i },
+        player_scores: MultiplayerMatchScore.parse_all(player_scores),
         registered_by_user_id: user_id
       )
       EventStore.append(event, decision.append_condition)

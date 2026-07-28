@@ -49,6 +49,20 @@ RSpec.describe Scoreboards::MultiplayerGameType do
     end
   end
 
+  describe "::best_score" do
+    it "is the highest score where the game ranks descending" do
+      expect(described_class.best_score("Foosball", [ 9, 21, 15 ])).to eq(21)
+    end
+
+    it "is the lowest score where the game ranks ascending" do
+      expect(described_class.best_score("Golf", [ 21, 9, 15 ])).to eq(9)
+    end
+
+    it "follows the default (descending) for an unknown game type" do
+      expect(described_class.best_score("Pool", [ 9, 21, 15 ])).to eq(21)
+    end
+  end
+
   describe "::DEFAULT" do
     it "defaults to desc ranking (legacy behavior)" do
       expect(Scoreboards::MultiplayerGameType::DEFAULT[:ranking]).to eq(:desc)

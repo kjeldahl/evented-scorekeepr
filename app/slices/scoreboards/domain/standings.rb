@@ -34,7 +34,7 @@ module Scoreboards
       end
     end
 
-    def initialize(starting_points:, stake_percentage:, game_type: "Foosball", match_type: "match")
+    def initialize(starting_points:, stake_percentage:, game_type:, match_type:)
       @starting_points = starting_points
       @stake_percentage = stake_percentage
       @game_type = game_type
@@ -53,8 +53,8 @@ module Scoreboards
 
     def apply(stats, match)
       case match
-      when Scoreboards::Match then apply_match(stats, match)
-      when Scoreboards::MultiplayerMatch then apply_multi(stats, match)
+      when Match then apply_match(stats, match)
+      when MultiplayerMatch then apply_multi(stats, match)
       end
     end
 
@@ -73,17 +73,24 @@ module Scoreboards
     end
 
     def settle_points(stats, match)
-      engine.settle(stats.transform_values(&:points), winners: match.winners, losers: match.losers)
-      .then { |settled| stats.to_h { |player, player_stats| [ player, player_stats.with(points: settled.fetch(player)) ] } }
+      with_points(stats, engine.settle(stats.transform_values(&:points),
+                                       winners: match.winners, losers: match.losers))
     end
 
     def settle_multi_points(stats, match)
-      player_ids = match.players.map { |id| { id:, score: match.player_scores[id.to_sym] } }
-      player_points = stats.transform_values(&:points)
-      settled = engine.settle(player_points, player_ids)
+      entrants = match.players.map { |id| { id:, score: score_of(match, id) } }
+      with_points(stats, engine.settle(stats.transform_values(&:points), entrants))
+    end
+
+    # The settled points folded back onto each player's statistics.
+    def with_points(stats, settled)
       stats.to_h { |player, player_stats| [ player, player_stats.with(points: settled.fetch(player)) ] }
-    rescue StandardError => e
-      raise "Multiplayer scoring error: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
+    end
+
+    # Every player of a multiplayer match has a score; a missing one is a
+    # corrupt registration, not a zero.
+    def score_of(match, player_id)
+      match.player_scores.fetch(player_id.to_sym)
     end
 
     def record_results(stats, match)
@@ -95,17 +102,20 @@ module Scoreboards
       end
     end
 
+    # Only this match's players get a result - the fold's stats also carry
+    # players from earlier matches, and they did not play in this one.
     def record_multi_results(stats, match)
-      best_score = match.player_ids.map { |pid| match.player_scores[pid.to_sym] }.max
-      stats.map do |player_id, player_stats|
-        game_score = match.player_scores.fetch(player_id.to_sym, 0)
-        is_winner = game_score == best_score
-        if is_winner
-          [ player_id, player_stats.won(game_score, 0) ]
-        else
-          [ player_id, player_stats.lost(0, game_score) ]
-        end
-      end.to_h
+      best_score = MultiplayerGameType.best_score(@game_type, match.player_ids.map { |id| score_of(match, id) })
+      match.player_ids.reduce(stats) do |updated, player_id|
+        updated.merge(player_id => multi_result(updated.fetch(player_id), score_of(match, player_id), best_score))
+      end
+    end
+
+    # Everyone who tied the best score won the game; the rest lost it.
+    def multi_result(player_stats, game_score, best_score)
+      return player_stats.won(game_score, 0) if game_score == best_score
+
+      player_stats.lost(0, game_score)
     end
 
     def rank(stats, names)
@@ -128,7 +138,6 @@ module Scoreboards
       else
                     ScoringEngine.new(stake_percentage: @stake_percentage)
       end
-      @engine
     end
   end
 end
