@@ -37,6 +37,12 @@ module Matches
 
     private
 
+    # The registration form for this league's match type; both the initial
+    # GET and a rejected POST render it.
+    def new_view
+      @multiplayer ? :new_multiplayer : :new
+    end
+
     def registration
       return RegisterMultiplayerMatch.call(user_id: current_user.id, **multiplayer_params) if @multiplayer
 
@@ -47,12 +53,6 @@ module Matches
       return CorrectMultiplayerMatch.call(match_id: @match.match_id, user_id: current_user.id, **correct_multi_params) if @match.multiplayer?
 
       EditMatch.call(match_id: @match.match_id, user_id: current_user.id, **edit_params)
-    end
-
-    # The two match kinds have their own register form; the league's type
-    # picks which one both the initial GET and a rejected POST render.
-    def new_view
-      @multiplayer ? :new_multiplayer : :new
     end
 
     # A failed registration re-renders the register form it came from.
@@ -80,7 +80,7 @@ module Matches
       render :edit, status: :unprocessable_entity
     end
 
-    # Loads the match under edit and records its kind for the views; a match
+    # Loads the match under edit and records its type for the views; a match
     # that is gone redirects to the scoreboard and answers nil.
     def load_match
       @match = find_match(params[:id])
