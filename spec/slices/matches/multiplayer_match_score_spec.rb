@@ -25,6 +25,25 @@ RSpec.describe Matches::MultiplayerMatchScore do
     it "accepts an integer directly" do
       expect(described_class.parse(42)).to eq(42)
     end
+
+    it "is nil for a float, which is not an integer score (never truncates)" do
+      expect(described_class.parse(10.5)).to be_nil
+    end
+  end
+
+  describe ".parse_all" do
+    it "parses every score, keeping the player keys" do
+      expect(described_class.parse_all({ "alice" => "21", "bob" => "-50" }))
+        .to eq({ "alice" => 21, "bob" => -50 })
+    end
+
+    it "leaves an already-integer score alone" do
+      expect(described_class.parse_all({ "alice" => 7 })).to eq({ "alice" => 7 })
+    end
+
+    it "is nil for a score that is not an integer" do
+      expect(described_class.parse_all({ "alice" => "10.5" })).to eq({ "alice" => nil })
+    end
   end
 
   describe ".rejection" do

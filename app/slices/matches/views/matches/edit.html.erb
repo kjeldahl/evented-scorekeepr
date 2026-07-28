@@ -3,7 +3,6 @@
 <% if @multiplayer %>
   <%# Multiplayer edit: fixed players, editable scores. %>
   <% names = members.to_h { |member| [ member.user_id, member.name ] } %>
-  <% details = @match.is_a?(Matches::MultiplayerMatchDetails::Details) ? @match : nil %>
 
   <div class="card match-form">
     <h1><%= @league.name %></h1>
@@ -20,16 +19,14 @@
             </tr>
           </thead>
           <tbody>
-            <% if details %>
-              <% details.player_ids.each do |player_id| %>
-                <tr>
-                  <td><%= names.fetch(player_id, player_id) %></td>
-                  <td>
-                    <%= form.number_field "scores[#{player_id}]", value: params.dig(:scores, player_id) || details.player_scores[player_id],
-                                          required: true, step: 1 %>
-                  </td>
-                </tr>
-              <% end %>
+            <% @match.player_ids.each do |player_id| %>
+              <tr>
+                <td><%= names.fetch(player_id, player_id) %></td>
+                <td>
+                  <%= form.number_field "scores[#{player_id}]", value: params.dig(:scores, player_id) || @match.player_scores[player_id],
+                                        required: true, step: 1 %>
+                </td>
+              </tr>
             <% end %>
           </tbody>
         </table>

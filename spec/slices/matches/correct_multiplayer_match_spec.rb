@@ -88,6 +88,21 @@ RSpec.describe Matches::CorrectMultiplayerMatch do
         .to eq(Result.failure("the match was not found"))
     end
 
+    # This command owns multiplayer matches; EditMatch owns head-to-head ones,
+    # so a head-to-head id is not a match this command can find.
+    it "rejects a head-to-head match id" do
+      EventStore.append([ DcbEventStore::Event.new(
+        type: "MatchRegistered",
+        data: { match_id: "h2h-1", league_id: "league-1", account_id: "acc-1",
+                home_player_ids: %w[alice], away_player_ids: %w[bob],
+                home_score: 21, away_score: 8, registered_by_user_id: "alice" },
+        tags: [ "match:h2h-1", "league:league-1", "account:acc-1", "player:alice", "player:bob" ]
+      ) ])
+      expect(call(match_id: "h2h-1", player_scores: { "alice" => 12, "bob" => 6 }))
+        .to eq(Result.failure("the match was not found"))
+      expect(correction_events).to be_empty
+    end
+
     it "rejects a deleted match" do
       match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
       EventStore.append([ DcbEventStore::Event.new(
@@ -107,21 +122,26 @@ RSpec.describe Matches::CorrectMultiplayerMatch do
   end
 
   describe "successful correction", :event_store do
-    it "returns success" do
+    it "returns success with the match id" do
       match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
-      result = call(match_id:, player_scores: { "alice" => 12, "bob" => 6 })
-      expect(result).to be_success
+      expect(call(match_id:, player_scores: { "alice" => 12, "bob" => 6 })).to eq(Result.success(match_id))
     end
 
-    it "appends a MultiplayerMatchResultCorrected event" do
+    it "appends a MultiplayerMatchResultCorrected event with the whole scoreline" do
       match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
-      result = call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }, user_id: "alice")
-      expect(result).to be_success, "call failed: #{result.error}"
-      event = correction_events.find { |e| e.data[:match_id] == match_id } or raise "no correction event found"
+      call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }, user_id: "alice")
+      event = correction_events.sole
       expect(event.type).to eq("MultiplayerMatchResultCorrected")
-      expect(event.data).to include(match_id:)
-      expect(event.data[:player_scores]).to include({ alice: 12, bob: 6 })
-      expect(event.data[:corrected_by_user_id]).to eq("alice")
+      expect(event.data).to eq(
+        match_id:, league_id: "league-1", account_id: "acc-1",
+        player_scores: { alice: 12, bob: 6 }, corrected_by_user_id: "alice"
+      )
+    end
+
+    it "stores scores submitted as strings as integers" do
+      match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
+      call(match_id:, player_scores: { "alice" => "12", "bob" => "6" }, user_id: "alice")
+      expect(correction_events.sole.data[:player_scores]).to eq({ alice: 12, bob: 6 })
     end
 
     it "preserves the original player_ids (players are fixed)" do
@@ -140,6 +160,16 @@ RSpec.describe Matches::CorrectMultiplayerMatch do
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }))
         .to eq(Result.failure("the league changed while you were working — please retry"))
+    end
+
+    it "loses the race against a league close that lands after the decision was read" do
+      match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
+      stale_decision = Matches::MatchDecision.read(match_id:, league_id: "league-1", account_id: "acc-1")
+      close_league
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      expect(call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
+      expect(correction_events).to be_empty
     end
   end
 end
