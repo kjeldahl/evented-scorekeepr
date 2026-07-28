@@ -130,7 +130,8 @@ namespace :demo do
     PENDING_PLAYER = "Pat"
     LEAGUES = [
       { name: "Foosball", game_type: "Foosball" },
-      { name: "Table Tennis", game_type: "Table Tennis" }
+      { name: "Table Tennis", game_type: "Table Tennis" },
+      { name: "Norsk Rummy", game_type: "Norsk Rummy" }
     ].freeze
 
     def initialize(account_name:, matches_per_league:)
