@@ -16,25 +16,25 @@ RSpec.describe Scoreboards::RecentMatches do
 
   describe ".line" do
     it "phrases a 1v1 win as 'beats' with the winner's score first" do
-      expect(described_class.line(match([ "a" ], [ "b" ], 21, 8), names)).to eq("Alice beats Bob 21-8")
+      expect(described_class.line(match([ "a" ], [ "b" ], 21, 8), names, "Foosball")).to eq("Alice beats Bob 21-8")
     end
 
     it "puts the winning side first even when the away side won" do
-      expect(described_class.line(match([ "b" ], [ "a" ], 8, 21), names)).to eq("Alice beats Bob 21-8")
+      expect(described_class.line(match([ "b" ], [ "a" ], 8, 21), names, "Foosball")).to eq("Alice beats Bob 21-8")
     end
 
     it "phrases a 2v2 win as 'beat' joining each side with 'and'" do
-      expect(described_class.line(match(%w[a c], %w[b d], 10, 4), names))
+      expect(described_class.line(match(%w[a c], %w[b d], 10, 4), names, "Foosball"))
         .to eq("Alice and Carol beat Bob and Dave 10-4")
     end
 
     it "keeps each side's listed player order" do
-      expect(described_class.line(match(%w[c a], %w[d b], 10, 4), names))
+      expect(described_class.line(match(%w[c a], %w[d b], 10, 4), names, "Foosball"))
         .to eq("Carol and Alice beat Dave and Bob 10-4")
     end
 
     it "falls back to the player id when no name is known" do
-      expect(described_class.line(match([ "ghost" ], [ "b" ], 21, 8), names)).to eq("ghost beats Bob 21-8")
+      expect(described_class.line(match([ "ghost" ], [ "b" ], 21, 8), names, "Foosball")).to eq("ghost beats Bob 21-8")
     end
   end
 
@@ -61,13 +61,8 @@ RSpec.describe Scoreboards::RecentMatches do
     end
 
     it "falls back to player id for unknown names" do
-      line = described_class.multiplayer_line(make_multi({ ghost: 10, b: 5 }), symbol_names)
+      line = described_class.multiplayer_line(make_multi({ ghost: 10, b: 5 }), symbol_names, "Foosball")
       expect(line).to eq("ghost (10), Bob (5)")
-    end
-
-    it "uses default game_type Foosball when not specified" do
-      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5 }), symbol_names)
-      expect(line).to eq("Alice (10), Bob (5)")
     end
 
     it "treats nil game_type as Foosball (default config returns desc ranking)" do
@@ -101,7 +96,7 @@ RSpec.describe Scoreboards::RecentMatches do
     end
 
     it "is empty when no match was registered" do
-      expect(described_class.lines("league-1")).to eq([])
+      expect(described_class.lines("league-1", game_type: "Foosball")).to eq([])
     end
 
     it "lists the league's matches newest first with resolved names" do
@@ -111,7 +106,7 @@ RSpec.describe Scoreboards::RecentMatches do
         match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8),
         match_registered(match_id: "m-2", home: [ "b" ], away: [ "c" ], home_score: 21, away_score: 15)
       ])
-      expect(described_class.lines("league-1")).to eq([ "Bob beats Carol 21-15", "Alice beats Bob 21-8" ])
+      expect(described_class.lines("league-1", game_type: "Foosball")).to eq([ "Bob beats Carol 21-15", "Alice beats Bob 21-8" ])
     end
 
     it "caps the list at the 5 most recent matches, dropping the oldest" do
@@ -122,7 +117,7 @@ RSpec.describe Scoreboards::RecentMatches do
                            home_score: 21, away_score: number)
         end
       ])
-      expect(described_class.lines("league-1")).to eq([
+      expect(described_class.lines("league-1", game_type: "Foosball")).to eq([
         "Alice beats Bob 21-6", "Alice beats Bob 21-5", "Alice beats Bob 21-4",
         "Alice beats Bob 21-3", "Alice beats Bob 21-2"
       ])
@@ -154,7 +149,7 @@ RSpec.describe Scoreboards::RecentMatches do
         match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8),
         match_registered(match_id: "m-2", home: [ "b" ], away: [ "a" ], home_score: 21, away_score: 15)
       ])
-      expect(described_class.entries("league-1")).to eq([
+      expect(described_class.entries("league-1", game_type: "Foosball")).to eq([
         Scoreboards::RecentMatches::Entry.new(match_id: "m-2", line: "Bob beats Alice 21-15", player_ids: %w[b a]),
         Scoreboards::RecentMatches::Entry.new(match_id: "m-1", line: "Alice beats Bob 21-8", player_ids: %w[a b])
       ])
@@ -207,7 +202,7 @@ RSpec.describe Scoreboards::RecentMatches do
           multiplayer_registered(match_id: "mp-2", players: %w[a c], scores: { a: 4, c: 8 }),
           multiplayer_deleted(match_id: "mp-1")
         ])
-        expect(described_class.entries("league-1").map(&:match_id)).to eq([ "mp-2" ])
+        expect(described_class.entries("league-1", game_type: "Foosball").map(&:match_id)).to eq([ "mp-2" ])
       end
     end
   end

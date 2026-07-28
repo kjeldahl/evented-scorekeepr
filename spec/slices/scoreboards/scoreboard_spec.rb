@@ -49,6 +49,39 @@ RSpec.describe Scoreboards::Scoreboard, :event_store do
     expect(rows.map(&:points)).to eq([ 1116, 914 ])
   end
 
+  def multiplayer_registered(match_id:, players:, scores:, league_id: "league-1")
+    DcbEventStore::Event.new(
+      type: "MultiplayerMatchRegistered",
+      data: { match_id:, league_id:, account_id: "acc-1", player_ids: players,
+              player_scores: scores, registered_by_user_id: players.first },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:acc-1",
+              *players.map { |player| "player:#{player}" } ]
+    )
+  end
+
+  # The facade passes the league's mode and game type down to the standings,
+  # so a multiplayer league is scored by the multiplayer engine and ranked in
+  # its game type's direction.
+  it "scores a multiplayer league with the multiplayer engine" do
+    EventStore.append([
+      user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
+      multiplayer_registered(match_id: "mp-1", players: %w[a b], scores: { a: 21, b: 8 })
+    ])
+    rows = described_class.rows(league(match_type: "multiplayer"))
+    expect(rows.map { |row| [ row.name, row.points, row.wins ] })
+      .to eq([ [ "Alice", 1100, 1 ], [ "Bob", 900, 0 ] ])
+  end
+
+  it "ranks a multiplayer league by its game type's direction" do
+    EventStore.append([
+      user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
+      multiplayer_registered(match_id: "mp-1", players: %w[a b], scores: { a: 21, b: 8 })
+    ])
+    rows = described_class.rows(league(match_type: "multiplayer").with(game_type: "Golf"))
+    expect(rows.map { |row| [ row.name, row.points, row.wins ] })
+      .to eq([ [ "Bob", 1100, 1 ], [ "Alice", 900, 0 ] ])
+  end
+
   it "ignores matches from other leagues" do
     EventStore.append([
       user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
