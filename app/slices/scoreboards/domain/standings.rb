@@ -97,15 +97,15 @@ module Scoreboards
 
     def record_multi_results(stats, match)
       best_score = match.player_ids.map { |pid| match.player_scores[pid.to_sym] }.max
-      result = stats.reduce({}) do |updated, (player_id, player_stats)|
-        game_score = match.player_scores[player_id.to_sym] || 0
-        if game_score == best_score
-          updated.merge(player_id => player_stats.won(game_score, 0))
+      stats.map do |player_id, player_stats|
+        game_score = match.player_scores.fetch(player_id.to_sym, 0)
+        is_winner = game_score == best_score
+        if is_winner
+          [ player_id, player_stats.won(game_score, 0) ]
         else
-          updated.merge(player_id => player_stats.lost(0, game_score))
+          [ player_id, player_stats.lost(0, game_score) ]
         end
-      end
-      result
+      end.to_h
     end
 
     def rank(stats, names)

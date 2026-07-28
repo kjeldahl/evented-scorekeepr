@@ -21,19 +21,20 @@ module Matches
       active_match = resolve_match(states)
       active_multi = resolve_multiplayer_match(states)
 
-      if active_match
-        return Result.failure("only players in the match can #{action} it") unless active_match.players.include?(user_id)
-        return Result.failure("the match was not found") unless active_match.league_id == league_id && active_match.account_id == account_id
-      end
-      if active_multi
-        return Result.failure("only players in the match can #{action} it") unless active_multi.player_ids.include?(user_id)
-        return Result.failure("the match was not found") unless active_multi.league_id == league_id && active_multi.account_id == account_id
-      end
-      return Result.failure("the match was not found") unless active_match || active_multi
+      target = active_match || active_multi
+      return Result.failure("the match was not found") unless target
+
+      return Result.failure("only players in the match can #{action} it") unless target_player_ids(target).include?(user_id)
+      return Result.failure("the match was not found") unless target.league_id == league_id && target.account_id == account_id
 
       return Result.failure("the league was not found") unless states.fetch(:league)
       Result.failure("the league is closed") if states.fetch(:league).closed?
     end
+
+    def target_player_ids(target)
+      target.respond_to?(:players) ? target.players : target.player_ids
+    end
+    private_class_method :target_player_ids
 
     def resolve_match(states)
       match = states.fetch(:match)
