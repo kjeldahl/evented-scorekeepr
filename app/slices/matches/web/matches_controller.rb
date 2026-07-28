@@ -55,12 +55,10 @@ module Matches
       EditMatch.call(match_id: @match.match_id, user_id: current_user.id, **edit_params)
     end
 
-    # A failed registration re-renders the register form it came from — the
-    # league's match type picks the template, as it does in #new.
+    # A failed registration re-renders the register form it came from.
     def handle_registration(result)
       return redirect_to_scoreboard(notice: "Match registered") if result.success?
 
-      @multiplayer = @league.multiplayer_league?
       flash.now[:alert] = result.error
       render new_view, status: :unprocessable_entity
     end
