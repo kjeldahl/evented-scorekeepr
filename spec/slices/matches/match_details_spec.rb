@@ -82,6 +82,13 @@ RSpec.describe Matches::MatchDetails do
     end
   end
 
+  describe "Details#multiplayer?" do
+    it "is false: this is the head-to-head kind" do
+      details = described_class.projection(match_id: "m-1").fold([ match_registered ])
+      expect(details.multiplayer?).to be(false)
+    end
+  end
+
   describe ".find", :event_store do
     it "reads the match from the store, correction applied" do
       EventStore.append([ match_registered(home_score: 21, away_score: 8), match_corrected(home_score: 15, away_score: 21) ])

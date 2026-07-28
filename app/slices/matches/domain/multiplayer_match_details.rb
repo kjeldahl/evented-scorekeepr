@@ -6,10 +6,15 @@
 # MultiplayerMatchDeleted flips the deleted? flag rather than dropping the
 # state, so the transition stays observable; `find` maps a deleted match
 # back to nil at the read boundary.
+#
+# Details answers the same `players` / `multiplayer?` / `deleted?` questions as
+# MatchDetails::Details (see there).
 module Matches
   module MultiplayerMatchDetails
     Details = Data.define(:match_id, :league_id, :account_id, :player_ids,
                           :player_scores, :deleted) do
+      def players = player_ids
+      def multiplayer? = true
       def deleted? = deleted
     end
 

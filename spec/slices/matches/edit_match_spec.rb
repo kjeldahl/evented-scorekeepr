@@ -114,6 +114,20 @@ RSpec.describe Matches::EditMatch do
       expect(call(account_id: "acc-2")).to eq(Result.failure("the match was not found"))
     end
 
+    # This command owns head-to-head matches; CorrectMultiplayerMatch owns the
+    # others, so a multiplayer id is not a match this command can find.
+    it "rejects a multiplayer match id" do
+      EventStore.append([ DcbEventStore::Event.new(
+        type: "MultiplayerMatchRegistered",
+        data: { match_id: "mp-1", league_id: "league-1", account_id: "acc-1",
+                player_ids: %w[bob carol], player_scores: { "bob" => 9, "carol" => 4 },
+                registered_by_user_id: "bob" },
+        tags: [ "match:mp-1", "league:league-1", "account:acc-1", "player:bob", "player:carol" ]
+      ) ])
+      expect(call(match_id: "mp-1", user_id: "bob")).to eq(Result.failure("the match was not found"))
+      expect(corrections).to be_empty
+    end
+
     # Defensive: a match whose league has no LeagueCreated (a corrupt history)
     # is caught by the league guard rather than crashing on the closed? check.
     it "rejects when the match's league was never created" do
@@ -166,10 +180,7 @@ RSpec.describe Matches::EditMatch do
     end
 
     it "loses the race against a league close that lands after the decision was read" do
-      stale_decision = EventStore.decide(
-        match: Matches::MatchDetails.projection(match_id: "m-1"),
-        league: Matches::League.projection(league_id: "league-1", account_id: "acc-1")
-      )
+      stale_decision = Matches::MatchDecision.read(match_id: "m-1", league_id: "league-1", account_id: "acc-1")
       close_league
       allow(EventStore).to receive(:decide).and_return(stale_decision)
       expect(call).to eq(Result.failure("the league changed while you were working - please retry"))
