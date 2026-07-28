@@ -9,6 +9,11 @@ RSpec.describe Scoreboards::RecentMatches do
     { "a" => "Alice", "b" => "Bob", "c" => "Carol", "d" => "Dave" }
   end
 
+  def symbol_names
+    { "a" => "Alice", "b" => "Bob", "c" => "Carol", "d" => "Dave" }
+      .transform_keys(&:to_sym)
+  end
+
   describe ".line" do
     it "phrases a 1v1 win as 'beats' with the winner's score first" do
       expect(described_class.line(match([ "a" ], [ "b" ], 21, 8), names)).to eq("Alice beats Bob 21-8")
@@ -30,6 +35,50 @@ RSpec.describe Scoreboards::RecentMatches do
 
     it "falls back to the player id when no name is known" do
       expect(described_class.line(match([ "ghost" ], [ "b" ], 21, 8), names)).to eq("ghost beats Bob 21-8")
+    end
+  end
+
+  describe ".multiplayer_line" do
+    def make_multi(scores)
+      player_ids = scores.keys.map(&:to_sym)
+      Scoreboards::MultiplayerMatch.new(match_id: "m-1", player_ids:,
+                                         player_scores: scores.transform_keys(&:to_sym),
+                                         deleted: false)
+    end
+
+    it "ranks descending for Foosball (highest score first)" do
+      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5, c: 3 }), symbol_names, "Foosball")
+      expect(line).to eq("Alice (10), Bob (5), Carol (3)")
+    end
+
+    it "ranks ascending for Golf (lowest score first)" do
+      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5, c: 3 }), symbol_names, "Golf")
+      expect(line).to eq("Carol (3), Bob (5), Alice (10)")
+    end
+
+    it "ranks ascending for Norsk Rummy" do
+      line = described_class.multiplayer_line(make_multi({ a: 100, b: 50, c: 200 }), symbol_names, "Norsk Rummy")
+      expect(line).to eq("Bob (50), Alice (100), Carol (200)")
+    end
+
+    it "falls back to player id for unknown names" do
+      line = described_class.multiplayer_line(make_multi({ ghost: 10, b: 5 }), symbol_names)
+      expect(line).to eq("ghost (10), Bob (5)")
+    end
+
+    it "uses default game_type Foosball when not specified" do
+      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5 }), symbol_names)
+      expect(line).to eq("Alice (10), Bob (5)")
+    end
+
+    it "treats nil game_type as Foosball (default config returns desc ranking)" do
+      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5, c: 3 }), symbol_names, nil)
+      expect(line).to eq("Alice (10), Bob (5), Carol (3)")
+    end
+
+    it "treats empty string game_type as Foosball" do
+      line = described_class.multiplayer_line(make_multi({ a: 10, b: 5, c: 3 }), symbol_names, "")
+      expect(line).to eq("Alice (10), Bob (5), Carol (3)")
     end
   end
 

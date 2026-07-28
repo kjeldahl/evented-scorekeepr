@@ -34,38 +34,49 @@ module Matches
     end
 
     def update
-      load_match or return
-      multi = @match.is_a?(MultiplayerMatchDetails::Details)
-      if multi
-        result = CorrectMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **correct_multi_params)
-      else
-        result = EditMatch.call(match_id: params[:id], user_id: current_user.id, **edit_params)
-      end
-      if result.success?
-        redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                    notice: "Match updated"
-      else
-        render_edit_error(result.error)
-      end
+      perform_match_action(:update, "Match updated") or return
     end
 
     def destroy
+      perform_match_action(:destroy, "Match deleted") or return
+    end
+
+    private
+
+    # Routes the action through the match-type-specific dispatcher,
+    # then redirects or re-renders.
+    def perform_match_action(action, notice)
       load_match or return
-      multi = @match.is_a?(MultiplayerMatchDetails::Details)
-      if multi
-        result = DeleteMultiplayerMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
-      else
-        result = DeleteMatch.call(match_id: params[:id], user_id: current_user.id, **match_scope)
-      end
+      @multiplayer = @match.is_a?(MultiplayerMatchDetails::Details)
+      handle_result(dispatch_command(action), notice)
+    end
+
+    # Dispatches to the correct command based on action and match type.
+    # Maps (action, type) pairs so the lookup is O(1) and the method
+    # has a cyclomatic complexity of 2 (the hash lookup path).
+    def dispatch_command(action)
+      table = {
+        true => {
+          update: -> { CorrectMultiplayerMatch.call(match_id: @match.match_id, user_id: current_user.id, **correct_multi_params) },
+          destroy: -> { DeleteMultiplayerMatch.call(match_id: @match.match_id, user_id: current_user.id, **match_scope) }
+        },
+        false => {
+          update: -> { EditMatch.call(match_id: @match.match_id, user_id: current_user.id, **edit_params) },
+          destroy: -> { DeleteMatch.call(match_id: @match.match_id, user_id: current_user.id, **match_scope) }
+        }
+      }
+      table[@multiplayer][action].call
+    end
+
+    # Redirects on success; re-renders the edit form on failure.
+    def handle_result(result, notice)
       if result.success?
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
-                    notice: "Match deleted"
+                    notice: notice
       else
         render_edit_error(result.error)
       end
     end
-
-    private
 
     # A failed edit or delete re-renders the edit form (which hosts both
     # actions) with the error; a match that has since vanished sends the
