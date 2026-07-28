@@ -128,10 +128,12 @@ namespace :demo do
     PASSWORD = "secret123"
     PLAYERS = %w[Erin Frank Grace Heidi Ivan Judy Karl Lena Mike Nora].freeze
     PENDING_PLAYER = "Pat"
+    # The mode is chosen per league, not implied by the game type, so the
+    # demo account shows both: two head-to-head leagues and a multiplayer one.
     LEAGUES = [
-      { name: "Foosball", game_type: "Foosball" },
-      { name: "Table Tennis", game_type: "Table Tennis" },
-      { name: "Norsk Rummy", game_type: "Norsk Rummy" }
+      { name: "Foosball", game_type: "Foosball", match_type: "match" },
+      { name: "Table Tennis", game_type: "Table Tennis", match_type: "match" },
+      { name: "Norsk Rummy", game_type: "Norsk Rummy", match_type: "multiplayer" }
     ].freeze
 
     def initialize(account_name:, matches_per_league:)
@@ -202,24 +204,39 @@ namespace :demo do
     end
 
     def create_leagues
-      @league_ids = LEAGUES.map do |league|
-        Leagues::CreateLeague.call(account_id: @account_id, user_id: owner_id,
-                                   name: league[:name], game_type: league[:game_type]).value
+      @leagues = LEAGUES.map do |league|
+        league_id = Leagues::CreateLeague.call(
+          account_id: @account_id, user_id: owner_id, name: league[:name],
+          game_type: league[:game_type], match_type: league[:match_type]
+        ).value
+        league.merge(id: league_id)
       end
     end
 
     def register_matches
-      @league_ids.each do |league_id|
-        @matches_per_league.times { register_random_match(league_id) }
+      @leagues.each do |league|
+        @matches_per_league.times { register_random_match(league) }
       end
     end
 
-    def register_random_match(league_id)
+    def register_random_match(league)
+      return register_random_multiplayer_match(league) if league[:match_type] == "multiplayer"
+
       home, away = random_sides
       home_score, away_score = random_scores
       Matches::RegisterMatch.call(
-        league_id:, account_id: @account_id, user_id: owner_id,
+        league_id: league[:id], account_id: @account_id, user_id: owner_id,
         home_player_ids: home, away_player_ids: away, home_score:, away_score:
+      )
+    end
+
+    # 3 to 6 participants, each with their own score (Norsk Rummy is scored
+    # low-to-high, so these read as penalty points).
+    def register_random_multiplayer_match(league)
+      players = @user_ids.values_at(*PLAYERS).shuffle.first(rand(3..6))
+      Matches::RegisterMultiplayerMatch.call(
+        league_id: league[:id], account_id: @account_id, user_id: owner_id,
+        player_ids: players, player_scores: players.to_h { |id| [ id, rand(0..120) ] }
       )
     end
 

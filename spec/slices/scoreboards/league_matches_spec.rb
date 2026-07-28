@@ -28,6 +28,33 @@ RSpec.describe Scoreboards::LeagueMatches do
     )
   end
 
+  def multiplayer_registered(match_id: "mm-1", league_id: "league-1", players: %w[a b c],
+                             scores: { "a" => 10, "b" => 6, "c" => 2 })
+    DcbEventStore::Event.new(
+      type: "MultiplayerMatchRegistered",
+      data: { match_id:, league_id:, account_id: "acc-1", player_ids: players,
+              player_scores: scores, registered_by_user_id: "a" },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:acc-1",
+              *players.map { |player| "player:#{player}" } ]
+    )
+  end
+
+  def multiplayer_corrected(match_id: "mm-1", league_id: "league-1", scores: { "a" => 1, "b" => 2, "c" => 3 })
+    DcbEventStore::Event.new(
+      type: "MultiplayerMatchResultCorrected",
+      data: { match_id:, league_id:, account_id: "acc-1", player_scores: scores, corrected_by_user_id: "b" },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:acc-1" ]
+    )
+  end
+
+  def multiplayer_deleted(match_id: "mm-1", league_id: "league-1")
+    DcbEventStore::Event.new(
+      type: "MultiplayerMatchDeleted",
+      data: { match_id:, league_id:, account_id: "acc-1", deleted_by_user_id: "b" },
+      tags: [ "match:#{match_id}", "league:#{league_id}", "account:acc-1" ]
+    )
+  end
+
   describe ".projection" do
     subject(:projection) { described_class.projection("league-1") }
 
@@ -79,6 +106,60 @@ RSpec.describe Scoreboards::LeagueMatches do
         match_deleted(match_id: "m-2")
       ])
       expect(matches.sole.match_id).to eq("m-1")
+    end
+
+    it "carries the id, players and scores onto the MultiplayerMatch value" do
+      match = projection.fold([ multiplayer_registered ]).sole
+      expect(match).to eq(Scoreboards::MultiplayerMatch.new(match_id: "mm-1", player_ids: %w[a b c],
+                                                            player_scores: { "a" => 10, "b" => 6, "c" => 2 },
+                                                            deleted: false))
+    end
+
+    it "applies a multiplayer correction to its match's scores, keeping league order" do
+      matches = projection.fold([
+        multiplayer_registered(match_id: "mm-1"),
+        multiplayer_registered(match_id: "mm-2", scores: { "a" => 4, "b" => 5, "c" => 6 }),
+        multiplayer_corrected(match_id: "mm-1", scores: { "a" => 7, "b" => 8, "c" => 9 })
+      ])
+      expect(matches.map { |match| [ match.match_id, match.player_scores ] })
+        .to eq([ [ "mm-1", { "a" => 7, "b" => 8, "c" => 9 } ], [ "mm-2", { "a" => 4, "b" => 5, "c" => 6 } ] ])
+    end
+
+    it "leaves other multiplayer matches untouched by a correction" do
+      matches = projection.fold([
+        multiplayer_registered(match_id: "mm-1"),
+        multiplayer_corrected(match_id: "mm-2")
+      ])
+      expect(matches.sole.player_scores).to eq({ "a" => 10, "b" => 6, "c" => 2 })
+    end
+
+    it "leaves singles matches untouched by a multiplayer correction" do
+      matches = projection.fold([ match_registered(match_id: "m-1"), multiplayer_corrected(match_id: "m-1") ])
+      expect(matches.sole.home_score).to eq(21)
+    end
+
+    it "drops a deleted multiplayer match, keeping the others in league order" do
+      matches = projection.fold([
+        multiplayer_registered(match_id: "mm-1"),
+        multiplayer_registered(match_id: "mm-2"),
+        multiplayer_deleted(match_id: "mm-1")
+      ])
+      expect(matches.map(&:match_id)).to eq([ "mm-2" ])
+    end
+
+    it "leaves singles matches untouched by a multiplayer deletion" do
+      matches = projection.fold([ match_registered(match_id: "m-1"), multiplayer_deleted(match_id: "m-1") ])
+      expect(matches.sole.match_id).to eq("m-1")
+    end
+
+    it "leaves multiplayer matches untouched by a singles deletion" do
+      matches = projection.fold([ multiplayer_registered(match_id: "mm-1"), match_deleted(match_id: "mm-1") ])
+      expect(matches.sole.match_id).to eq("mm-1")
+    end
+
+    it "leaves multiplayer matches untouched by a singles correction" do
+      matches = projection.fold([ multiplayer_registered(match_id: "mm-1"), match_corrected(match_id: "mm-1") ])
+      expect(matches.sole.player_scores).to eq({ "a" => 10, "b" => 6, "c" => 2 })
     end
 
     it "queries all three match event types scoped to the league" do

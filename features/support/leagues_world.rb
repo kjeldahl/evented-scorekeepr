@@ -15,6 +15,7 @@
 #                                       # via the domain command + remember
 #   find_league_id(league_name)         # newest LeagueCreated with that name (from the event store)
 #   create_league_via_ui(actor, name, account:, game_type:, ...)
+#   league_match_type(league_name)      # "match" / "multiplayer", from LeagueCreated
 #   close_league_via_ui(actor, league_name)   # POSTs the close route as the actor
 #   account_owner_name(account_name) / owner_name_for(account_id)
 #   league_list_entry(league_name)      # the league's row on its account page (signed in as the owner)
@@ -65,18 +66,28 @@ module LeaguesWorld
     EventStore.read(query).find { |event| event.data[:name] == league_name }&.data&.fetch(:league_id)
   end
 
-  # Creates a league through the real UI form. Leaving starting points and
-  # stake nil keeps the form's prefilled defaults (1000 / 10).
-  def create_league_via_ui(actor, league_name, account:, game_type:, starting_points: nil, stake: nil)
+  # Creates a league through the real UI form. Leaving starting points, stake
+  # and mode nil keeps the form's prefilled defaults (1000 / 10 / match).
+  def create_league_via_ui(actor, league_name, account:, game_type:, starting_points: nil, stake: nil, mode: nil)
     @last_league_name = league_name
     sign_in(actor) unless signed_in_as?(actor)
     visit "/accounts/#{account_id_for(account)}/leagues/new"
     fill_in "Name", with: league_name
     select game_type, from: "Game type"
+    select mode.capitalize, from: "Mode" if mode
     fill_in "Starting points", with: starting_points if starting_points
     fill_in "Stake percentage", with: stake if stake
     submit_form "Create league"
     remember_league(league_name, find_league_id(league_name))
+  end
+
+  # The league's mode as recorded on its LeagueCreated event.
+  def league_match_type(league_name)
+    league = league_for(league_name)
+    query = DcbEventStore::Query.new([
+      DcbEventStore::QueryItem.new(event_types: %w[LeagueCreated], tags: "league:#{league.id}")
+    ])
+    EventStore.read(query).last.data.fetch(:match_type)
   end
 
   # POSTs the create route directly: invalid settings re-render the form and
