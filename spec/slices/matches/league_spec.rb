@@ -61,6 +61,35 @@ RSpec.describe Matches::League do
       expect(item.event_types).to eq(%w[LeagueCreated LeagueRenamed LeagueClosed])
       expect(item.tags).to contain_exactly("league:league-1", "account:acc-1")
     end
+
+    it "reads match_type from LeagueCreated (defaults to 'match')" do
+      summary = projection.fold([ league_created ])
+      expect(summary.match_type).to eq("match")
+    end
+
+    it "reads match_type when explicitly set" do
+      event = DcbEventStore::Event.new(
+        type: "LeagueCreated",
+        data: { league_id: "league-1", account_id: "acc-1", name: "Multiplayer",
+                game_type: "Golf", match_type: "multiplayer" },
+        tags: [ "league:league-1", "account:acc-1" ]
+      )
+      summary = projection.fold([ event ])
+      expect(summary.match_type).to eq("multiplayer")
+      expect(summary).to be_multiplayer_league
+      expect(summary).not_to be_match_league
+    end
+
+    it "defaults match_type to 'match' when the event has no match_type key" do
+      event = DcbEventStore::Event.new(
+        type: "LeagueCreated",
+        data: { league_id: "league-1", account_id: "acc-1", name: "Legacy",
+                game_type: "Foosball", starting_points: 1000, stake_percentage: 10 },
+        tags: [ "league:league-1", "account:acc-1" ]
+      )
+      summary = projection.fold([ event ])
+      expect(summary.match_type).to eq("match")
+    end
   end
 
   describe ".find", :event_store do

@@ -7,6 +7,11 @@ RSpec.describe Scoreboards::Standings do
     { "alice" => "Alice", "bob" => "Bob", "carol" => "Carol", "dave" => "Dave", "eve" => "Eve" }
   end
 
+  def sym_names
+    { "alice" => "Alice", "bob" => "Bob", "carol" => "Carol", "dave" => "Dave", "eve" => "Eve" }
+      .transform_keys(&:to_sym)
+  end
+
   def match(home, away, home_score, away_score)
     Scoreboards::Match.new(match_id: "m-1", home_player_ids: home, away_player_ids: away, home_score:, away_score:)
   end
@@ -229,6 +234,60 @@ RSpec.describe Scoreboards::Standings do
                    match([ "bob" ], [ "alice" ], 21, 17))
       expect(row_for(rows, "Alice").win_percentage).to eq(33)
       expect(row_for(rows, "Bob").win_percentage).to eq(67)
+    end
+  end
+
+  describe "multiplayer matches" do
+    def multiplayer_standings(gt = "Foosball")
+      Scoreboards::Standings.new(starting_points: 1000, stake_percentage: 10, game_type: gt, match_type: "multiplayer")
+    end
+
+    def multiplayer_table(scores, gt = "Foosball")
+      player_ids = scores.keys.map(&:to_sym)
+      match = Scoreboards::MultiplayerMatch.new(match_id: "m-1", player_ids:,
+                                                 player_scores: scores.transform_keys(&:to_sym),
+                                                 deleted: false)
+      multiplayer_standings(gt).table([ match ], names: sym_names)
+    end
+
+    def row_for_table(rows, name)
+      rows.find { |row| row.name == name } or raise "#{name} not in #{rows.map { |r| [ r.name, r.player_id ] }.inspect}"
+    end
+
+    it "marks the player with the highest score as a win regardless of ranking direction" do
+      # record_multi_results uses .max on scores — highest score always gets the win
+      rows = multiplayer_table({ "alice" => 5, "bob" => 3, "carol" => 10 })
+      expect(row_for_table(rows, "Carol").wins).to eq(1)  # highest score = 10
+      expect(row_for_table(rows, "Bob").wins).to eq(0)
+      expect(row_for_table(rows, "Alice").wins).to eq(0)
+    end
+
+    it "marks the highest score as a win for descending games (Foosball)" do
+      rows = multiplayer_table({ "alice" => 5, "bob" => 3, "carol" => 10 }, game_type: "Foosball")
+      expect(row_for_table(rows, "Carol").wins).to eq(1)
+      expect(row_for_table(rows, "Carol").points).to be > 1000  # pot added by scoring engine
+      expect(row_for_table(rows, "Alice").wins).to eq(0)
+    end
+
+    it "records a loss for non-winners" do
+      rows = multiplayer_table({ "alice" => 5, "bob" => 10 })
+      # Carol (=bob with 10) is the highest, Alice (=alice with 5) loses
+      expect(row_for_table(rows, "Bob").wins).to eq(1)
+      expect(row_for_table(rows, "Bob").losses).to eq(0)
+      expect(row_for_table(rows, "Alice").wins).to eq(0)
+      expect(row_for_table(rows, "Alice").losses).to eq(1)
+    end
+
+    it "handles 3-player Golf — highest score still gets the win record" do
+      rows = multiplayer_table({ "alice" => 45, "bob" => 42, "carol" => 50 }, game_type: "Golf")
+      expect(row_for_table(rows, "Carol").wins).to eq(1)  # 50 is highest
+      expect(row_for_table(rows, "Bob").wins).to eq(0)
+    end
+
+    it "handles Norsk Rummy with asc ranking — highest score gets the win record" do
+      rows = multiplayer_table({ "alice" => 100, "bob" => 50, "carol" => 200 }, game_type: "Norsk Rummy")
+      expect(row_for_table(rows, "Carol").wins).to eq(1)  # 200 is highest
+      expect(row_for_table(rows, "Bob").wins).to eq(0)
     end
   end
 end
