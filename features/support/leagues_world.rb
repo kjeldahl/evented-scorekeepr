@@ -72,7 +72,7 @@ module LeaguesWorld
     sign_in(actor) unless signed_in_as?(actor)
     visit "/accounts/#{account_id_for(account)}/leagues/new"
     fill_in "Name", with: league_name
-    fill_in "Game type", with: game_type
+    select game_type, from: "Game type"
     fill_in "Starting points", with: starting_points if starting_points
     fill_in "Stake percentage", with: stake if stake
     submit_form "Create league"

@@ -1,9 +1,9 @@
 module Leagues
   class LeaguesController < BaseController
     before_action :require_account_member!
+    before_action :set_game_types, only: %i[new create]
 
     def new
-      @game_types = Leagues::GameType::TYPES
     end
 
     def create
@@ -43,6 +43,10 @@ module Leagues
     end
 
     private
+
+    def set_game_types
+      @game_types = Leagues::GameType::TYPES
+    end
 
     def league_params
       { account_id: params[:account_id], name: params[:name], game_type: params[:game_type],

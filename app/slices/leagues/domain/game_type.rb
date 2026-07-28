@@ -8,12 +8,12 @@ module Leagues
   module GameType
     # [human label, code value] pairs for form select helpers.
     TYPES = [
-      ["Foosball", "Foosball"],
-      ["Table Tennis", "Table Tennis"],
-      ["Pool", "Pool"],
-      ["Darts", "Darts"],
-      ["Golf", "Golf"],
-      ["Norsk Rummy", "Norsk Rummy"]
+      [ "Foosball", "Foosball" ],
+      [ "Table Tennis", "Table Tennis" ],
+      [ "Pool", "Pool" ],
+      [ "Darts", "Darts" ],
+      [ "Golf", "Golf" ],
+      [ "Norsk Rummy", "Norsk Rummy" ]
     ].freeze
   end
 end
