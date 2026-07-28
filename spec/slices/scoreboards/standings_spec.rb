@@ -204,9 +204,9 @@ RSpec.describe Scoreboards::Standings do
                           game_type: "Foosball", match_type: "multiplayer")
     end
 
-    def multi(scores, match_id: "mp-1", deleted: false)
+    def multi(scores, match_id: "mp-1")
       Scoreboards::MultiplayerMatch.new(match_id:, player_ids: scores.keys,
-                                        player_scores: scores.transform_keys(&:to_sym), deleted:)
+                                        player_scores: scores.transform_keys(&:to_sym))
     end
 
     it "credits the top scorer with the win and their own game score" do
@@ -247,13 +247,6 @@ RSpec.describe Scoreboards::Standings do
                    multi({ "alice" => 3, "bob" => 7 }, match_id: "mp-2"))
       expect(row_for(rows, "Alice"))
         .to have_attributes(played: 2, wins: 1, losses: 1, points_for: 10, points_against: 3, streak: "L1")
-    end
-
-    it "leaves a deleted match out of the standings but keeps its players seeded" do
-      rows = table(multi({ "alice" => 10, "bob" => 5 }, match_id: "mp-1"),
-                   multi({ "alice" => 10, "carol" => 5 }, match_id: "mp-2", deleted: true))
-      expect(row_for(rows, "Alice")).to have_attributes(played: 1, wins: 1, points: 1100)
-      expect(rows.map(&:name)).not_to include("Carol")
     end
 
     it "is a no-op for a single-player match" do
@@ -332,8 +325,7 @@ RSpec.describe Scoreboards::Standings do
     def multiplayer_table(scores, gt = "Foosball")
       player_ids = scores.keys.map(&:to_sym)
       match = Scoreboards::MultiplayerMatch.new(match_id: "m-1", player_ids:,
-                                                 player_scores: scores.transform_keys(&:to_sym),
-                                                 deleted: false)
+                                                 player_scores: scores.transform_keys(&:to_sym))
       multiplayer_standings(gt).table([ match ], names: sym_names)
     end
 

@@ -196,6 +196,57 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
     end
   end
 
+  describe "stakes come out of each player's own points" do
+    it "stakes a percentage of the loser's current points, not a fixed amount" do
+      # Bob is 2nd of 2 (100% basis): floor(2000 * 10 / 100) = 200 out of his own 2000.
+      points = { "alice" => 500, "bob" => 2000 }
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
+
+      settled = engine(game_type: "Foosball").settle(points, players)
+      expect(settled).to eq({ "alice" => 700, "bob" => 1800 })
+    end
+
+    it "leaves a broke loser and the winner untouched when the pot is empty" do
+      points = { "alice" => 1000, "bob" => 0 }
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
+
+      settled = engine(game_type: "Foosball").settle(points, players)
+      expect(settled).to eq({ "alice" => 1000, "bob" => 0 })
+    end
+
+    it "floors each stake rather than rounding it up" do
+      # Bob 2nd of 3 (3750 basis): 1009 * 3750 * 10 / 1_000_000 = 37.8 -> 37.
+      points = { "alice" => 1000, "bob" => 1009, "carol" => 1000 }
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 }, { id: "carol", score: 0 } ]
+
+      settled = engine(game_type: "Foosball").settle(points, players)
+      expect(settled["bob"]).to eq(1009 - 37)
+    end
+  end
+
+  describe "an odd pot shared by several winners" do
+    # Golf ranks ascending: Bob and Carol tie for 1st on 0, Alice is 3rd on 5.
+    # Alice stakes floor(1010 * 6250 * 10 / 1_000_000) = 63, so the pot of 63
+    # splits into 31 each with 1 point left over.
+    let(:points) { { "alice" => 1010, "bob" => 1000, "carol" => 1000 } }
+    let(:players) do
+      [ { id: "alice", score: 5 }, { id: "bob", score: 0 }, { id: "carol", score: 0 } ]
+    end
+    let(:settled) { engine(game_type: "Golf").settle(points, players) }
+
+    it "hands the remainder to a single winner, one point at a time" do
+      expect(settled.values_at("bob", "carol").sort).to eq([ 1031, 1032 ])
+    end
+
+    it "creates no points while doing so" do
+      expect(settled.values.sum).to eq(points.values.sum)
+    end
+
+    it "takes the whole pot out of the loser" do
+      expect(settled["alice"]).to eq(1010 - 63)
+    end
+  end
+
   describe "zero-sum" do
     it "the total points never change" do
       points = { "a" => 1000, "b" => 1000, "c" => 1000, "d" => 1000, "e" => 1000 }
