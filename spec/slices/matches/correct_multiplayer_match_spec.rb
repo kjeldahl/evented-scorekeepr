@@ -168,7 +168,7 @@ RSpec.describe Matches::CorrectMultiplayerMatch do
       close_league
       allow(EventStore).to receive(:decide).and_return(stale_decision)
       expect(call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }))
-        .to eq(Result.failure("the league changed while you were working - please retry"))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
       expect(correction_events).to be_empty
     end
   end

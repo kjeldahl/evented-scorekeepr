@@ -193,7 +193,7 @@ RSpec.describe Matches::DeleteMatch do
       register_multiplayer
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call(match_id: "mp-1", user_id: "alice"))
-        .to eq(Result.failure("the league changed while you were working - please retry"))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
     end
   end
 
