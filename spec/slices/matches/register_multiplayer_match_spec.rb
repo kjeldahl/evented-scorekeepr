@@ -175,5 +175,20 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
       expect(call(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 }))
         .to eq(Result.failure("the league changed while you were working — please retry"))
     end
+
+    # The real condition, not a stubbed append: a league close that lands
+    # after the decision was read must beat this registration.
+    it "loses the race against a league close that lands after the decision was read" do
+      stale_decision = EventStore.decide(
+        member: Matches::Membership.projection(account_id: "acc-1", user_id: "alice"),
+        league: Matches::League.projection(league_id: "league-1", account_id: "acc-1"),
+        players: Matches::PlayerMembership.projection(account_id: "acc-1", player_ids: %w[alice bob])
+      )
+      close_league
+      allow(EventStore).to receive(:decide).and_return(stale_decision)
+      expect(call(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 }))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
+      expect(match_events).to be_empty
+    end
   end
 end
