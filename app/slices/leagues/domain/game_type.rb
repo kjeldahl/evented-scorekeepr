@@ -15,10 +15,5 @@ module Leagues
       [ "Golf", "Golf" ],
       [ "Norsk Rummy", "Norsk Rummy" ]
     ].freeze
-
-    # Game types scored as multiplayer (mirrors Scoreboards::MultiplayerGameType::CONFIG keys).
-    MULTIPLAYER_TYPES = [ "Golf", "Norsk Rummy" ].freeze
-
-    def self.multiplayer?(game_type) = MULTIPLAYER_TYPES.include?(game_type.to_s.strip)
   end
 end

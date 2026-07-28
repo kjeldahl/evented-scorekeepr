@@ -10,6 +10,10 @@
     <%= form.label :game_type, "Game type" %>
     <%= form.select :game_type, options_for_select(@game_types, params[:game_type]), { include_blank: true } %>
 
+    <%= form.label :match_type, "Mode" %>
+    <%= form.select :match_type, options_for_select(@modes, params[:match_type]) %>
+    <p class="muted">Match: 1v1 or 2v2 head-to-head. Multiplayer: everyone plays for themselves and is ranked by their own score.</p>
+
     <%= form.label :starting_points, "Starting points" %>
     <%= form.number_field :starting_points, value: params.fetch(:starting_points, 1000), min: 1 %>
 
