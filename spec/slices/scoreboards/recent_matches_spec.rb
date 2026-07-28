@@ -42,8 +42,7 @@ RSpec.describe Scoreboards::RecentMatches do
     def make_multi(scores)
       player_ids = scores.keys.map(&:to_sym)
       Scoreboards::MultiplayerMatch.new(match_id: "m-1", player_ids:,
-                                         player_scores: scores.transform_keys(&:to_sym),
-                                         deleted: false)
+                                         player_scores: scores.transform_keys(&:to_sym))
     end
 
     it "ranks descending for Foosball (highest score first)" do
@@ -159,6 +158,57 @@ RSpec.describe Scoreboards::RecentMatches do
         Scoreboards::RecentMatches::Entry.new(match_id: "m-2", line: "Bob beats Alice 21-15", player_ids: %w[b a]),
         Scoreboards::RecentMatches::Entry.new(match_id: "m-1", line: "Alice beats Bob 21-8", player_ids: %w[a b])
       ])
+    end
+
+    describe "in a multiplayer league" do
+      def multiplayer_registered(match_id:, players:, scores:)
+        DcbEventStore::Event.new(
+          type: "MultiplayerMatchRegistered",
+          data: { match_id:, league_id: "league-1", account_id: "acc-1", player_ids: players,
+                  player_scores: scores, registered_by_user_id: players.first },
+          tags: [ "match:#{match_id}", "league:league-1", "account:acc-1",
+                  *players.map { |player| "player:#{player}" } ]
+        )
+      end
+
+      def multiplayer_deleted(match_id:)
+        DcbEventStore::Event.new(
+          type: "MultiplayerMatchDeleted",
+          data: { match_id:, league_id: "league-1", account_id: "acc-1", deleted_by_user_id: "a" },
+          tags: [ "match:#{match_id}", "league:league-1", "account:acc-1" ]
+        )
+      end
+
+      before do
+        EventStore.append([
+          user_registered(user_id: "a", name: "Alice"), user_registered(user_id: "b", name: "Bob"),
+          user_registered(user_id: "c", name: "Carol")
+        ])
+      end
+
+      it "carries the ranked line and every participant of a multiplayer match" do
+        EventStore.append([ multiplayer_registered(match_id: "mp-1", players: %w[a b c],
+                                                   scores: { a: 10, b: 5, c: 3 }) ])
+        expect(described_class.entries("league-1", game_type: "Foosball")).to eq([
+          Scoreboards::RecentMatches::Entry.new(match_id: "mp-1", line: "Alice (10), Bob (5), Carol (3)",
+                                                player_ids: %w[a b c])
+        ])
+      end
+
+      it "ranks the line by the league's own game type" do
+        EventStore.append([ multiplayer_registered(match_id: "mp-1", players: %w[a b c],
+                                                   scores: { a: 10, b: 5, c: 3 }) ])
+        expect(described_class.lines("league-1", game_type: "Golf")).to eq([ "Carol (3), Bob (5), Alice (10)" ])
+      end
+
+      it "drops a deleted multiplayer match from the list" do
+        EventStore.append([
+          multiplayer_registered(match_id: "mp-1", players: %w[a b], scores: { a: 10, b: 5 }),
+          multiplayer_registered(match_id: "mp-2", players: %w[a c], scores: { a: 4, c: 8 }),
+          multiplayer_deleted(match_id: "mp-1")
+        ])
+        expect(described_class.entries("league-1").map(&:match_id)).to eq([ "mp-2" ])
+      end
     end
   end
 end

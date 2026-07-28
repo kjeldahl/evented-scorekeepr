@@ -78,6 +78,33 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
     end
   end
 
+  describe "player id normalisation", :event_store do
+    it "strips surrounding whitespace from the submitted ids" do
+      call(player_ids: [ "  alice  ", "bob" ], player_scores: { "alice" => 10, "bob" => 5 })
+      expect(match_events.sole.data[:player_ids]).to eq(%w[alice bob])
+    end
+
+    it "drops empty selections (an unused player row on the form)" do
+      call(player_ids: [ "alice", "", "   ", "bob" ], player_scores: { "alice" => 10, "bob" => 5 })
+      expect(match_events.sole.data[:player_ids]).to eq(%w[alice bob])
+    end
+
+    it "rejects a match whose only participants were blank" do
+      expect(call(player_ids: [ "", "  " ], player_scores: {}))
+        .to eq(Result.failure("at least 1 participant is required"))
+    end
+
+    it "detects duplicates only after stripping" do
+      expect(call(player_ids: [ "alice", " alice " ], player_scores: { "alice" => 10 }))
+        .to eq(Result.failure("players must be distinct"))
+    end
+
+    it "reads ids that are not strings" do
+      call(player_ids: [ :alice, :bob ], player_scores: { "alice" => 10, "bob" => 5 })
+      expect(match_events.sole.data[:player_ids]).to eq(%w[alice bob])
+    end
+  end
+
   describe "decision invariants", :event_store do
     it "rejects a registrar who is not a member" do
       expect(call(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 }, user_id: "stranger"))

@@ -63,8 +63,6 @@ module Scoreboards
     end
 
     def apply_multi(stats, match)
-      return seed(stats, match.players) if match.deleted?
-
       record_multi_results(settle_multi_points(seed(stats, match.players), match), match)
     end
 
