@@ -9,6 +9,7 @@ module Matches
 
     def new
       @multiplayer = @league.multiplayer_league?
+      render @multiplayer ? :new_multiplayer : :new
     end
 
     def create
@@ -21,8 +22,9 @@ module Matches
         redirect_to account_league_scoreboard_path(params[:account_id], params[:league_id]),
                     notice: "Match registered"
       else
+        @multiplayer = @league.multiplayer_league?
         flash.now[:alert] = result.error
-        render :new, status: :unprocessable_entity
+        render @multiplayer ? :new_multiplayer : :new, status: :unprocessable_entity
       end
     end
 
