@@ -9,7 +9,7 @@ gem "dcb_event_store", github: "Kjeldahl/ruby-dcb"
 gem "pg", "~> 1.5"
 gem "connection_pool", "~> 2.4"
 
-gem "appsignal"
+gem "appsignal", require: false
 
 gem "bcrypt", "~> 3.1.7"
 

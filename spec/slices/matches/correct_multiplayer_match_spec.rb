@@ -139,7 +139,7 @@ RSpec.describe Matches::CorrectMultiplayerMatch do
       match_id = register_match(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
       allow(EventStore).to receive(:append).and_raise(DcbEventStore::ConditionNotMet)
       expect(call(match_id:, player_scores: { "alice" => 12, "bob" => 6 }))
-        .to eq(Result.failure("the league changed while you were working - please retry"))
+        .to eq(Result.failure("the league changed while you were working — please retry"))
     end
   end
 end

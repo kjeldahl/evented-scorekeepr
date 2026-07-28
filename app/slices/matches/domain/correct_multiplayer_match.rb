@@ -13,7 +13,7 @@ module Matches
 
       append_correction(decision, match_id:, league_id:, account_id:, player_scores:, user_id:)
     rescue DcbEventStore::ConditionNotMet
-      Result.failure("the league changed while you were working - please retry")
+      Result.failure("the league changed while you were working — please retry")
     end
 
     def self.append_correction(decision, match_id:, league_id:, account_id:, player_scores:, user_id:)

@@ -5,6 +5,85 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
     described_class.new(stake_percentage:, game_type:)
   end
 
+  describe "#rank" do
+    it "ranks descending for Foosball (highest score first)" do
+      players = [ { id: "bob", score: 5 }, { id: "alice", score: 10 }, { id: "carol", score: 3 } ]
+      ranked = engine(game_type: "Foosball").send(:rank, players)
+      expect(ranked.map { |p| p[:id] }).to eq(%w[alice bob carol])
+      expect(ranked.map { |p| p[:position] }).to eq([ 0, 1, 2 ])
+    end
+
+    it "ranks ascending for Golf (lowest score first)" do
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 }, { id: "carol", score: 3 } ]
+      ranked = engine(game_type: "Golf").send(:rank, players)
+      expect(ranked.map { |p| p[:id] }).to eq(%w[carol bob alice])
+    end
+
+    it "ranks ascending for Norsk Rummy" do
+      players = [ { id: "alice", score: 100 }, { id: "bob", score: 50 } ]
+      ranked = engine(game_type: "Norsk Rummy").send(:rank, players)
+      expect(ranked.map { |p| p[:id] }).to eq(%w[bob alice])
+      expect(ranked.first[:position]).to eq(0)
+    end
+
+    it "includes Table Tennis with desc ranking" do
+      players = [ { id: "bob", score: 3 }, { id: "alice", score: 7 } ]
+      ranked = engine(game_type: "Table Tennis").send(:rank, players)
+      expect(ranked.map { |p| p[:id] }).to eq(%w[alice bob])
+    end
+
+    it "preserves player data alongside position" do
+      players = [ { id: "bob", score: 10, team: "A" }, { id: "alice", score: 5 } ]
+      ranked = engine(game_type: "Foosball").send(:rank, players)
+      expect(ranked.first[:team]).to eq("A")
+    end
+  end
+
+  describe "#compute_basis_points" do
+    it "assigns 0 basis points to 1st place" do
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
+      ranked = engine(game_type: "Foosball").send(:rank, players)
+      bp = engine.send(:compute_basis_points, ranked, 2)
+      expect(bp["alice"]).to eq(0)
+    end
+
+    it "assigns 10000 basis points to 2nd place (2-player match)" do
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
+      ranked = engine(game_type: "Foosball").send(:rank, players)
+      bp = engine.send(:compute_basis_points, ranked, 2)
+      expect(bp["bob"]).to eq(10000)
+    end
+
+    it "handles ties with shared basis points" do
+      # Bob and Carol tied at score 5, Alice at 10
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 }, { id: "carol", score: 5 } ]
+      ranked = engine(game_type: "Foosball").send(:rank, players)
+      bp = engine.send(:compute_basis_points, ranked, 3)
+      # Bob and Carol share avg(3750, 6250) = 5000
+      expect(bp["bob"]).to eq(5000)
+      expect(bp["carol"]).to eq(5000)
+      expect(bp["alice"]).to eq(0)
+    end
+
+    it "uses ascending rank for Golf" do
+      # Bob(0) and Carol(0) tied 1st → 0bp each; Alice(5) at position 2 → 6250bp
+      players = [ { id: "alice", score: 5 }, { id: "bob", score: 0 }, { id: "carol", score: 0 } ]
+      ranked = engine(game_type: "Golf").send(:rank, players)
+      bp = engine.send(:compute_basis_points, ranked, 3)
+      expect(bp["bob"]).to eq(0)
+      expect(bp["carol"]).to eq(0)
+      expect(bp["alice"]).to eq(6250)
+    end
+
+    it "handles Norsk Rummy with 3 players" do
+      players = [ { id: "bob", score: 50 }, { id: "alice", score: 100 } ]
+      ranked = engine(game_type: "Norsk Rummy").send(:rank, players)
+      bp = engine.send(:compute_basis_points, ranked, 2)
+      expect(bp["bob"]).to eq(0)
+      expect(bp["alice"]).to eq(10000)
+    end
+  end
+
   describe "ranking direction" do
     it "ranks ascending for Golf (lowest score is 1st)" do
       points = { "alice" => 1000, "bob" => 1000, "carol" => 1000 }
