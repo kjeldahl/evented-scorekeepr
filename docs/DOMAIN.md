@@ -82,8 +82,24 @@ game type specifies (ascending or descending), and each finishing position
 division, remainder handed out one point at a time. Tied players share the
 average ratio of their positions.
 
-A multiplayer match can have 1 to N players (N per the game type's max). A
-single-player match is accepted but is a no-op (no stakes, no gains).
+A multiplayer match is played by a **subset** of the account's members, and
+how many may take part is fixed by the game type: Foosball and Table Tennis
+take 2 to 4 players, Golf takes 1 to 8, and an unconfigured game type takes
+2 to 4. A count outside that range is rejected with "a {game type} match
+needs {min} to {max} players". Where the game type allows a single player,
+such a match is accepted but is a no-op (no stakes, no gains). Players must
+be distinct *before* the count is judged, so picking the same player twice
+is reported as a duplicate rather than as a wrong number of players.
+
+The registration form is how the participants are chosen. It offers a fixed
+set of player rows — as many as the game type's maximum, capped at the
+number of account members — each row a picker over every account member plus
+that player's score. The registrar fills one row per participant and leaves
+the rest empty; an empty row is ignored, so the match is registered for
+exactly the players picked. A half-filled row is a mistake, not a
+participant: a row with a player but no score is rejected with "every player
+needs a score", and a score with no player with "every score needs a
+player".
 
 Editing and deleting follow the same pattern as regular matches:
 `MultiplayerMatchResultCorrected` folds onto `MultiplayerMatchRegistered`

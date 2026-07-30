@@ -7,9 +7,17 @@ Feature: Register a multiplayer match
   and is distributed to the winner(s) with integer division; the remainder is
   handed out one point at a time to winners in rank order.
 
-  A multiplayer match has 1 or more players, all of whom must be members of
-  the account. A match with a single player is accepted (the player stakes
-  nothing and gains nothing).
+  A multiplayer match is played by a subset of the account's members: the
+  registrar picks who took part (see "Multiplayer match registration form").
+  How many may take part is fixed by the game type — Foosball and Table
+  Tennis take 2 to 4 players, Golf takes 1 to 8, and a game type nobody has
+  configured takes 2 to 4. Where the game type allows a single player, such a
+  match is accepted but is a no-op: the player stakes nothing and gains
+  nothing. Every player must be a member of the account.
+
+  Rejection order is fixed so a mistake reports its own cause: players must
+  be distinct before the count is judged, so picking the same player twice is
+  reported as a duplicate rather than as a wrong number of players.
 
   Background:
     Given "Alice" is a registered user with email "alice@example.com" and password "secret123"
@@ -24,6 +32,7 @@ Feature: Register a multiplayer match
     And "Eve" is a member of the "Office" account
     And the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
 
+  # register_multiplayer_match-1
   Scenario: Ranking direction depends on game type
     # A game with ascending ranking: lowest score is 1st place
     # Golf: basis-points for 3 players: [0, 3750, 6250]
@@ -38,6 +47,7 @@ Feature: Register a multiplayer match
     And "Alice" has 963 points in "Golf Cup"
     And "Carol" has 938 points in "Golf Cup"
 
+  # register_multiplayer_match-2
   Scenario: Descending ranking: highest score is 1st place
     # Foosball with multiplayer mode: highest score wins
     # basis-points for 3 players: [0, 3750, 6250]
@@ -51,11 +61,14 @@ Feature: Register a multiplayer match
     And "Bob" has 963 points in "Foosball Open"
     And "Carol" has 938 points in "Foosball Open"
 
+  # register_multiplayer_match-3
   Scenario: Single player match — no stakes, no gains
+    # Golf allows a single player; the match is a legal no-op.
     When the "Office" account has an open league "Solo Golf" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" registers a multiplayer match in "Solo Golf" where "Alice" scores 0
     Then "Alice" has 1000 points in "Solo Golf"
 
+  # register_multiplayer_match-4
   Scenario: Two players
     # basis-points for 2 players: [0, 10000]
     # 1st pays 0%, 2nd pays 100% of stake_percentage
@@ -67,6 +80,7 @@ Feature: Register a multiplayer match
     Then "Alice" has 1100 points in "Head to Head"
     And "Bob" has 900 points in "Head to Head"
 
+  # register_multiplayer_match-5
   Scenario: Ties are treated equally
     # basis-points for 3 players: [0, 3750, 6250]
     # Ascending ranking: Carol 0 (1st), Alice 10 & Bob 10 (tied 2nd/3rd)
@@ -80,6 +94,7 @@ Feature: Register a multiplayer match
     And "Alice" has 950 points in "Tied Golf"
     And "Bob" has 950 points in "Tied Golf"
 
+  # register_multiplayer_match-6
   Scenario: Scores can be negative
     # Golf: ascending ranking. Lowest score is 1st.
     # basis-points for 3 players: [0, 3750, 6250]
@@ -93,16 +108,19 @@ Feature: Register a multiplayer match
     And "Alice" has 963 points in "Winter Golf"
     And "Carol" has 938 points in "Winter Golf"
 
+  # register_multiplayer_match-7
   Scenario: All players must be account members
     Given "Frank" is a registered user with email "frank@example.com" and password "secret123"
     When "Alice" attempts to register a multiplayer match in "Golf Cup" where "Alice" scores 10 and "Frank" scores 5
     Then the registration is rejected because "all players must be members of the account"
 
+  # register_multiplayer_match-8
   Scenario: A non-member cannot register a multiplayer match
     Given "Frank" is a registered user with email "frank@example.com" and password "secret123"
     When "Frank" attempts to register a multiplayer match in "Golf Cup" where "Frank" scores 10 and "Alice" scores 5
     Then the registration is rejected because "only members can register matches"
 
+  # register_multiplayer_match-9
   Scenario: Cannot register a multiplayer match in a closed league
     Given the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" has already registered a multiplayer match in "Golf Cup" where "Bob" scores 0, "Alice" scores 5, and "Carol" scores 10
@@ -110,16 +128,25 @@ Feature: Register a multiplayer match
     When "Alice" attempts to register a multiplayer match in "Golf Cup" where "Dave" scores 10 and "Eve" scores 5
     Then the registration is rejected because "the league is closed"
 
-  Scenario: Only scores in the range allowed by game type are accepted
-    When the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
-    And "Alice" attempts to register a multiplayer match in "Golf Cup" with fewer than 1 players
-    Then the registration is rejected because "at least 1 participant is required"
+  # register_multiplayer_match-10
+  Scenario Outline: The game type fixes how many players a match takes
+    Given the "Office" account has an open league "Club Night" for "<game type>" as a multiplayer league with starting points 1000 and stake 10%
+    When "Alice" attempts to register a multiplayer match in "Club Night" with <players> players
+    Then the registration is rejected because "a <game type> match needs <min> to <max> players"
 
+    Examples:
+      | game type | players | min | max |
+      | Foosball  | 1       | 2   | 4   |
+      | Foosball  | 5       | 2   | 4   |
+      | Golf      | 0       | 1   | 8   |
+
+  # register_multiplayer_match-11
   Scenario: Score input is validated — non-integer scores are rejected
     When the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" attempts to register a multiplayer match in "Golf Cup" where "Alice" scores 10.5 and "Bob" scores 5
     Then the registration is rejected because "scores must be integers"
 
+  # register_multiplayer_match-12
   Scenario: Players cannot be duplicated in a match
     When the "Office" account has an open league "Golf Cup" for "Golf" as a multiplayer league with starting points 1000 and stake 10%
     And "Alice" attempts to register a multiplayer match in "Golf Cup" where "Alice" scores 10 and "Alice" scores 5
