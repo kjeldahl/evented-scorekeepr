@@ -60,6 +60,28 @@ When("{string} attempts to register a multiplayer match in {string} with fewer t
 end
 
 
+# Register with a raw player count — submits via the driver so flash messages render.
+When("{string} attempts to register a multiplayer match in {string} with {int} players") do |registrar, league_name, player_count|
+  league_record = league_for(league_name)
+  sign_in(registrar) unless signed_in_as?(registrar)
+
+  visit new_account_league_match_path(league_record.account_id, league_id_for(league_name))
+
+  members_list = Matches::AccountMembers.for_account(league_record.account_id)
+  uids = members_list.map(&:user_id).first(player_count)
+  player_names = members_list.map(&:name).first(player_count)
+
+  # Set up the "last attempt" tracking so the rejection step can verify.
+  @last_multiplayer_match = { league: league_name, player_names:, scores: Array.new(player_count, "0") }
+  @multiplayer_matches_before = multiplayer_match_events(league_name).count
+
+  # Build player_ids and scores for exactly player_count participants.
+  scores = uids.to_h { |uid| [uid, "0"] }
+
+  post_path = "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league_name)}/matches"
+  page.driver.submit :post, post_path, { player_ids: uids, scores: scores }
+end
+
 # Deletion step — delete the first (oldest) multiplayer match in the league
 When("{string} deletes the first match") do |deleter|
   league = last_multiplayer_league
@@ -186,3 +208,138 @@ def multiplayer_deletion_events(league_name)
   ])
   EventStore.read(query)
 end
+
+# --- Multiplayer match form steps (multiplayer_match_form.feature) --------
+
+When("{string} opens the multiplayer match form for {string}") do |registrar, league_name|
+  league_record = league_for(league_name)
+  sign_in(registrar) unless signed_in_as?(registrar)
+  visit new_account_league_match_path(league_record.account_id, league_id_for(league_name))
+end
+
+Then("the form offers {int} player rows") do |expected_count|
+  actual_count = page.all("div.multiplayer-scores table tbody tr").count
+  expect(actual_count).to eq(expected_count),
+    "expected #{expected_count} rows, found #{actual_count}"
+end
+
+Then("every player row offers all {int} members of the {string} account") do |member_count, _account_name|
+  page.all("div.multiplayer-scores table tbody tr").each do |row|
+    select = row.find("select[name*='player_ids']")
+    options = select.all("option").map { |opt| opt.text.strip }.reject { |t| t.empty? || t == "Select player" }
+    expect(options.size).to eq(member_count),
+      "expected #{member_count} options, found #{options.size}: #{options.inspect}"
+  end
+end
+
+# Submit the multiplayer form with a mix of filled and empty rows.
+# DataTable rows map POSITIONALLY to form rows: row 0 → form row 0, etc.
+# If a row names a player, that player is selected and scored.
+# If a row has no player but a score, the score is entered without selection.
+#
+# Because we use the Rack::Test driver (no JavaScript), Capybara form-filling
+# helpers cannot modify <select> elements.  Instead we build the params hash
+# and submit directly via page.driver.post, which mimics a real form POST.
+def submit_multiplayer_form(registrar, league_name, table)
+  league_record = league_for(league_name)
+  sign_in(registrar) unless signed_in_as?(registrar)
+
+  # Visit the form to establish session and navigate.
+  visit new_account_league_match_path(league_record.account_id, league_id_for(league_name))
+
+  # Collect form row info: uid + name for each rendered row.
+  members_list = Matches::AccountMembers.for_account(league_record.account_id)
+  rows_info = page.all("div.multiplayer-scores table tbody tr").each_with_index.map do |row, idx|
+    select_el = row.find("select[name*='player_ids']")
+    uid = select_el["data-player-id"]
+    name = members_list.find { |m| m.user_id == uid }&.name || ""
+    { idx:, uid:, name:, row: }
+  end
+
+  # Parse the DataTable.
+  table_rows = table.hashes.map do |row|
+    { player: row["player"]&.strip, score: row["score"]&.strip }
+  end
+
+  # Build form parameters mirroring what the browser would send.
+  # We need player_ids[] and scores[] as arrays, one per row.
+  player_ids_arr = []
+  scores_arr = []
+
+  # First pass: for each DataTable entry with a player, mark it as filled.
+  rows_info.each do |info|
+    entry = table_rows.find { |t| t[:player] == info[:name] }
+    if entry
+      if entry[:score] && !entry[:score].empty?
+        # Full row: player + score.
+        player_ids_arr << info[:uid]
+        scores_arr << entry[:score]
+      else
+        # Half-filled: player selected but no score → send player_id with empty score.
+        player_ids_arr << info[:uid]
+        scores_arr << ""
+      end
+    else
+      # Empty row: no player, no score.
+      player_ids_arr << ""
+      scores_arr << ""
+    end
+  end
+
+  # Second pass: handle DataTable rows with no player but a score.
+  table_rows.each_with_index do |entry, i|
+    next if entry[:player] && !entry[:player].empty?
+    next unless entry[:score] && !entry[:score].empty?
+
+    form_row = rows_info[i]
+    next unless form_row
+    # Score without player.
+    player_ids_arr[i] = ""
+    scores_arr[i] = entry[:score]
+  end
+
+  # Convert positional arrays to hash { uid => score } for the scores param.
+  scores_hash = {}
+  rows_info.each_with_index do |info, i|
+    scores_hash[info[:uid]] = scores_arr[i] if scores_arr[i] && !scores_arr[i].empty?
+  end
+
+  # POST the form data via the driver.
+  post_path = "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league_name)}/matches"
+  page.driver.submit :post, post_path, { player_ids: player_ids_arr, scores: scores_hash }
+
+  # page.driver.submit updates page.body and page.current_path for the re-render
+  # case (flash.now is inlined in the response body).  For the redirect case,
+  # page.body is empty; follow the redirect to get the flash into the DOM.
+  if page.response_headers["Location"].present?
+    visit page.response_headers["Location"]
+  end
+end
+
+When("{string} registers a multiplayer match in {string} on the form, leaving the other rows empty:") do |registrar, league_name, table|
+  submit_multiplayer_form(registrar, league_name, table)
+end
+
+When("{string} attempts to register a multiplayer match in {string} on the form, leaving the other rows empty:") do |registrar, league_name, table|
+  # Build player_names from the DataTable (entries that name a player) so the
+  # event-tracking hash reflects the intended participants (even though the
+  # submission will be rejected).
+  player_names = table.hashes.filter_map { |row| row["player"]&.strip&.presence }
+  @last_multiplayer_match = { league: league_name, player_names:, scores: Array.new(player_names.size, "0") }
+  @multiplayer_matches_before = multiplayer_match_events(league_name).count
+
+  submit_multiplayer_form(registrar, league_name, table)
+end
+
+# Legacy helpers from earlier Rack::QueryParser experiments — no longer used.
+# Kept at the bottom of the file to avoid accidental calls.
+#
+# def submit_form_encoded(path, query_string)
+#   page.driver.post(path, {}, { input: StringIO.new(query_string) })
+# end
+#
+# def build_multiplayer_params(player_ids, scores)
+#   parts = player_ids.map { |uid| "player_ids[]=#{CGI.escape(uid)}" }
+#   scores.each { |uid, score| parts << "scores[#{CGI.escape(uid)}]=#{CGI.escape(score.to_s)}" }
+#   parts.join("&")
+# end

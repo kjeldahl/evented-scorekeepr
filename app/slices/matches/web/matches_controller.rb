@@ -157,17 +157,32 @@ module Matches
     helper_method :members
 
     # The players shown in the multiplayer form: all account members, prefilled
-    # from a failed submission if present.
+    # from a failed submission if present.  The row count is bounded by the
+    # game type's maximum and the number of account members so that every row
+    # can legally be filled and there are never more rows than members.
     def form_players
       @form_players ||= if params[:scores]
         params[:scores].keys.map do |player_id|
           { player_id:, score: params[:scores][player_id] }
         end
       else
-        members.map { |m| { player_id: m.user_id, score: nil } }
+        members.map { |m| { player_id: m.user_id, score: nil } }.first(row_limit)
       end
     end
     helper_method :form_players
+
+    # How many rows to show: game type max, capped at the number of members.
+    def row_limit
+      return @row_limit if defined?(@row_limit)
+
+      if @league&.multiplayer_league?
+        config = GameType.find(@league.game_type)
+        @row_limit = [ config[:max_players], members.size ].min
+      else
+        @row_limit = members.size
+      end
+    end
+    private :row_limit
 
     # Membership is enforced per slice with its own fold (docs/ARCHITECTURE.md):
     # non-members are sent back to the dashboard and never reach the form.
