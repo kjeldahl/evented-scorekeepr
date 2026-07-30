@@ -166,23 +166,10 @@ module Matches
           { player_id:, score: params[:scores][player_id] }
         end
       else
-        members.map { |m| { player_id: m.user_id, score: nil } }.first(row_limit)
+        members.map { |m| { player_id: m.user_id, score: nil } }.first(@league.row_limit(members.size))
       end
     end
     helper_method :form_players
-
-    # How many rows to show: game type max, capped at the number of members.
-    def row_limit
-      return @row_limit if defined?(@row_limit)
-
-      if @league&.multiplayer_league?
-        config = GameType.find(@league.game_type)
-        @row_limit = [ config[:max_players], members.size ].min
-      else
-        @row_limit = members.size
-      end
-    end
-    private :row_limit
 
     # Membership is enforced per slice with its own fold (docs/ARCHITECTURE.md):
     # non-members are sent back to the dashboard and never reach the form.

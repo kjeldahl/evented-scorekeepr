@@ -76,7 +76,7 @@ When("{string} attempts to register a multiplayer match in {string} with {int} p
   @multiplayer_matches_before = multiplayer_match_events(league_name).count
 
   # Build player_ids and scores for exactly player_count participants.
-  scores = uids.to_h { |uid| [uid, "0"] }
+  scores = uids.to_h { |uid| [ uid, "0" ] }
 
   post_path = "/accounts/#{league_record.account_id}/leagues/#{league_id_for(league_name)}/matches"
   page.driver.submit :post, post_path, { player_ids: uids, scores: scores }

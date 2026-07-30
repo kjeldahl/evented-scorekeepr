@@ -50,8 +50,6 @@ module Matches
     # a hash keyed by user id (the form sends a blank key "" for rows where
     # the score was entered but no player was selected).
     def self.half_filled_rejection(player_ids, player_scores)
-      player_set = player_ids.to_set
-
       # Scores keyed by an id that has no matching player id: either a blank
       # key (the form's empty-string sentinel) or a real uid for a row that
       # was left with no player selected.
@@ -72,14 +70,10 @@ module Matches
     # Game type fixes the allowed player count range.
     def self.player_count_rejection(count, league)
       return nil unless league && league.multiplayer_league?
+      return nil if GameType.valid_player_count?(league.game_type, count)
 
       config = GameType.find(league.game_type)
-      return nil if (config[:min_players]..config[:max_players]).cover?(count)
-
-      game = league.game_type
-      min = config[:min_players]
-      max = config[:max_players]
-      Result.failure("a #{game} match needs #{min} to #{max} players")
+      Result.failure("a #{league.game_type} match needs #{config[:min_players]} to #{config[:max_players]} players")
     end
     private_class_method :player_count_rejection
 

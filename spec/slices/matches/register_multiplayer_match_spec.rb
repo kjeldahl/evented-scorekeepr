@@ -135,7 +135,7 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
       create_league(game_type: "Golf")
       %w[alice bob carol dave eve frank grace henry].each { |u| make_member(u) }
       player_ids = %w[alice bob carol dave eve frank grace henry]
-      scores = player_ids.to_h { |id| [id, 0] }
+      scores = player_ids.to_h { |id| [ id, 0 ] }
       result = call(player_ids:, player_scores: scores)
       expect(result).to be_success
     end
@@ -144,7 +144,7 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
       create_league(game_type: "Golf")
       %w[alice bob carol dave eve frank grace henry ivan].each { |u| make_member(u) }
       player_ids = %w[alice bob carol dave eve frank grace henry ivan]
-      scores = player_ids.to_h { |id| [id, 0] }
+      scores = player_ids.to_h { |id| [ id, 0 ] }
       expect(call(player_ids:, player_scores: scores))
         .to eq(Result.failure("a Golf match needs 1 to 8 players"))
     end
