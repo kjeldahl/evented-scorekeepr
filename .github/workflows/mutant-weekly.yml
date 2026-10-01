@@ -1,0 +1,37 @@
+name: Mutant (weekly full)
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # Mondays 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutant:
+    name: Mutant (full)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Scheduled runs skip when main saw no commits in the past week.
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -n "$(git log --since='7 days ago' --format=%H -1)" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No commits in the past week; skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ruby/setup-ruby@v1
+        if: steps.changes.outputs.run == 'true'
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+      - name: Mutant
+        if: steps.changes.outputs.run == 'true'
+        run: bin/rails quality:mutant:full
