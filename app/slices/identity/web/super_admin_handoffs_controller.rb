@@ -12,7 +12,7 @@ module Identity
 
     def create
       result = HandOffSuperAdmin.call(
-        from_user_id: session[:user_id], password: params[:password],
+        from_user_id: session[:user_id], reauthenticated: reauthenticated?,
         to_email: params[:email], impersonation_id: session[:impersonation_id]
       )
       if result.success?
@@ -25,6 +25,12 @@ module Identity
     end
 
     private
+
+    # The super admin proves identity with their own password; the command
+    # only learns the outcome.
+    def reauthenticated?
+      AuthenticateUser.call(email: Users.find(session[:user_id]).email, password: params[:password]).success?
+    end
 
     def require_super_admin!
       return if EventStore.project(CurrentSuperAdmin.projection) == session[:user_id]

@@ -19,8 +19,8 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     EventStore.read(DcbEventStore::Query.new(DcbEventStore::QueryItem.new(event_types: "SuperAdminHandedOff")))
   end
 
-  def hand_off(from: "root", to: "alice", password: "secret123", email: nil, impersonation_id: nil)
-    described_class.call(from_user_id: ids.fetch(from), password:, to_email: email || "#{to}@example.com", impersonation_id:)
+  def hand_off(from: "root", to: "alice", reauthenticated: true, email: nil, impersonation_id: nil)
+    described_class.call(from_user_id: ids.fetch(from), reauthenticated:, to_email: email || "#{to}@example.com", impersonation_id:)
   end
 
   def current
@@ -62,17 +62,17 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     expect(handoffs).to be_empty
   end
 
-  it "checks the sender before the password" do
-    expect(hand_off(from: "alice", password: "wrong")).to eq(Result.failure(described_class::NOT_SUPER_ADMIN))
+  it "checks the sender before re-authentication" do
+    expect(hand_off(from: "alice", reauthenticated: false)).to eq(Result.failure(described_class::NOT_SUPER_ADMIN))
   end
 
-  it "rejects a wrong password and appends nothing" do
-    expect(hand_off(password: "wrong")).to eq(Result.failure("invalid credentials"))
+  it "rejects a failed re-authentication and appends nothing" do
+    expect(hand_off(reauthenticated: false)).to eq(Result.failure("invalid credentials"))
     expect(handoffs).to be_empty
   end
 
-  it "checks the password before the recipient" do
-    expect(hand_off(password: "wrong", email: "nobody@example.com")).to eq(Result.failure("invalid credentials"))
+  it "checks re-authentication before the recipient" do
+    expect(hand_off(reauthenticated: false, email: "nobody@example.com")).to eq(Result.failure("invalid credentials"))
   end
 
   it "rejects an unknown recipient and appends nothing" do
@@ -80,11 +80,14 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     expect(handoffs).to be_empty
   end
 
-  it "succeeds without appending when handing off to oneself" do
-    expect(EventStore).not_to receive(:append)
-    expect(hand_off(to: "root")).to eq(Result.success(ids.fetch("root")))
+  it "rejects handing off to oneself and appends nothing" do
+    expect(hand_off(to: "root")).to eq(Result.failure("you are already the super admin"))
     expect(handoffs).to be_empty
     expect(current).to eq(ids.fetch("root"))
+  end
+
+  it "checks the recipient exists before the self check" do
+    expect(hand_off(email: "nobody@example.com")).to eq(Result.failure("the user was not found"))
   end
 
   it "appends no impersonation end when none is given" do
@@ -109,10 +112,9 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     expect(calls).to eq(2)
   end
 
-  it "still ends the impersonation on a self-handoff, without a handoff event" do
+  it "does not end the impersonation when rejecting a self-handoff" do
     hand_off(to: "root", impersonation_id: "imp-1")
-    expect(types).to include("ImpersonationEnded")
-    expect(handoffs).to be_empty
+    expect(types).not_to include("ImpersonationEnded")
   end
 
   it "keeps the impersonation end when retrying" do
@@ -139,7 +141,7 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
   end
 
   it "reports a missing email as an unknown user" do
-    expect(described_class.call(from_user_id: ids.fetch("root"), password: "secret123", to_email: nil, impersonation_id: nil))
+    expect(described_class.call(from_user_id: ids.fetch("root"), reauthenticated: true, to_email: nil, impersonation_id: nil))
       .to eq(Result.failure("the user was not found"))
   end
 end
