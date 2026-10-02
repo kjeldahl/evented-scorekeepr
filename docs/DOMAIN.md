@@ -272,7 +272,8 @@ caught by the append condition). Granting is a domain-level command
 The current super admin can hand status to any registered user, identified by
 email (`Identity::HandOffSuperAdmin`). The UI is a "Hand off super admin" link
 on the super admin's dashboard to a page with recipient email + the sender's
-own password (re-authentication on every handoff). Checks, first failure wins:
+own password (re-authentication on every handoff; verified by the web layer, the command only
+receives whether the sender was re-authenticated). Checks, first failure wins:
 sender must be the super admin ("only the super admin can hand off super admin
 status"), password correct ("invalid credentials"), recipient registered
 ("the user was not found"). Handing off to oneself succeeds without appending.
