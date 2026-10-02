@@ -43,6 +43,11 @@ Read models, including the scoreboard, are folds over events.
 
 Requirements: Ruby >= 4.0, a running PostgreSQL server.
 
+In Claude Code cloud sessions, `.claude/hooks/session-start.sh` installs the
+prebuilt Ruby from `.ruby-version` via mise plus the gems (skipping the
+`development`, `deploy` and `production` groups). The environment's network
+allowlist needs `mise-versions.jdx.dev` and `tuf-repo-cdn.sigstore.dev`.
+
 ```bash
 bin/setup
 ```
