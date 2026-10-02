@@ -56,6 +56,14 @@ You run in one of two modes; your spawn prompt tells you which.
   Then stay available: on each follow-up message, `git merge --ff-only` the
   sender's commit, do the work, hand back to the sender.
 
+## Routing (not strictly linear)
+Anything you find outside your ownership goes to its owner **now**, not to the
+lead's report: spec wording / weak or missing scenarios → specifier; behaviour
+bugs → coder; structure/duplication → refactorer; boundaries/design →
+architect. Teammate: SendMessage the owner (include your commit sha). Subagent:
+list it under `follow_ups`. Always also list it under `follow_ups` in your
+handoff so the lead can track it.
+
 ## Git
 - Commit only on your own branch. Never push. Never touch other branches.
 - Everything you want kept must be committed before handing off.
@@ -73,5 +81,7 @@ commit: <sha or ->
 worktree: <absolute path>
 files: <changed paths>
 summary: <1-3 lines>
+follow_ups:
+  - <owner>: <request>   # omit if none
 blocker: <only for BLOCKED>
 ```

@@ -66,8 +66,12 @@ Then tell the user: "Switch to the **specifier** pane to answer its questions
 and approve the spec."
 
 ### T3. Watch
-Handoffs flow specifier → coder → refactorer → architect; the architect drives
-follow-ups itself (max 2 rounds). You only step in when:
+Main chain: specifier → coder → refactorer → architect. **Not strictly
+linear**: any role sends issues outside its ownership straight to the owner
+(spec → specifier, bugs → coder, structure → refactorer, design → architect).
+Keep a list of every `follow_ups` item from handoffs and idle notifications.
+You step in when:
+- a follow-up reached you but not its owner → forward it to the owner;
 - a `BLOCKED` is cc'd to you and the roles can't resolve it → ask the user;
 - a ff-merge between role branches fails → tell the sender to merge the
   receiver's tip and re-hand off;
@@ -78,7 +82,16 @@ On the architect's `HANDOFF` to you (`status: DONE`):
 ```bash
 git merge --ff-only <architect commit>   # in main checkout, on INT
 ```
-ff fails → ask the user (INT moved). Then go to **Finish**.
+ff fails → ask the user (INT moved).
+
+### T5. Follow-up gate
+**Never stop teammates or remove worktrees while any follow-up is open.**
+For each open item (yours, the architect's, any role's):
+- spec item → specifier (user approves in its pane) → coder → refactorer →
+  architect again, all on the same worktrees; integrate the new architect commit;
+- code/structure item → owner → downstream roles → architect again.
+Go to **Finish** only when none are open, or the user explicitly defers them
+(then record them in the report).
 
 ---
 
@@ -108,6 +121,8 @@ ff fails → resume the role to rebase onto base, retry.
 2. **Coder**: `BLOCKED` (scenario impossible) → specifier with the blocker,
    user approval, then coder again.
 3. **Refactorer**.
+   Any role's `follow_ups` → route to the owner as below; spec items always go
+   to the specifier. Never finish with open follow-ups unless the user defers.
 4. **Architect**: `follow_ups` for coder/refactorer → run them, integrate,
    architect again with all follow-up handoffs as one batch (max 2 rounds,
    then ask). `functional: yes` or specifier follow-up → specifier review;
@@ -116,6 +131,7 @@ ff fails → resume the role to rebase onto base, retry.
 ---
 
 ## Finish (both modes)
+Only after the follow-up gate (T5 / subagent step 4) is clear.
 - Teams: tell teammates to stop and shut the team down.
 - `git worktree remove` each `.claude/worktrees/<slug>-*`, `git worktree prune`,
   delete `<slug>/*` role branches.
