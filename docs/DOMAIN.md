@@ -277,8 +277,9 @@ which passes the command only whether the sender was re-authenticated).
 Checks, first failure wins:
 sender must be the super admin ("only the super admin can hand off super admin
 status"), password correct ("invalid credentials"), recipient registered
-("the user was not found"). Handing off to oneself succeeds without appending a
-handoff event (an impersonation in effect still ends).
+("the user was not found"), recipient is someone else ("you are already the
+super admin"). Handing off to oneself is rejected, appends nothing and does not
+end an impersonation in effect.
 The sender acts as their real login even mid-impersonation; on success any
 impersonation they have in effect ends in the same append (`ImpersonationEnded`
 is appended with `SuperAdminHandedOff`). The handoff is not an impersonated

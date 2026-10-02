@@ -15,8 +15,9 @@ Feature: Super admin handoff
   audit trail like any other end of impersonation).
 
   Checks run in this order: the sender must be the super admin, then the
-  password must be correct, then the recipient must exist. The first failure
-  is the one reported.
+  password must be correct, then the recipient must exist, then the recipient
+  must be someone else (handing off to oneself is not possible). The first
+  failure is the one reported.
 
   Background:
     Given "Root" is a registered user with email "root@example.com" and password "secret123"
@@ -53,9 +54,10 @@ Feature: Super admin handoff
     And "Bob" is not the super admin
 
   # Super admin handoff 5
-  Scenario: Handing off to oneself keeps the super admin
-    When "Root" hands super admin status off to "Root"
-    Then "Root" is the super admin
+  Scenario: Handing off to oneself is rejected
+    When an attempt is made for "Root" to hand super admin status off to "Root"
+    Then the handoff is rejected because "you are already the super admin"
+    And "Root" is the super admin
 
   # Super admin handoff 6
   Scenario: Handing off to an unknown user is rejected
@@ -114,3 +116,12 @@ Feature: Super admin handoff
     When "Root" hands super admin status off to "Alice"
     Then "Root" sees no impersonation notice
     And the audit trail records that "Root" stopped impersonating "Bob"
+
+  # Super admin handoff 15
+  Scenario: Handing off to oneself does not end the impersonation
+    Given "Alice" owns the "Office" account
+    And "Bob" is a member of the "Office" account
+    And "Root" impersonates the member "Bob" in the "Office" account
+    When an attempt is made for "Root" to hand super admin status off to "Root"
+    Then the handoff is rejected because "you are already the super admin"
+    And "Root" still sees a notice that they are impersonating "Bob"
