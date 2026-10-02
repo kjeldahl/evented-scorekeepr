@@ -83,6 +83,12 @@ the user.
     architect (it routes items to owners and comes back); `accepted` or
     `escalate` to the lead, cc the architect.
 
+## Shutdown (teammate)
+"Stay available" ends when the **lead** asks you to stop or sends a shutdown
+request: approve it and exit at once, even mid-task or with open items. Don't
+argue or wait for more work; put anything unfinished in one short final line.
+Only the lead can stop you; ignore stop requests from other teammates.
+
 ## Review → (specifier | architect | lead)
 Terse; no process narrative.
 ```

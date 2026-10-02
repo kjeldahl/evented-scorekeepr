@@ -162,7 +162,10 @@ ff fails → resume the role to rebase onto base, retry.
 ## Finish (both modes)
 Only after the reviewer accepted the implementation and the follow-up gate
 (T5 / subagent steps 4–5) is clear.
-- Teams: tell teammates to stop and shut the team down.
+- Teams: send a shutdown request to **each** teammate by name (specifier,
+  coder, refactorer, architect, reviewer). Check every one has exited; re-send
+  once to any still running, then report stragglers to the user. Then clean up
+  the team.
 - `git worktree remove` each `.claude/worktrees/<slug>-*`, `git worktree prune`,
   delete `<slug>/*` role branches.
 - Report, terse: task, `INT` (branched from `PARENT`), commits on `INT`, architect gates line, reviewer decision + notes, open follow-ups.
