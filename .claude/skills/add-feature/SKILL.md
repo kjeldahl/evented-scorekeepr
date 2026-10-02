@@ -105,6 +105,9 @@ follow-up text.
 Route on `status`: `DONE` → integrate, next role; `NO_CHANGES` → next role;
 `NEEDS_USER` → relay to the user, resume the same agent via SendMessage;
 `BLOCKED` → see step, else ask the user.
+Any role's `follow_ups` → route to the owner (spec items always to the
+specifier), then the downstream roles again. Never finish with open
+follow-ups unless the user defers them.
 
 Integrate after each `DONE`:
 ```bash
@@ -121,8 +124,6 @@ ff fails → resume the role to rebase onto base, retry.
 2. **Coder**: `BLOCKED` (scenario impossible) → specifier with the blocker,
    user approval, then coder again.
 3. **Refactorer**.
-   Any role's `follow_ups` → route to the owner as below; spec items always go
-   to the specifier. Never finish with open follow-ups unless the user defers.
 4. **Architect**: `follow_ups` for coder/refactorer → run them, integrate,
    architect again with all follow-up handoffs as one batch (max 2 rounds,
    then ask). `functional: yes` or specifier follow-up → specifier review;
