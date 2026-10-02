@@ -15,9 +15,9 @@ permissions:
 jobs:
   lint:
     name: Lint & security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -34,7 +34,7 @@ jobs:
 
   test:
     name: Tests (${{ matrix.adapter }} store)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +55,7 @@ jobs:
       RAILS_ENV: test
       EVENT_STORE_ADAPTER: ${{ matrix.adapter }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -69,11 +69,11 @@ jobs:
 
   quality:
     name: CRAP & duplication
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       RAILS_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -84,9 +84,9 @@ jobs:
 
   mutant:
     name: Mutant (incremental)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ruby/setup-ruby@v1
