@@ -156,7 +156,7 @@ and `MultiplayerMatchDeleted` tagged `league:{id}`.
 |---|---|---|
 | `UserRegistered` | user_id, name, email, password_digest | `user:{user_id}`, `user_email:{email}` |
 | `UserHandleSet` | user_id, handle | `user:{user_id}` |
-| `SuperAdminGranted` | user_id | `user:{user_id}` |
+| `SuperAdminGranted` | user_id | `user:{user_id}`, `super_admin` |
 | `AccountCreated` | account_id, name, owner_user_id | `account:{account_id}`, `user:{owner_user_id}` |
 | `PlayerInvited` | invitation_id, account_id, email, invited_by_user_id | `invitation:{invitation_id}`, `account:{account_id}`, `invitee_email:{email}` |
 | `InvitationAccepted` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}`, `user:{user_id}` |
@@ -183,6 +183,7 @@ enforced with DCB append conditions, never with read-then-write races.
 ## Invariants
 
 - An email can register only once (`user_email:` tag + append condition).
+- There is at most one super admin. Granting a second, different user is rejected with "there can only be one super admin" (global `super_admin` tag + append condition). Re-granting the current super admin is an idempotent success. Revocation remains deferred, so the role cannot be transferred yet.
 - Account membership: the owner is a member from creation; an invitation can
   be accepted only once, only by a signed-in user whose email matches. An
   invitation is **settled** once it is accepted, revoked (by a member) or
@@ -254,14 +255,17 @@ privilege is strictly read-only:
 - A super admin who is *also* an ordinary member of some account behaves
   like any other member there.
 
-The fact is the `SuperAdminGranted` event (identity slice owns it; tag
-`user:{user_id}`); super admin status is `true` iff at least one
+The fact is the `SuperAdminGranted` event (identity slice owns it; tags
+`user:{user_id}`, `super_admin`); super admin status is `true` iff at least one
 `SuperAdminGranted` exists for the user. Granting is a domain-level command
 (`Identity::GrantSuperAdmin.call(user_id:)`) with **no web UI and no route**
 — it is invoked from cucumber steps, the console or seed tasks. The command
 is idempotent: granting an existing super admin succeeds without appending.
-**Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
-yet because no behaviour requires it; when it is needed, add the event to
+**There is at most one super admin**: granting a second, different user is
+rejected with "there can only be one super admin" (global `super_admin` tag
++ append condition); re-granting the current super admin is an idempotent
+success. **Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
+yet because no behaviour requires it, so the role cannot be transferred yet; when it is needed, add the event to
 the table above and the status fold becomes latest-wins (like
 `MemberLeft` for membership).
 
