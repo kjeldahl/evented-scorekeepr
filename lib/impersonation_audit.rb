@@ -12,12 +12,14 @@
 # This is root infrastructure: it references no slice, and the audit event it
 # owns is not a slice event. The impersonation lifecycle events, and audit
 # events themselves, are never audited — that both avoids double-recording the
-# session boundaries and stops the hook recursing on its own append.
+# session boundaries and stops the hook recursing on its own append. Nor is
+# SuperAdminHandedOff: the real super admin acts as themselves, not as the
+# impersonated member.
 module ImpersonationAudit
   extend self
 
   RECORDED_TYPE = "ImpersonatedActionRecorded"
-  NON_AUDITABLE_TYPES = %w[ImpersonationStarted ImpersonationEnded ImpersonatedActionRecorded].freeze
+  NON_AUDITABLE_TYPES = %w[ImpersonationStarted ImpersonationEnded ImpersonatedActionRecorded SuperAdminHandedOff].freeze
 
   def record(events)
     context = Current.impersonation

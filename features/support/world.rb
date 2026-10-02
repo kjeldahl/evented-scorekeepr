@@ -11,6 +11,8 @@
 #   remember_user(name, email:, password:)      # record credentials only
 #   register_user(name, email:, password:)      # register via the domain command + remember
 #   grant_super_admin(name)                     # grant super admin via the domain command
+#   hand_off_via_form(sender, email)            # hand super admin off through the real form
+#   attempt_hand_off(sender, email, password:)  # POST a handoff directly (rejections render flash)
 #   sign_up(name, email:, password:)            # register through the real /signup UI + remember
 #   sign_in(name)                               # sign in through the real /login UI
 #   sign_out                                    # sign out via the layout's Sign out button
@@ -49,6 +51,29 @@ module ScorekeeprWorld
   def grant_super_admin(name)
     result = attempt_super_admin_grant(name)
     raise "could not grant super admin to #{name}: #{result.error}" if result.failure?
+  end
+
+  # Signs in unless already acting as that user. While impersonating, the nav
+  # shows the member, so an in-effect impersonation banner also counts as the
+  # super admin's own session (signing in again would not end it anyway).
+  def ensure_signed_in(name)
+    return if signed_in_as?(name)
+
+    visit "/"
+    sign_in(name) unless page.has_css?(".impersonation-banner", wait: 0)
+  end
+
+  def hand_off_via_form(sender, email, password: users.fetch(sender).fetch(:password))
+    ensure_signed_in(sender)
+    visit "/super_admin_handoff/new"
+    fill_in "Recipient email", with: email
+    fill_in "Your password", with: password
+    click_button "Hand off"
+  end
+
+  def attempt_hand_off(sender, email, password: users.fetch(sender).fetch(:password))
+    ensure_signed_in(sender)
+    page.driver.submit :post, "/super_admin_handoff", { email:, password: }
   end
 
   def sign_up(name, email:, password:)

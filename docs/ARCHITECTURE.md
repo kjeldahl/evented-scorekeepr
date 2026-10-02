@@ -18,7 +18,7 @@ The app is built in five slices under `app/slices/`:
 
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
-| `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
+| `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant + handoff | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted`, `SuperAdminHandedOff` |
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register, correct and delete match results | `MatchRegistered`, `MatchResultCorrected`, `MatchDeleted`, `MultiplayerMatchRegistered`, `MultiplayerMatchResultCorrected`, `MultiplayerMatchDeleted` |
@@ -46,7 +46,7 @@ controller name, so `Leagues::LeaguesController#new` renders
 share one lookup path, **resource directory names under `views/` must be
 unique across slices**. The reserved names per the routing table below:
 
-- identity: `views/registrations/`, `views/sessions/`, `views/profiles/`
+- identity: `views/registrations/`, `views/sessions/`, `views/profiles/`, `views/super_admin_handoffs/`
 - accounts: `views/dashboard/`, `views/accounts/`, `views/invitations/`, `views/pending_invitations/`
 - leagues: `views/leagues/`
 - matches: `views/matches/`
@@ -345,16 +345,20 @@ end
   the scoreboards fold) defines its **own** `<Slice>::SuperAdmin` read model
   (duplicate
   per slice, like `Membership` — never share the class), folding the
-  identity slice's `SuperAdminGranted` by tag. The canonical fold:
+  identity slice's `SuperAdminGranted` and `SuperAdminHandedOff` by tag,
+  latest wins (handoff → true only for the recipient). The canonical fold:
 
 ```ruby
 def projection(user_id:)
   DcbEventStore::Projection.new(
     initial_state: false,
-    handlers: { "SuperAdminGranted" => ->(_s, _e) { true } },
+    handlers: {
+      "SuperAdminGranted"   => ->(_s, _e) { true },
+      "SuperAdminHandedOff" => ->(_s, e) { e.data.fetch(:to_user_id) == user_id }
+    },
     query: DcbEventStore::Query.new(
       DcbEventStore::QueryItem.new(
-        event_types: %w[SuperAdminGranted],
+        event_types: %w[SuperAdminGranted SuperAdminHandedOff],
         tags: [ "user:#{user_id}" ]
       )
     )
@@ -372,7 +376,15 @@ end
   distinction in the view.
   Granting has **no web UI and no route**: `Identity::GrantSuperAdmin.
   call(user_id:)` (identity domain) is called from cucumber steps, console
-  or seeds only.
+  or seeds only. **Handoff** is the UI path: `Identity::HandOffSuperAdmin`
+  (decision model: `Identity::CurrentSuperAdmin`, latest-wins over grants and
+  handoffs, plus the recipient's credentials) behind
+  `Identity::SuperAdminHandoffsController`, which acts on `session[:user_id]`
+  (the real login, not the impersonated member), re-checks the password in the
+  command, and passes the session's `impersonation_id` so the command appends
+  `ImpersonationEnded` atomically (built by root `ImpersonationSession.
+  ended_event`); the controller then drops the session keys. `SuperAdminHandedOff`
+  is never audited as an impersonated action (`ImpersonationAudit`).
 - **All-accounts list (discovery)**: `GET /accounts` ->
   `Accounts::AccountsController#index` is the one **super-admin-only** page
   (everything else stays member-or-super-admin or member-only). The gate is
@@ -442,6 +454,8 @@ in sync). All routes except signup/login require authentication.
 | GET | `/profile` | `identity/profiles#show` | `profile_path` | profile page: set the display handle |
 | POST | `/profile` | `identity/profiles#update` | — | set handle; → profile |
 | GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations; super admins also get a link to the all-accounts list |
+| GET | `/super_admin_handoff/new` | `identity/super_admin_handoffs#new` | `new_super_admin_handoff_path` | **super admin only** (others redirected to `/` with an alert): hand-off form (recipient email + own password); dashboard links to it |
+| POST | `/super_admin_handoff` | `identity/super_admin_handoffs#create` | `super_admin_handoff_path` | hand super admin status off; ends the sender's impersonation; → dashboard |
 | GET | `/accounts` | `accounts/accounts#index` | `accounts_path` | **super admin only**: read-only all-accounts list (alphabetical by name), each linking to its account page |
 | GET | `/accounts/new` | `accounts/accounts#new` | `new_account_path` | new-account form |
 | POST | `/accounts` | `accounts/accounts#create` | `accounts_path` | create account; → account page |
@@ -450,7 +464,7 @@ in sync). All routes except signup/login require authentication.
 | POST | `/accounts/:account_id/invitations` | `accounts/invitations#create` | `account_invitations_path` | invite player; → account page |
 | POST | `/accounts/:account_id/invitations/:invitation_id/revoke` | `accounts/invitation_revocations#create` | `revoke_account_invitation_path` | revoke outgoing invitation; → account page |
 | POST | `/accounts/:account_id/leave` | `accounts/account_leavings#create` | `leave_account_path` | leave the account; → dashboard |
-| POST | `/accounts/:account_id/members/:user_id/impersonate` | `accounts/impersonations#create` | `impersonate_account_member_path` | **super admin only** (enforced in the `StartImpersonation` command): start impersonating a member; → account page |
+| POST | `/accounts/:account_id/members/:user_id/impersonate` | `accounts/impersonations#create` | `impersonate_account_member_path` | **super admin only** (enforced in the `StartImpersonation` command): start impersonating a member; → account page (rejection → dashboard) |
 | DELETE | `/impersonation` | `accounts/impersonations#destroy` | `impersonation_path` | stop impersonating (whole-session, account-independent); → dashboard |
 | GET | `/invitations` | `accounts/pending_invitations#index` | `pending_invitations_path` | my pending invitations (by my email) |
 | POST | `/invitations/:invitation_id/accept` | `accounts/invitation_acceptances#create` | `accept_invitation_path` | accept; → that account page |
