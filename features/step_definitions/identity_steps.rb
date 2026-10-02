@@ -18,6 +18,27 @@ Given("{string} is a super admin") do |name|
   grant_super_admin(name)
 end
 
+When("{string} is made a super admin") do |name|
+  grant_super_admin(name)
+end
+
+When("an attempt is made to make {string} a super admin") do |name|
+  @grant_result = attempt_super_admin_grant(name)
+end
+
+Then("the grant is rejected because {string}") do |reason|
+  expect(@grant_result).to be_failure
+  expect(@grant_result.error).to eq(reason)
+end
+
+Then("{string} is the super admin") do |name|
+  expect(super_admin?(name)).to be(true)
+end
+
+Then("{string} is not the super admin") do |name|
+  expect(super_admin?(name)).to be(false)
+end
+
 When("someone signs up with name {string}, email {string} and password {string}") do |name, email, password|
   @last_actor = name
   sign_up(name, email:, password:)
