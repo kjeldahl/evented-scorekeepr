@@ -10,6 +10,13 @@ module Identity
     ONLY_ONE = "there can only be one super admin".freeze
 
     def self.call(user_id:)
+      decide_and_append(user_id)
+    rescue DcbEventStore::ConditionNotMet
+      # Lost a race: the winning grant is now visible, so one re-decide settles it.
+      decide_and_append(user_id)
+    end
+
+    def self.decide_and_append(user_id)
       decision = EventStore.decide(
         user: UserExistence.projection(user_id:),
         super_admin: SuperAdminStatus.projection
@@ -22,8 +29,7 @@ module Identity
 
       EventStore.append(Events.super_admin_granted(user_id:), decision.append_condition)
       Result.success(user_id)
-    rescue DcbEventStore::ConditionNotMet
-      call(user_id:) # lost a race: re-decide against the winning grant
     end
+    private_class_method :decide_and_append
   end
 end
