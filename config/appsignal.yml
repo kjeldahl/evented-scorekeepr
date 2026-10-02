@@ -13,3 +13,6 @@ test:
 
 production:
   <<: *defaults
+  # Kamal sets KAMAL_VERSION (git SHA) in the app container; a new revision
+  # makes AppSignal create a deploy marker automatically.
+  revision: <%= ENV["KAMAL_VERSION"] %>
