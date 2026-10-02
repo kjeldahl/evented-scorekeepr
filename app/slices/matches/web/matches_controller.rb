@@ -157,14 +157,16 @@ module Matches
     helper_method :members
 
     # The players shown in the multiplayer form: all account members, prefilled
-    # from a failed submission if present.
+    # from a failed submission if present.  The row count is bounded by the
+    # game type's maximum and the number of account members so that every row
+    # can legally be filled and there are never more rows than members.
     def form_players
       @form_players ||= if params[:scores]
         params[:scores].keys.map do |player_id|
           { player_id:, score: params[:scores][player_id] }
         end
       else
-        members.map { |m| { player_id: m.user_id, score: nil } }
+        members.map { |m| { player_id: m.user_id, score: nil } }.first(@league.row_limit(members.size))
       end
     end
     helper_method :form_players

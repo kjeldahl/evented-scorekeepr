@@ -62,6 +62,11 @@ RSpec.describe Matches::League do
       expect(item.tags).to contain_exactly("league:league-1", "account:acc-1")
     end
 
+    it "reads game_type from LeagueCreated" do
+      summary = projection.fold([ league_created ])
+      expect(summary.game_type).to eq("Foosball")
+    end
+
     it "reads match_type from LeagueCreated (defaults to 'match')" do
       summary = projection.fold([ league_created ])
       expect(summary.match_type).to eq("match")

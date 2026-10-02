@@ -9,11 +9,11 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
     ) ])
   end
 
-  def create_league(league_id: "league-1", account_id: "acc-1")
+  def create_league(league_id: "league-1", account_id: "acc-1", game_type: "Golf", match_type: "multiplayer")
     EventStore.append([ DcbEventStore::Event.new(
       type: "LeagueCreated",
-      data: { league_id:, account_id:, name: "Golf Cup", game_type: "Golf",
-              starting_points: 1000, stake_percentage: 10, match_type: "multiplayer" },
+      data: { league_id:, account_id:, name: "Golf Cup", game_type:,
+              starting_points: 1000, stake_percentage: 10, match_type: },
       tags: [ "league:#{league_id}", "account:#{account_id}" ]
     ) ])
   end
@@ -46,8 +46,17 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
 
   describe "input validation", :event_store do
     it "rejects an empty player list" do
+      # The game type count check catches 0 players before the generic
+      # "at least 1" guard, so the error reflects the game type requirement.
       expect(call(player_ids: [], player_scores: {})).to eq(
-        Result.failure("at least 1 participant is required")
+        Result.failure("a Golf match needs 1 to 8 players")
+      )
+    end
+
+    it "rejects an empty player list for Foosball" do
+      create_league(game_type: "Foosball")
+      expect(call(player_ids: [], player_scores: {})).to eq(
+        Result.failure("a Foosball match needs 2 to 4 players")
       )
     end
 
@@ -78,6 +87,75 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
     end
   end
 
+  describe "half-filled row detection", :event_store do
+    it "rejects a row with player but no score" do
+      expect(call(player_ids: %w[alice bob], player_scores: { "alice" => 10 }))
+        .to eq(Result.failure("every player needs a score"))
+    end
+
+    it "rejects a row with score but no player" do
+      # The form sends a blank key "" for rows with a score but no player.
+      expect(call(player_ids: %w[alice], player_scores: { "alice" => 10, "" => 5 }))
+        .to eq(Result.failure("every score needs a player"))
+    end
+
+    it "passes when all players have scores" do
+      result = call(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
+      expect(result).to be_success
+    end
+  end
+
+  describe "game type player count", :event_store do
+    it "rejects a foosball match with 1 player" do
+      create_league(game_type: "Foosball")
+      expect(call(player_ids: %w[alice], player_scores: { "alice" => 10 }))
+        .to eq(Result.failure("a Foosball match needs 2 to 4 players"))
+    end
+
+    it "rejects a foosball match with 5 players" do
+      create_league(game_type: "Foosball")
+      expect(call(player_ids: %w[alice bob carol dave frank],
+                  player_scores: { "alice" => 1, "bob" => 2, "carol" => 3, "dave" => 4, "frank" => 5 }))
+        .to eq(Result.failure("a Foosball match needs 2 to 4 players"))
+    end
+
+    it "accepts a foosball match within range" do
+      create_league(game_type: "Foosball")
+      result = call(player_ids: %w[alice bob], player_scores: { "alice" => 10, "bob" => 5 })
+      expect(result).to be_success
+    end
+
+    it "accepts a golf match with 1 player" do
+      create_league(game_type: "Golf")
+      result = call(player_ids: %w[alice], player_scores: { "alice" => 0 })
+      expect(result).to be_success
+    end
+
+    it "accepts a golf match with 8 players" do
+      create_league(game_type: "Golf")
+      %w[alice bob carol dave eve frank grace henry].each { |u| make_member(u) }
+      player_ids = %w[alice bob carol dave eve frank grace henry]
+      scores = player_ids.to_h { |id| [ id, 0 ] }
+      result = call(player_ids:, player_scores: scores)
+      expect(result).to be_success
+    end
+
+    it "rejects a golf match with 9 players" do
+      create_league(game_type: "Golf")
+      %w[alice bob carol dave eve frank grace henry ivan].each { |u| make_member(u) }
+      player_ids = %w[alice bob carol dave eve frank grace henry ivan]
+      scores = player_ids.to_h { |id| [ id, 0 ] }
+      expect(call(player_ids:, player_scores: scores))
+        .to eq(Result.failure("a Golf match needs 1 to 8 players"))
+    end
+
+    it "does not enforce game type on match leagues" do
+      create_league(match_type: "match")
+      league = Matches::League.find(league_id: "league-1", account_id: "acc-1")
+      expect(league).to be_match_league
+    end
+  end
+
   describe "player id normalisation", :event_store do
     it "strips surrounding whitespace from the submitted ids" do
       call(player_ids: [ "  alice  ", "bob" ], player_scores: { "alice" => 10, "bob" => 5 })
@@ -90,8 +168,9 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
     end
 
     it "rejects a match whose only participants were blank" do
+      # After normalization all entries drop out → 0 players → game type check fires.
       expect(call(player_ids: [ "", "  " ], player_scores: {}))
-        .to eq(Result.failure("at least 1 participant is required"))
+        .to eq(Result.failure("a Golf match needs 1 to 8 players"))
     end
 
     it "detects duplicates only after stripping" do
