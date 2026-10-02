@@ -53,6 +53,17 @@ Implement reasonable structural fixes yourself.
 - Before your final handoff, collect every open follow-up raised by any role
   in this feature (including ones sent to others) and list the unresolved ones.
 
+## Implementation review
+After your gates pass, the **reviewer** reviews your tip before the lead
+integrates it.
+- **Teammate**: send your `HANDOFF` to `reviewer` (cc the lead). On a
+  `changes-requested` REVIEW, route each item to its owner like a follow-up
+  (spec items → specifier, needing user approval), merge their fixes, re-run
+  your gates, and hand off to the reviewer again. The reviewer sends
+  `accepted`/`escalate` to the lead.
+- **Subagent**: hand off to the orchestrator; it runs the reviewer and sends
+  you the items to route.
+
 ## Modes
 You run in one of two modes; your spawn prompt tells you which.
 - **Subagent**: you are in an auto-created worktree. First
@@ -83,7 +94,7 @@ handoff so the lead can track it.
 - Commit only on your own branch. Never push. Never touch other branches.
 - Everything you want kept must be committed before handing off.
 
-## Handoff → lead
+## Handoff → reviewer (teammate) / orchestrator (subagent)
 Terse; state only, no process narrative or verification logs.
 - `functional: yes` only if your commits change observable behaviour
   (triggers specifier review).
@@ -94,7 +105,7 @@ Terse; state only, no process narrative or verification logs.
 HANDOFF
 task: <task-name>
 from: architect
-to: lead
+to: reviewer | lead
 status: DONE | BLOCKED | NO_CHANGES
 branch: <worktree branch>
 commit: <sha or ->

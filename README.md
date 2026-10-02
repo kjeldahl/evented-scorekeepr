@@ -86,10 +86,12 @@ Quality tooling:
 ## Development roles
 
 Features are added with the `add-feature` Claude Code skill
-(`.claude/skills/add-feature/`), which runs four role subagents from
+(`.claude/skills/add-feature/`), which runs five role agents from
 `.claude/agents/`, each in its own git worktree (as agent-team teammates,
 split panes in tmux/iTerm2 via `teammateMode: auto`, or as plain subagents): **specifier** (owns the
 Gherkin features), **coder** (implements slices to make them pass),
-**refactorer** (keeps CRAP scores low and duplication down) and **architect**
-(guards slice boundaries and the event-sourcing rules, runs the final gates).
+**refactorer** (keeps CRAP scores low and duplication down), **architect**
+(guards slice boundaries and the event-sourcing rules, runs the final gates)
+and **reviewer** (read-only; reviews the spec before you approve it and the
+implementation before it is integrated).
 Shared project rules live in `CLAUDE.md`.

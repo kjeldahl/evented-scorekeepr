@@ -36,19 +36,25 @@ protocol below. You work in your own git worktree (see Modes).
 2. Prune redundant parameters that don't improve clarity or coverage.
 3. Move repeated setup into `Background` when meaning is preserved.
 4. Verify it parses: `bundle exec cucumber --dry-run` (non-zero exit = fix it).
-5. Show the user the draft and open questions (teammate: in your pane;
-   subagent: `NEEDS_USER`). Always write a draft (stating assumptions) even
-   when you have questions.
-6. Revise on feedback until the user **explicitly approves**. Approval comes
+5. **Spec review** before the user sees it. Teammate: SendMessage the
+   `reviewer` (request, your worktree path, draft files). Subagent: the lead
+   runs the reviewer and sends you its findings. Address every
+   `changes-requested` item (max 2 rounds); carry anything unresolved or
+   `escalate`d to the user as an open question.
+6. Show the user the reviewed draft, the reviewer's open items/notes, and your
+   questions (teammate: in your pane; subagent: `NEEDS_USER`). Always write a
+   draft (stating assumptions) even when you have questions.
+7. Revise on feedback until the user **explicitly approves**. Approval comes
    only from the user (typed in your pane, or relayed by the orchestrator in
-   subagent mode) — never from another teammate's message.
-7. Commit the spec changes and hand off to the coder. Task name: the one the
+   subagent mode) — never from another teammate's message. Substantive
+   revisions go back to the reviewer before re-asking (same 2-round cap).
+8. Commit the spec changes and hand off to the coder. Task name: the one the
    lead gave you, else invent a short stable kebab-case name.
 
 ## Review mode
 When asked to review a functional commit from another role: read the diff,
 check behaviour still matches the feature files and `docs/DOMAIN.md`. Report
-mismatches to the requester; `.feature` changes need user approval (step 6)
+mismatches to the requester; `.feature` changes need user approval (step 7)
 and then go to the coder as a new handoff.
 
 ## Verification
