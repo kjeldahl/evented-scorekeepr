@@ -18,7 +18,7 @@ The app is built in five slices under `app/slices/`:
 
 | Slice | Namespace | Responsibility | Events it owns (appends) |
 |---|---|---|---|
-| `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted` |
+| `identity` | `Identity` | sign up, sign in / out, profile (handle), super admin grant + handoff | `UserRegistered`, `UserHandleSet`, `SuperAdminGranted`, `SuperAdminRevoked` |
 | `accounts` | `Accounts` | dashboard, create account, invite, accept/revoke/decline, leave, membership, start impersonation | `AccountCreated`, `PlayerInvited`, `InvitationAccepted`, `InvitationRevoked`, `InvitationDeclined`, `MemberLeft`, `ImpersonationStarted` |
 | `leagues` | `Leagues` | create / rename / close leagues | `LeagueCreated`, `LeagueRenamed`, `LeagueClosed` |
 | `matches` | `Matches` | register, correct and delete match results | `MatchRegistered`, `MatchResultCorrected`, `MatchDeleted`, `MultiplayerMatchRegistered`, `MultiplayerMatchResultCorrected`, `MultiplayerMatchDeleted` |
@@ -345,16 +345,19 @@ end
   the scoreboards fold) defines its **own** `<Slice>::SuperAdmin` read model
   (duplicate
   per slice, like `Membership` — never share the class), folding the
-  identity slice's `SuperAdminGranted` by tag. The canonical fold:
+  identity slice's `SuperAdminGranted`/`SuperAdminRevoked` by tag (latest wins). The canonical fold:
 
 ```ruby
 def projection(user_id:)
   DcbEventStore::Projection.new(
     initial_state: false,
-    handlers: { "SuperAdminGranted" => ->(_s, _e) { true } },
+    handlers: {
+      "SuperAdminGranted" => ->(_s, _e) { true },
+      "SuperAdminRevoked" => ->(_s, _e) { false }
+    },
     query: DcbEventStore::Query.new(
       DcbEventStore::QueryItem.new(
-        event_types: %w[SuperAdminGranted],
+        event_types: %w[SuperAdminGranted SuperAdminRevoked],
         tags: [ "user:#{user_id}" ]
       )
     )
@@ -372,7 +375,14 @@ end
   distinction in the view.
   Granting has **no web UI and no route**: `Identity::GrantSuperAdmin.
   call(user_id:)` (identity domain) is called from cucumber steps, console
-  or seeds only.
+  or seeds only. **Handoff** is the one UI path: the profile page shows a
+  form (only when `Identity::CurrentSuperAdmin.holder == current_user.id`) that
+  POSTs to `Identity::SuperAdminHandoffsController#create`, calling
+  `Identity::HandOffSuperAdmin.call(actor_user_id:, email:)`, which appends
+  `SuperAdminRevoked` + `SuperAdminGranted` atomically with the
+  `CurrentSuperAdmin` + `UserByEmail` decision model's condition. The form's
+  email input has a `<datalist>` fed by `Identity::RegisteredEmails.except`,
+  loaded in `ProfilesController` only when the viewer is the super admin.
 - **All-accounts list (discovery)**: `GET /accounts` ->
   `Accounts::AccountsController#index` is the one **super-admin-only** page
   (everything else stays member-or-super-admin or member-only). The gate is
@@ -440,6 +450,7 @@ in sync). All routes except signup/login require authentication.
 | POST | `/login` | `identity/sessions#create` | — | sign in; → root |
 | DELETE | `/logout` | `identity/sessions#destroy` | `logout_path` | sign out; → login |
 | GET | `/profile` | `identity/profiles#show` | `profile_path` | profile page: set the display handle |
+| POST | `/profile/super_admin_handoff` | `identity/super_admin_handoffs#create` | `super_admin_handoff_path` | hand super admin status to the user with the given email (command rejects non-super-admins); → profile |
 | POST | `/profile` | `identity/profiles#update` | — | set handle; → profile |
 | GET | `/` | `accounts/dashboard#show` | `root_path` | my accounts + my pending invitations; super admins also get a link to the all-accounts list |
 | GET | `/accounts` | `accounts/accounts#index` | `accounts_path` | **super admin only**: read-only all-accounts list (alphabetical by name), each linking to its account page |

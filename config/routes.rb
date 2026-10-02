@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   delete "logout", to: "identity/sessions#destroy"
   get    "profile", to: "identity/profiles#show", as: :profile
   post   "profile", to: "identity/profiles#update"
+  post   "profile/super_admin_handoff", to: "identity/super_admin_handoffs#create", as: :super_admin_handoff
 
   # Accounts slice: dashboard, accounts, invitations, membership.
   root "accounts/dashboard#show"

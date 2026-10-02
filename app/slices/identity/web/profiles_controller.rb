@@ -4,6 +4,8 @@ module Identity
   class ProfilesController < ApplicationController
     before_action :require_authentication
 
+    before_action :load_super_admin, only: %i[show update]
+
     def show
     end
 
@@ -15,6 +17,15 @@ module Identity
         flash.now[:alert] = result.error
         render :show, status: :unprocessable_entity
       end
+    end
+
+    private
+
+    # True only for the current super admin (never while impersonating, since
+    # current_user is then the impersonated member): shows the handoff form.
+    def load_super_admin
+      @super_admin = CurrentSuperAdmin.holder == current_user.id
+      @recipient_emails = @super_admin ? RegisteredEmails.except(current_user.id) : []
     end
   end
 end

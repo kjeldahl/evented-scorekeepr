@@ -14,3 +14,24 @@
     </div>
   <% end %>
 </div>
+
+<% if @super_admin %>
+  <div class="card super-admin-handoff">
+    <h2>Hand off super admin</h2>
+    <p class="muted">Pass the super admin status to another registered user. You become an ordinary user.</p>
+
+    <%= form_with url: super_admin_handoff_path do |form| %>
+      <%= form.label :email, "Recipient email" %>
+      <%= form.email_field :email, list: "recipient-emails" %>
+      <datalist id="recipient-emails">
+        <% @recipient_emails.each do |email| %>
+          <option value="<%= email %>"></option>
+        <% end %>
+      </datalist>
+
+      <div class="actions">
+        <%= form.submit "Hand off super admin" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

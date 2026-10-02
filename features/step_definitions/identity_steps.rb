@@ -121,3 +121,43 @@ end
 Then("the handle change is rejected because {string}") do |reason|
   expect(page).to have_css(".flash--alert", text: reason)
 end
+
+When("{string} hands the super admin status to {string}") do |name, email|
+  submit_super_admin_handoff(name, email)
+end
+
+When("{string} attempts to hand the super admin status to {string}") do |name, email|
+  submit_super_admin_handoff(name, email)
+end
+
+Given("{string} has handed the super admin status to {string}") do |name, email|
+  submit_super_admin_handoff(name, email)
+end
+
+Then("the handoff is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end
+
+Then("{string} sees the super admin handoff control on their profile page") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(page).to have_button("Hand off super admin")
+end
+
+Then("{string} does not see the super admin handoff control on their profile page") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(page).to have_no_button("Hand off super admin")
+end
+
+Then("{string} is offered exactly these recipient email suggestions on their profile page, in any order:") do |name, table|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(recipient_email_suggestions).to match_array(table.hashes.map { |row| row.fetch("email") })
+end
+
+Then("{string} is offered no recipient email suggestions on their profile page") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(recipient_email_suggestions).to be_empty
+end

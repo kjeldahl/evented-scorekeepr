@@ -11,6 +11,7 @@
 #   remember_user(name, email:, password:)      # record credentials only
 #   register_user(name, email:, password:)      # register via the domain command + remember
 #   grant_super_admin(name)                     # grant super admin via the domain command
+#   submit_super_admin_handoff(name, email)     # fill + submit the profile handoff form
 #   sign_up(name, email:, password:)            # register through the real /signup UI + remember
 #   sign_in(name)                               # sign in through the real /login UI
 #   sign_out                                    # sign out via the layout's Sign out button
@@ -49,6 +50,25 @@ module ScorekeeprWorld
   def grant_super_admin(name)
     result = attempt_super_admin_grant(name)
     raise "could not grant super admin to #{name}: #{result.error}" if result.failure?
+  end
+
+  # Submits the profile page's super admin handoff form (or, when the form
+  # is not shown to this session, posts to its route directly). Keeps an existing
+  # session as is (an impersonating super admin's nav shows the member).
+  def submit_super_admin_handoff(name, email)
+    sign_in(name) unless signed_in_as?(name) || page.has_css?(".impersonation-banner", wait: 0)
+    visit "/profile"
+    if page.has_field?("Recipient email", wait: 0)
+      fill_in "Recipient email", with: email
+      submit_form "Hand off super admin"
+    else # control hidden from non-super-admins: post straight to the route
+      page.driver.submit :post, "/profile/super_admin_handoff", { email: }
+    end
+  end
+
+  # Values of the <datalist> options attached to the handoff email field.
+  def recipient_email_suggestions
+    page.all("datalist#recipient-emails option", visible: :all).map { |option| option[:value] }
   end
 
   def sign_up(name, email:, password:)
