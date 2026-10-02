@@ -25,6 +25,7 @@ module Identity
     # current_user is then the impersonated member): shows the handoff form.
     def load_super_admin
       @super_admin = CurrentSuperAdmin.holder == current_user.id
+      @recipient_emails = @super_admin ? RegisteredEmails.except(current_user.id) : []
     end
   end
 end

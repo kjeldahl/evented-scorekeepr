@@ -271,7 +271,10 @@ registered user, identified by email (trimmed, case-insensitive), from a form
 on their own profile page (shown to nobody else; `Identity::HandOffSuperAdmin`).
 It atomically appends `SuperAdminRevoked` (actor) + `SuperAdminGranted`
 (recipient) under one append condition, so there is never zero-or-two admins
-mid-transfer. No recipient confirmation. Rejections: "only the super admin
+mid-transfer. No recipient confirmation. The recipient email field offers
+suggestions: the emails of all registered users except the viewer, emitted
+only to the current super admin (never to anyone else, as it exposes every
+user's email). Rejections: "only the super admin
 can hand off the super admin status" (actor is not the current holder —
 including a previous holder, or a super admin impersonating a member, whose
 effective user is the member) and "there is no user with that email" (unknown

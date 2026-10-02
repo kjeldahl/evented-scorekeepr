@@ -149,3 +149,15 @@ Then("{string} does not see the super admin handoff control on their profile pag
   visit "/profile"
   expect(page).to have_no_button("Hand off super admin")
 end
+
+Then("{string} is offered exactly these recipient email suggestions on their profile page, in any order:") do |name, table|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(recipient_email_suggestions).to match_array(table.hashes.map { |row| row.fetch("email") })
+end
+
+Then("{string} is offered no recipient email suggestions on their profile page") do |name|
+  sign_in(name) unless signed_in_as?(name)
+  visit "/profile"
+  expect(recipient_email_suggestions).to be_empty
+end

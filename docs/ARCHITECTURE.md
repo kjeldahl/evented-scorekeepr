@@ -380,7 +380,9 @@ end
   POSTs to `Identity::SuperAdminHandoffsController#create`, calling
   `Identity::HandOffSuperAdmin.call(actor_user_id:, email:)`, which appends
   `SuperAdminRevoked` + `SuperAdminGranted` atomically with the
-  `CurrentSuperAdmin` + `UserByEmail` decision model's condition.
+  `CurrentSuperAdmin` + `UserByEmail` decision model's condition. The form's
+  email input has a `<datalist>` fed by `Identity::RegisteredEmails.except`,
+  loaded in `ProfilesController` only when the viewer is the super admin.
 - **All-accounts list (discovery)**: `GET /accounts` ->
   `Accounts::AccountsController#index` is the one **super-admin-only** page
   (everything else stays member-or-super-admin or member-only). The gate is

@@ -22,7 +22,12 @@
 
     <%= form_with url: super_admin_handoff_path do |form| %>
       <%= form.label :email, "Recipient email" %>
-      <%= form.email_field :email %>
+      <%= form.email_field :email, list: "recipient-emails" %>
+      <datalist id="recipient-emails">
+        <% @recipient_emails.each do |email| %>
+          <option value="<%= email %>"></option>
+        <% end %>
+      </datalist>
 
       <div class="actions">
         <%= form.submit "Hand off super admin" %>

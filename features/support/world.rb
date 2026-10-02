@@ -66,6 +66,11 @@ module ScorekeeprWorld
     end
   end
 
+  # Values of the <datalist> options attached to the handoff email field.
+  def recipient_email_suggestions
+    page.all("datalist#recipient-emails option", visible: :all).map { |option| option[:value] }
+  end
+
   def sign_up(name, email:, password:)
     visit "/signup"
     fill_in "Name", with: name
