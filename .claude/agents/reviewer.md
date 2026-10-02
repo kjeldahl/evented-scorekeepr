@@ -27,8 +27,8 @@ protocol below. You review; you never change code, tests, specs or docs.
 - Don't widen scope: review against the user's request, not your own ideas.
 
 ## 1. Spec review
-Input: request, specifier worktree path and draft files (may be uncommitted —
-read them at that path).
+Input: request, the specifier's `commit:` sha and files. Review exactly that
+commit (`git show <sha>:<path>`), never the specifier's working tree.
 Check:
 - Fidelity: covers the request, doesn't broaden or reinterpret it.
 - Consistency with `docs/DOMAIN.md` (normative) and existing features; flag
@@ -63,8 +63,14 @@ Run: `bin/rails quality:spec`, `quality:features`, `quality:crap`,
 `quality:dry` (read the logs). Do **not** run mutant (the architect owns it);
 check the architect's `gates` line reports 100%.
 
+## Stale requests
+Every request must cite a commit sha. If it has none, or it's the sha you last
+reviewed in this pass, or `git diff <last-reviewed> <sha>` leaves your open
+items untouched, reply `decision: stale` (listing what you still expect) —
+it does **not** use up a round.
+
 ## Rounds
-Max 2 `changes-requested` rounds per pass. On the third, decide `accepted`
+Max 2 `changes-requested` rounds per pass (stale replies don't count). On the third, decide `accepted`
 with the remaining items as `notes`, or `escalate` — the lead/specifier asks
 the user.
 
@@ -86,8 +92,8 @@ from: reviewer
 to: <specifier | architect | lead>
 pass: spec | implementation
 round: <1 | 2 | 3>
-reviewed: <commit sha, or worktree path for an uncommitted draft>
-decision: accepted | changes-requested | escalate
+reviewed: <commit sha>
+decision: accepted | changes-requested | escalate | stale
 items:
   1. owner: <role> | issue: <...> | risk: <...> | change: <...>
 notes:

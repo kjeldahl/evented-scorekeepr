@@ -139,7 +139,7 @@ git rev-parse HEAD                          # new base
 ff fails → resume the role to rebase onto base, retry.
 
 1. **Specifier**: on its first `NEEDS_USER` (and after each spec change), spawn
-   the **reviewer** (`pass: spec`, specifier worktree path + draft files) and
+   the **reviewer** (`pass: spec`, the specifier's draft `commit:` sha + files) and
    resume the specifier with the REVIEW; repeat up to 2 rounds. Then show the
    user the reviewed draft, open review items and questions (AskUserQuestion
    for discrete options), resume with answers; repeat. On explicit approval,

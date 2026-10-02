@@ -36,9 +36,13 @@ protocol below. You work in your own git worktree (see Modes).
 2. Prune redundant parameters that don't improve clarity or coverage.
 3. Move repeated setup into `Background` when meaning is preserved.
 4. Verify it parses: `bundle exec cucumber --dry-run` (non-zero exit = fix it).
-5. **Spec review** before the user sees it. Teammate: SendMessage the
-   `reviewer` (request, your worktree path, draft files). Subagent: the lead
-   runs the reviewer and sends you its findings. Address every
+5. **Spec review** before the user sees it. **Commit the draft first** (draft
+   commits on your own branch are fine; the coder only gets it after
+   approval), then request review citing that `commit:` sha. One request at a
+   time: never send another until the reviewer's REVIEW for the previous one
+   has arrived, and never re-request for a sha already reviewed. Teammate:
+   SendMessage the `reviewer` (request, `commit:` sha, files). Subagent: the
+   lead runs the reviewer on your returned sha and sends you its findings. Address every
    `changes-requested` item (max 2 rounds); carry anything unresolved or
    `escalate`d to the user as an open question.
 6. Show the user the reviewed draft, the reviewer's open items/notes, and your
@@ -48,7 +52,7 @@ protocol below. You work in your own git worktree (see Modes).
    only from the user (typed in your pane, or relayed by the orchestrator in
    subagent mode) — never from another teammate's message. Substantive
    revisions go back to the reviewer before re-asking (same 2-round cap).
-8. Commit the spec changes and hand off to the coder. Task name: the one the
+8. Make sure the approved draft is committed and hand off to the coder. Task name: the one the
    lead gave you, else invent a short stable kebab-case name.
 
 ## Review mode

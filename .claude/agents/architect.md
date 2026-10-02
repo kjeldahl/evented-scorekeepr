@@ -56,7 +56,9 @@ Implement reasonable structural fixes yourself.
 ## Implementation review
 After your gates pass, the **reviewer** reviews your tip before the lead
 integrates it.
-- **Teammate**: send your `HANDOFF` to `reviewer` (cc the lead). On a
+- **Teammate**: send your `HANDOFF` to `reviewer` (cc the lead), always with
+  the committed `commit:` sha; one review request at a time — wait for the
+  REVIEW before sending another. On a
   `changes-requested` REVIEW, route each item to its owner like a follow-up
   (spec items → specifier, needing user approval), merge their fixes, re-run
   your gates, and hand off to the reviewer again. The reviewer sends
