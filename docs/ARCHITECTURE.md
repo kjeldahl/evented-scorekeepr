@@ -382,8 +382,8 @@ end
   `Identity::SuperAdminHandoffsController`, which acts on `session[:user_id]`
   (the real login, not the impersonated member), re-authenticates the sender's
   own password in the controller layer (the command never sees the password;
-  it takes `reauthenticated:`, a boolean meaning the sender was verified, and
-  still rejects "invalid credentials" when false, in check order), and passes the session's `impersonation_id` so the command appends
+  the controller computes `reauthenticated:` before the call and the command
+  still checks sender, then the flag ("invalid credentials"), then recipient), and passes the session's `impersonation_id` so the command appends
   `ImpersonationEnded` atomically (built by root `ImpersonationSession.
   ended_event`); the controller then drops the session keys. `SuperAdminHandedOff`
   is never audited as an impersonated action (`ImpersonationAudit`).
