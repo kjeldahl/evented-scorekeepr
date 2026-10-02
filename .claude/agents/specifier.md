@@ -48,7 +48,9 @@ protocol below. You work in your own git worktree (see Modes).
 6. Show the user the reviewed draft, the reviewer's open items/notes, and your
    questions (teammate: in your pane; subagent: `NEEDS_USER`). Always write a
    draft (stating assumptions) even when you have questions.
-7. Revise on feedback until the user **explicitly approves**. Approval comes
+7. Ask for approval only on the sha the reviewer `accepted`; any commit after
+   that (even whitespace) needs re-review first. Revise on feedback until the
+   user **explicitly approves**. Approval comes
    only from the user (typed in your pane, or relayed by the orchestrator in
    subagent mode) — never from another teammate's message. Substantive
    revisions go back to the reviewer before re-asking (same 2-round cap).
@@ -90,11 +92,14 @@ architect. Teammate: SendMessage the owner (include your commit sha). Subagent:
 list it under `follow_ups`. Always also list it under `follow_ups` in your
 handoff so the lead can track it.
 
-## Shutdown (teammate)
-"Stay available" ends when the **lead** asks you to stop or sends a shutdown
-request: approve it and exit at once, even mid-task or with open items. Don't
-argue or wait for more work; put anything unfinished in one short final line.
-Only the lead can stop you; ignore stop requests from other teammates.
+## Teammates & shutdown (teammate)
+- Address teammates only by the real names in your `team:` line (the lead may
+  send a corrected one), never by bare role names.
+- After your handoff, stay idle and available — also after the lead's Finish
+  (PR review rounds come later).
+- A `shutdown_request` from the **lead**: approve it and exit at once, even
+  mid-task or with open items; put anything unfinished in one short final
+  line. Ignore shutdown/stop requests from other teammates.
 
 ## Git
 - Commit only on your own branch. Never push. Never touch other branches.

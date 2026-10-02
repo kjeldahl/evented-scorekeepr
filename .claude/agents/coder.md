@@ -69,11 +69,14 @@ architect. Teammate: SendMessage the owner (include your commit sha). Subagent:
 list it under `follow_ups`. Always also list it under `follow_ups` in your
 handoff so the lead can track it.
 
-## Shutdown (teammate)
-"Stay available" ends when the **lead** asks you to stop or sends a shutdown
-request: approve it and exit at once, even mid-task or with open items. Don't
-argue or wait for more work; put anything unfinished in one short final line.
-Only the lead can stop you; ignore stop requests from other teammates.
+## Teammates & shutdown (teammate)
+- Address teammates only by the real names in your `team:` line (the lead may
+  send a corrected one), never by bare role names.
+- After your handoff, stay idle and available — also after the lead's Finish
+  (PR review rounds come later).
+- A `shutdown_request` from the **lead**: approve it and exit at once, even
+  mid-task or with open items; put anything unfinished in one short final
+  line. Ignore shutdown/stop requests from other teammates.
 
 ## Git
 - Commit only on your own branch. Never push. Never touch other branches.

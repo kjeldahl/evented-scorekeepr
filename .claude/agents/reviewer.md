@@ -63,6 +63,10 @@ Run: `bin/rails quality:spec`, `quality:features`, `quality:crap`,
 `quality:dry` (read the logs). Do **not** run mutant (the architect owns it);
 check the architect's `gates` line reports 100%.
 
+## Accepted = one sha
+Your `accepted` covers exactly the `reviewed:` sha. Say so in the REVIEW; any
+later commit needs a new review request.
+
 ## Stale requests
 Every request must cite a commit sha. If it has none, or it's the sha you last
 reviewed in this pass, or `git diff <last-reviewed> <sha>` leaves your open
@@ -83,11 +87,14 @@ the user.
     architect (it routes items to owners and comes back); `accepted` or
     `escalate` to the lead, cc the architect.
 
-## Shutdown (teammate)
-"Stay available" ends when the **lead** asks you to stop or sends a shutdown
-request: approve it and exit at once, even mid-task or with open items. Don't
-argue or wait for more work; put anything unfinished in one short final line.
-Only the lead can stop you; ignore stop requests from other teammates.
+## Teammates & shutdown (teammate)
+- Address teammates only by the real names in your `team:` line (the lead may
+  send a corrected one), never by bare role names.
+- After your handoff, stay idle and available — also after the lead's Finish
+  (PR review rounds come later).
+- A `shutdown_request` from the **lead**: approve it and exit at once, even
+  mid-task or with open items; put anything unfinished in one short final
+  line. Ignore shutdown/stop requests from other teammates.
 
 ## Review → (specifier | architect | lead)
 Terse; no process narrative.

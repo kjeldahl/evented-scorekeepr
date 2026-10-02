@@ -34,6 +34,12 @@ Check: `echo "teams=$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS remote=$CLAUDE_CODE_RE
 - Nothing is integrated without the reviewer's `accepted` on that exact commit
   (or the user overriding an `escalate`).
 - Never push or open a PR unless the user asks.
+- **You never edit code, specs or docs yourself** — not even a one-line
+  review-comment fix. Route every change to its owning role.
+- **A reviewer `accepted` covers one exact sha.** Any later commit (even
+  whitespace) needs re-review before user approval or integration. Before
+  asking the user to approve a spec or integrating, check the sha in front of
+  you equals the reviewer's `reviewed:` sha.
 
 ## 0. Preflight (both modes)
 - `git status` clean (else ask).
@@ -56,6 +62,10 @@ done
 ```
 
 ### T2. Spawn all five at once
+First `ListAgents`: if any role is already registered (live or ghost), don't
+spawn it again — reuse it (see **Re-runs**) or shut it down properly first
+(see **Shutdown**). Never a second pane for a registered role.
+
 One message, five Agent calls: `name` = role, `subagent_type` = role (the
 `name` is what makes them visible teammates). Prompt for each:
 ```
@@ -65,9 +75,12 @@ request: <feature request>
 worktree: <absolute path to .claude/worktrees/<slug>-<role>>
 branch: <slug>/<role>
 base: <base sha>
-lead: <your teammate name>
+team: lead=<your name> specifier=<name> coder=<name> refactorer=<name> architect=<name> reviewer=<name>
 ```
-Add per role:
+Use the **real** registered names in `team:` (check `ListAgents` after
+spawning; if any differ, e.g. a `-2` suffix, message every teammate the
+corrected `team:` line). Roles address each other only by these names.
+Add per role (role names below mean the real names from `team:`):
 - specifier: "Start now. Get a spec review from `reviewer` before showing the
   user. Talk to the user in your pane; hand off to `coder`."
 - coder / refactorer / architect: "Wait for your upstream HANDOFF message.
@@ -162,11 +175,37 @@ ff fails → resume the role to rebase onto base, retry.
 ## Finish (both modes)
 Only after the reviewer accepted the implementation and the follow-up gate
 (T5 / subagent steps 4–5) is clear.
-- Teams: send a shutdown request to **each** teammate by name (specifier,
-  coder, refactorer, architect, reviewer). Check every one has exited; re-send
-  once to any still running, then report stragglers to the user. Then clean up
-  the team.
-- `git worktree remove` each `.claude/worktrees/<slug>-*`, `git worktree prune`,
-  delete `<slug>/*` role branches.
+- Teams: **keep teammates and worktrees alive** (idle). PR review comes after
+  Finish. They stay until the PR is merged (and the user OKs shutdown) or the
+  user explicitly says shut down — then run **Shutdown**.
+- Subagent mode: role worktrees are already removed after each integration.
 - Report, terse: task, `INT` (branched from `PARENT`), commits on `INT`, architect gates line, reviewer decision + notes, open follow-ups.
 - Ask: push / open PR (base `PARENT`) / merge into `PARENT` / next feature?
+
+## Re-runs after Finish (PR review comments, requested changes)
+- `ListAgents` first. Reuse live role teammates via SendMessage; route each
+  item to its owner and run the chain from there (spec/docs wording →
+  specifier → coder → refactorer → architect → reviewer; code → coder → …;
+  structure → refactorer → …). You still never edit anything yourself.
+- New base (e.g. the PR branch after a merge or someone else's push): repoint
+  the **existing** worktrees (`git -C <worktree> checkout -B <slug>/<role> <new base>`
+  when clean), don't respawn.
+- Spawn only roles that are gone (not in `ListAgents`), with the current
+  `team:` line. Never a second pane for a registered role.
+- Integrate the newly reviewed sha into `INT` as in T4.
+
+## New feature in the same session
+Fresh teammates per feature are fine: run **Shutdown** for the previous team
+first (until `ListAgents` is clean), then start this skill again from step 0
+automatically.
+
+## Shutdown (teams; user's say-so, or after merge + user OK)
+- A plain-text "stop" does **not** terminate a teammate. Send each one, by its
+  real name, a SendMessage whose message is `{"type":"shutdown_request"}`.
+- Then `ListAgents` until none of the roles is listed; re-send to any still
+  there; report stragglers to the user.
+- Closing a pane does not unregister an agent: a ghost keeps the name (a new
+  spawn gets `-2`) and wakes on misdirected messages. Always shut down via the
+  request, never by closing panes.
+- Then `git worktree remove` each `.claude/worktrees/<slug>-*`,
+  `git worktree prune`, delete `<slug>/*` role branches.
