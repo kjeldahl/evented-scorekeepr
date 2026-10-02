@@ -4,7 +4,11 @@ Feature: Super admin handoff
   transfer: afterwards the recipient is the one and only super admin and the
   previous super admin is an ordinary user again. The control lives on the
   super admin's own profile page and is shown to nobody else. There is still
-  never more than one super admin at any time.
+  never more than one super admin at any time. While impersonating, the
+  super admin acts as the impersonated member and so cannot hand off.
+  Design basis: a handoff appends a super admin revocation for the previous
+  holder and a grant for the recipient atomically, so super admin status
+  becomes latest-wins per user.
 
   Background:
     Given "Root" is a registered user with email "root@example.com" and password "secret123"
@@ -37,6 +41,29 @@ Feature: Super admin handoff
   Scenario: Only the super admin sees the handoff control
     Then "Root" sees the super admin handoff control on their profile page
     And "Alice" does not see the super admin handoff control on their profile page
+
+  # Super admin handoff 9
+  Scenario: The handoff control follows the status
+    When "Root" hands the super admin status to "alice@example.com"
+    Then "Alice" sees the super admin handoff control on their profile page
+    And "Root" does not see the super admin handoff control on their profile page
+
+  # Super admin handoff 10
+  Scenario: A previous super admin cannot hand off again
+    Given "Root" has handed the super admin status to "alice@example.com"
+    When "Root" attempts to hand the super admin status to "bob@example.com"
+    Then the handoff is rejected because "only the super admin can hand off the super admin status"
+    And "Alice" is the super admin
+    And "Bob" is not the super admin
+
+  # Super admin handoff 11
+  Scenario: A super admin impersonating a member cannot hand off
+    Given "Alice" owns the "Office" account
+    And "Root" impersonates the member "Alice" in the "Office" account
+    When "Root" attempts to hand the super admin status to "bob@example.com"
+    Then the handoff is rejected because "only the super admin can hand off the super admin status"
+    And "Root" is the super admin
+    And "Bob" is not the super admin
 
   # Super admin handoff 5
   Scenario: An ordinary user cannot hand off the status
