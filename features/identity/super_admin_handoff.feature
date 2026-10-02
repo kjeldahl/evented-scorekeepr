@@ -14,6 +14,10 @@ Feature: Super admin handoff
   the previous super admin has in effect ends immediately (recorded in the
   audit trail like any other end of impersonation).
 
+  Checks run in this order: the sender must be the super admin, then the
+  password must be correct, then the recipient must exist. The first failure
+  is the one reported.
+
   Background:
     Given "Root" is a registered user with email "root@example.com" and password "secret123"
     And "Alice" is a registered user with email "alice@example.com" and password "secret123"
