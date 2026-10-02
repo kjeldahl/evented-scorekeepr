@@ -9,7 +9,10 @@ gem "dcb_event_store", github: "Kjeldahl/ruby-dcb"
 gem "pg", "~> 1.5"
 gem "connection_pool", "~> 2.4"
 
-gem "appsignal", require: false
+# Production-only: AppSignal logging (config/initializers/logging.rb)
+group :production do
+  gem "appsignal", require: false
+end
 
 gem "bcrypt", "~> 3.1.7"
 
@@ -17,8 +20,11 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "thruster", require: false
 
-# Deploy as a Docker container to Hetzner via Kamal [https://kamal-deploy.org]
-gem "kamal", require: false
+# Deploy as a Docker container to Hetzner via Kamal [https://kamal-deploy.org].
+# Deploy tooling only; excluded from the production image and cloud sessions.
+group :deploy do
+  gem "kamal", require: false
+end
 
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
