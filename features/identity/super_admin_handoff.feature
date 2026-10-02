@@ -20,7 +20,7 @@ Feature: Super admin handoff
 
   # Super admin handoff 2
   Scenario: The previous super admin loses the privileges and the recipient gains them
-    Given the "Office" account is owned by "Bob"
+    Given "Bob" owns the "Office" account
     When "Root" hands the super admin status to "alice@example.com"
     Then "Alice" can see the "Office" account
     And "Root" cannot see the "Office" account
