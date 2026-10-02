@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "../../config/coverage"
 require "cucumber/rails"
 
 ActionController::Base.allow_rescue = false
