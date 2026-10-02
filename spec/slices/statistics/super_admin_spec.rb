@@ -20,9 +20,19 @@ RSpec.describe Statistics::SuperAdmin do
       expect(projection.fold([ super_admin_granted ])).to be(true)
     end
 
-    it "queries SuperAdminGranted tagged with the user id" do
+    it "is not a super admin after a later SuperAdminRevoked event" do
+      revoked = DcbEventStore::Event.new(type: "SuperAdminRevoked", data: { user_id: "user-1" }, tags: [ "user:user-1" ])
+      expect(projection.fold([ super_admin_granted, revoked ])).to be(false)
+    end
+
+    it "is a super admin again when granted after a revocation" do
+      revoked = DcbEventStore::Event.new(type: "SuperAdminRevoked", data: { user_id: "user-1" }, tags: [ "user:user-1" ])
+      expect(projection.fold([ super_admin_granted, revoked, super_admin_granted ])).to be(true)
+    end
+
+    it "queries grant and revoke events tagged with the user id" do
       item = projection.query.items.sole
-      expect(item.event_types).to eq(%w[SuperAdminGranted])
+      expect(item.event_types).to eq(%w[SuperAdminGranted SuperAdminRevoked])
       expect(item.tags).to eq([ "user:user-1" ])
     end
   end

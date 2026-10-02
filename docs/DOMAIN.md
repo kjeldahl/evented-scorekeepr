@@ -157,6 +157,7 @@ and `MultiplayerMatchDeleted` tagged `league:{id}`.
 | `UserRegistered` | user_id, name, email, password_digest | `user:{user_id}`, `user_email:{email}` |
 | `UserHandleSet` | user_id, handle | `user:{user_id}` |
 | `SuperAdminGranted` | user_id | `user:{user_id}` |
+| `SuperAdminRevoked` | user_id | `user:{user_id}` |
 | `AccountCreated` | account_id, name, owner_user_id | `account:{account_id}`, `user:{owner_user_id}` |
 | `PlayerInvited` | invitation_id, account_id, email, invited_by_user_id | `invitation:{invitation_id}`, `account:{account_id}`, `invitee_email:{email}` |
 | `InvitationAccepted` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}`, `user:{user_id}` |
@@ -254,20 +255,27 @@ privilege is strictly read-only:
 - A super admin who is *also* an ordinary member of some account behaves
   like any other member there.
 
-The fact is the `SuperAdminGranted` event (identity slice owns it; tag
-`user:{user_id}`); super admin status is `true` iff at least one
-`SuperAdminGranted` exists for the user. **At most one user can ever be
-super admin**: granting a different user while one exists is rejected with
-"there is already a super admin" (the decision model reads every
-`SuperAdminGranted`, so concurrent grants are caught by the append
-condition). Pre-existing multi-admin data is not migrated. Granting is a domain-level command
-(`Identity::GrantSuperAdmin.call(user_id:)`) with **no web UI and no route**
-— it is invoked from cucumber steps, the console or seed tasks. The command
-is idempotent: granting the current super admin succeeds without appending.
-**Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
-yet because no behaviour requires it; when it is needed, add the event to
-the table above and the status fold becomes latest-wins (like
-`MemberLeft` for membership).
+The facts are the `SuperAdminGranted` / `SuperAdminRevoked` events (identity
+slice owns them; tag `user:{user_id}`); super admin status is **latest-wins
+per user**: `true` iff the user's latest such event is a grant. **At most one
+user can be super admin at a time**: granting a different user while one
+holds the status is rejected with "there is already a super admin" (the
+decision model reads every grant/revocation, so concurrent changes are
+caught by the append condition). Pre-existing multi-admin data is not
+migrated. Granting is a domain-level command
+(`Identity::GrantSuperAdmin.call(user_id:)`) with no web UI — invoked from
+cucumber steps, the console or seed tasks; idempotent for the current holder.
+
+**Handoff**: the current super admin may hand the status to another
+registered user, identified by email (trimmed, case-insensitive), from a form
+on their own profile page (shown to nobody else; `Identity::HandOffSuperAdmin`).
+It atomically appends `SuperAdminRevoked` (actor) + `SuperAdminGranted`
+(recipient) under one append condition, so there is never zero-or-two admins
+mid-transfer. No recipient confirmation. Rejections: "only the super admin
+can hand off the super admin status" (actor is not the current holder —
+including a previous holder, or a super admin impersonating a member, whose
+effective user is the member) and "there is no user with that email" (unknown
+or blank). Handing off to oneself is a no-op success.
 
 ### Impersonation
 
