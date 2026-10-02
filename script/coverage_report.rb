@@ -1,10 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Compares coverage between base branch and current PR branch.
-# Reads SimpleCov JSON output and produces a markdown summary.
+# Summarises SimpleCov JSON (simplecov-json) per slice, plus app/* (app code
+# outside app/slices) and lib, as markdown for the PR comment. With a base
+# report it adds deltas and a collapsed list of files whose coverage changed.
 #
 # Usage:
+#   ruby script/coverage_report.rb <pr_coverage.json>
 #   ruby script/coverage_report.rb <base_coverage.json> <pr_coverage.json>
 
 require "json"
@@ -14,37 +16,62 @@ def load_coverage(path)
   result = data.fetch("result", data)
   metrics = result.fetch("metrics", {})
 
-  # simplecov-json writes per-file data as a "files" array.
   file_coverage = {}
   result.fetch("files", []).each do |file|
     lines = file.dig("coverage", "lines") || file["coverage"]
     next unless lines.is_a?(Array)
 
     relevant = lines.compact
-    covered = relevant.count(&:positive?)
-    total = relevant.size
-    pct = total.positive? ? (covered.to_f / total * 100).round(2) : 100.0
-
     short_path = file["filename"].sub(%r{\A.*?/(?=(app|lib)/)}, "")
-    file_coverage[short_path] = { covered: covered, total: total, percent: pct }
+    file_coverage[short_path] = { covered: relevant.count(&:positive?), total: relevant.size }
   end
 
   {
     line_percent: metrics.fetch("covered_percent", 0).round(2),
     covered_lines: metrics.fetch("covered_lines", 0),
     total_lines: metrics.fetch("total_lines", 0),
-    files: file_coverage
+    files: file_coverage,
+    groups: group_totals(file_coverage)
   }
 end
 
-def delta_icon(delta)
-  if delta > 0.5
-    "+"
-  elsif delta < -0.5
-    "!!"
-  else
-    " "
+def group_for(path)
+  case path
+  when %r{\Aapp/slices/([^/]+)/} then Regexp.last_match(1)
+  when %r{\Aapp/} then "app/*"
+  when %r{\Alib/} then "lib"
+  else "other"
   end
+end
+
+# Slices alphabetically, then app/*, lib, other.
+def group_order(name)
+  [ [ "app/*", "lib", "other" ].index(name) || -1, name ]
+end
+
+def group_totals(files)
+  totals = Hash.new { |h, k| h[k] = { covered: 0, total: 0 } }
+  files.each do |path, data|
+    totals[group_for(path)][:covered] += data[:covered]
+    totals[group_for(path)][:total] += data[:total]
+  end
+  totals.sort_by { |name, _| group_order(name) }.to_h
+end
+
+def percent(data)
+  return nil unless data
+  return 100.0 if data[:total].zero?
+
+  (data[:covered].to_f / data[:total] * 100).round(2)
+end
+
+def format_percent(data)
+  pct = percent(data)
+  pct ? "#{pct}%" : "—"
+end
+
+def format_lines(data)
+  data ? "#{data[:covered]}/#{data[:total]}" : "—"
 end
 
 def format_delta(delta)
@@ -52,26 +79,39 @@ def format_delta(delta)
   "#{sign}#{delta.round(2)}%"
 end
 
+def delta_cell(base, pr)
+  return "—" unless base && pr
+
+  delta = percent(pr) - percent(base)
+  icon = if delta > 0.5 then " ⬆"
+  elsif delta < -0.5 then " ⬇"
+  else ""
+  end
+  "#{format_delta(delta)}#{icon}"
+end
+
+def label(name)
+  [ "app/*", "lib", "other" ].include?(name) ? "`#{name}`" : name
+end
+
 if ARGV.length == 1
-  # Single report mode — just summarize current coverage
   pr = load_coverage(ARGV[0])
 
   puts "## Coverage Report"
   puts ""
   puts "**Overall: #{pr[:line_percent]}%** (#{pr[:covered_lines]}/#{pr[:total_lines]} lines)"
   puts ""
-  puts "| File | Coverage | Lines |"
-  puts "|------|----------|-------|"
-
-  pr[:files].sort_by { |path, _| path }.each do |path, data|
-    puts "| `#{path}` | #{data[:percent]}% | #{data[:covered]}/#{data[:total]} |"
+  puts "| Slice | Coverage | Lines |"
+  puts "|-------|----------|-------|"
+  pr[:groups].each do |name, data|
+    puts "| #{label(name)} | #{format_percent(data)} | #{format_lines(data)} |"
   end
 
   exit 0
 end
 
 if ARGV.length != 2
-  warn "Usage: ruby script/coverage_report.rb <base_coverage.json> [pr_coverage.json]"
+  warn "Usage: ruby script/coverage_report.rb [base_coverage.json] <pr_coverage.json>"
   exit 1
 end
 
@@ -82,45 +122,43 @@ overall_delta = pr[:line_percent] - base[:line_percent]
 
 puts "## Coverage Change Report"
 puts ""
-puts "| | Base | PR | Delta |"
-puts "|---|------|-----|-------|"
-puts "| **Overall** | #{base[:line_percent]}% | #{pr[:line_percent]}% | #{format_delta(overall_delta)} |"
-puts "| **Lines** | #{base[:covered_lines]}/#{base[:total_lines]} | #{pr[:covered_lines]}/#{pr[:total_lines]} | |"
+puts "**Overall: #{pr[:line_percent]}%** (#{pr[:covered_lines]}/#{pr[:total_lines]} lines), " \
+     "#{format_delta(overall_delta)} vs base (#{base[:line_percent]}%)"
+puts ""
+puts "| Slice | Base | PR | Delta | Lines |"
+puts "|-------|------|----|-------|-------|"
+groups = (base[:groups].keys | pr[:groups].keys).sort_by { |name| group_order(name) }
+groups.each do |name|
+  b = base[:groups][name]
+  p = pr[:groups][name]
+  puts "| #{label(name)} | #{format_percent(b)} | #{format_percent(p)} | #{delta_cell(b, p)} | #{format_lines(p)} |"
+end
 puts ""
 
-# Collect all files from both reports
-all_files = (base[:files].keys + pr[:files].keys).uniq.sort
-
-changed_files = all_files.select do |path|
-  base_pct = base[:files].dig(path, :percent) || 0.0
-  pr_pct = pr[:files].dig(path, :percent) || 0.0
-  (pr_pct - base_pct).abs > 0.01 ||
-    !base[:files].key?(path) ||
-    !pr[:files].key?(path)
+changed_files = (base[:files].keys | pr[:files].keys).sort.reject do |path|
+  b = base[:files][path]
+  p = pr[:files][path]
+  b && p && (percent(p) - percent(b)).abs <= 0.01
 end
 
 if changed_files.empty?
-  puts "No per-file coverage changes detected."
+  puts "No per-file coverage changes."
 else
-  puts "### Changed Files"
+  puts "<details><summary>#{changed_files.size} file(s) with coverage changes</summary>"
   puts ""
-  puts "| Status | File | Base | PR | Delta |"
-  puts "|--------|------|------|-----|-------|"
-
+  puts "| File | Base | PR | Delta |"
+  puts "|------|------|----|-------|"
   changed_files.each do |path|
-    base_data = base[:files][path]
-    pr_data = pr[:files][path]
-
-    if base_data.nil?
-      puts "| NEW | `#{path}` | — | #{pr_data[:percent]}% | — |"
-    elsif pr_data.nil?
-      puts "| DEL | `#{path}` | #{base_data[:percent]}% | — | — |"
-    else
-      delta = pr_data[:percent] - base_data[:percent]
-      icon = delta_icon(delta)
-      puts "| #{icon} | `#{path}` | #{base_data[:percent]}% | #{pr_data[:percent]}% | #{format_delta(delta)} |"
+    b = base[:files][path]
+    p = pr[:files][path]
+    status = if b.nil? then " (new)"
+    elsif p.nil? then " (removed)"
+    else ""
     end
+    puts "| `#{path}`#{status} | #{format_percent(b)} | #{format_percent(p)} | #{delta_cell(b, p)} |"
   end
+  puts ""
+  puts "</details>"
 end
 
 # Exit with non-zero if coverage dropped significantly
