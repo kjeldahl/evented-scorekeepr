@@ -66,6 +66,87 @@ jobs:
         run: bundle exec rspec
       - name: Cucumber
         run: bundle exec cucumber --publish-quiet
+      # RSpec + Cucumber merge into one coverage/ result (config/coverage.rb).
+      - name: Upload coverage report
+        if: always() && matrix.adapter == 'postgres'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-${{ github.sha }}
+          path: coverage/
+          retention-days: 30
+
+  coverage-report:
+    name: Coverage report
+    needs: test
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: scorekeepr
+          POSTGRES_PASSWORD: scorekeepr
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      RAILS_ENV: test
+      EVENT_STORE_ADAPTER: postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-report-${{ github.sha }}
+          path: coverage-pr/
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Generate base branch coverage
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+          bundle install
+          bin/rails event_store:prepare
+          bundle exec rspec || true
+          bundle exec cucumber --publish-quiet || true
+          cp coverage/coverage.json /tmp/base_coverage.json || true
+
+      - name: Checkout back to PR
+        if: github.event_name == 'pull_request'
+        run: git checkout ${{ github.sha }}
+
+      - name: Generate coverage change report
+        run: |
+          if [ -f /tmp/base_coverage.json ] && [ -f coverage-pr/coverage.json ]; then
+            ruby script/coverage_report.rb /tmp/base_coverage.json coverage-pr/coverage.json > coverage_summary.md
+          else
+            ruby script/coverage_report.rb coverage-pr/coverage.json > coverage_summary.md
+          fi
+          cat coverage_summary.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          path: coverage_summary.md
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-summary
+          path: coverage_summary.md
+          retention-days: 30
 
   quality:
     name: CRAP & duplication

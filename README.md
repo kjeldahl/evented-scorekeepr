@@ -87,6 +87,11 @@ Quality tooling:
   code to prove the specs actually pin the behaviour. CI runs it
   incrementally (`--since` the base revision, only subjects you touched);
   a scheduled workflow runs the full suite weekly when anything changed.
+- SimpleCov (`config/coverage.rb`) merges the RSpec and Cucumber runs into
+  one `coverage/` report. CI (postgres leg) posts a sticky PR comment with
+  the coverage delta against the base branch (`script/coverage_report.rb`);
+  pushes to `main` publish the HTML report and a coverage-over-time chart
+  to GitHub Pages (`.github/workflows/pages.yml`).
 
 ## Development roles
 

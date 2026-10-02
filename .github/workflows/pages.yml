@@ -1,0 +1,125 @@
+name: Coverage Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: scorekeepr
+          POSTGRES_PASSWORD: scorekeepr
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      RAILS_ENV: test
+      EVENT_STORE_ADAPTER: postgres
+      CI: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Prepare event store
+        run: bin/rails event_store:prepare
+
+      - name: Run tests with coverage
+        run: |
+          bundle exec rspec
+          bundle exec cucumber --publish-quiet
+
+      - name: Fetch coverage history from gh-pages
+        run: |
+          git fetch origin gh-pages || true
+          git show origin/gh-pages:coverage_history.json > coverage_history.json 2>/dev/null || echo "[]" > coverage_history.json
+
+      - name: Update coverage history
+        run: ruby script/update_coverage_history.rb coverage/coverage.json coverage_history.json
+
+      - name: Build pages site
+        run: |
+          mkdir -p _site/html
+          cp -r coverage/* _site/html/
+          cp coverage_history.json _site/coverage_history.json
+          ruby script/generate_pages_index.rb coverage_history.json _site
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v4
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-26.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  persist-history:
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Initialize gh-pages branch if needed
+        run: |
+          if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+            git checkout --orphan gh-pages
+            git rm -rf . 2>/dev/null || true
+            echo "[]" > coverage_history.json
+            git add coverage_history.json
+            git commit -m "Initialize coverage history"
+          fi
+
+      - name: Download pages artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: /tmp/pages-artifact
+
+      - name: Extract and update history
+        run: |
+          mkdir -p /tmp/pages-extracted
+          tar -xf /tmp/pages-artifact/artifact.tar -C /tmp/pages-extracted 2>/dev/null || true
+          if [ -f /tmp/pages-extracted/coverage_history.json ]; then
+            cp /tmp/pages-extracted/coverage_history.json coverage_history.json
+          fi
+
+      - name: Commit updated history
+        run: |
+          git add coverage_history.json
+          git diff --staged --quiet || git commit -m "Update coverage history"
+          git push origin gh-pages
