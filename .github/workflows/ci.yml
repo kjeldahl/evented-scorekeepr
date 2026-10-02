@@ -15,7 +15,7 @@ permissions:
 jobs:
   lint:
     name: Lint & security
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
@@ -34,7 +34,7 @@ jobs:
 
   test:
     name: Tests (${{ matrix.adapter }} store)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -69,7 +69,7 @@ jobs:
 
   quality:
     name: CRAP & duplication
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       RAILS_ENV: test
     steps:
@@ -84,7 +84,7 @@ jobs:
 
   mutant:
     name: Mutant (incremental)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
