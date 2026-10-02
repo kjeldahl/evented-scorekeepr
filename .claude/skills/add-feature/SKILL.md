@@ -28,9 +28,11 @@ Feature request: `$ARGUMENTS` (ask the user if empty).
 - Never push or open a PR unless the user asks.
 
 ## 0. Preflight (both modes)
-- `git status` clean (else ask). Integration branch `INT` = current branch; if
-  `main`, `git checkout -b feature/<slug>`. Record base sha.
+- `git status` clean (else ask).
 - Invent a short kebab-case `<slug>` for the task.
+- Always branch off the current branch, whatever it is: record `PARENT` =
+  current branch, then `git checkout -b feature/<slug>`. Integration branch
+  `INT` = `feature/<slug>`. Record base sha. Never commit to `PARENT`.
 - `bundle check || bundle install` once here, so roles don't race on gems.
 
 ---
@@ -136,5 +138,5 @@ Only after the follow-up gate (T5 / subagent step 4) is clear.
 - Teams: tell teammates to stop and shut the team down.
 - `git worktree remove` each `.claude/worktrees/<slug>-*`, `git worktree prune`,
   delete `<slug>/*` role branches.
-- Report, terse: task, commits on `INT`, architect gates line, open follow-ups.
-- Ask: push / open PR / next feature?
+- Report, terse: task, `INT` (branched from `PARENT`), commits on `INT`, architect gates line, open follow-ups.
+- Ask: push / open PR (base `PARENT`) / merge into `PARENT` / next feature?
