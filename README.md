@@ -89,9 +89,9 @@ Quality tooling:
   a scheduled workflow runs the full suite weekly when anything changed.
 - SimpleCov (`config/coverage.rb`) merges the RSpec and Cucumber runs into
   one `coverage/` report. CI (postgres leg) posts a sticky PR comment with
-  per-slice coverage (plus `app/*`, `lib`) and its delta against the base
-  branch (`script/coverage_report.rb`);
-  the HTML report is kept as the `coverage-report-<sha>` run artifact.
+  coverage per slice, other `app/` subfolder and `lib`, and the delta
+  against the base branch (`script/coverage_report.rb`); the HTML report is
+  kept as the `coverage-report-<sha>` run artifact.
 
 ## Development roles
 

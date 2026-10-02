@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Summarises SimpleCov JSON (simplecov-json) per slice, plus app/* (app code
-# outside app/slices) and lib, as markdown for the PR comment. With a base
-# report it adds deltas and a collapsed list of files whose coverage changed.
+# Summarises SimpleCov JSON (simplecov-json) per slice, per other app/
+# subfolder and lib, as markdown for the PR comment, plus a collapsed file
+# list. With a base report it adds deltas and lists only the files whose
+# coverage changed; without one (first run) it lists every file.
 #
 # Usage:
 #   ruby script/coverage_report.rb <pr_coverage.json>
@@ -38,15 +39,20 @@ end
 def group_for(path)
   case path
   when %r{\Aapp/slices/([^/]+)/} then Regexp.last_match(1)
-  when %r{\Aapp/} then "app/*"
+  when %r{\A(app/[^/]+)/} then Regexp.last_match(1)
   when %r{\Alib/} then "lib"
   else "other"
   end
 end
 
-# Slices alphabetically, then app/*, lib, other.
+# Slices, then other app/ subfolders, lib, other; alphabetical within each.
 def group_order(name)
-  [ [ "app/*", "lib", "other" ].index(name) || -1, name ]
+  rank = if name.start_with?("app/") then 0
+  elsif name == "lib" then 1
+  elsif name == "other" then 2
+  else -1
+  end
+  [ rank, name ]
 end
 
 def group_totals(files)
@@ -91,7 +97,7 @@ def delta_cell(base, pr)
 end
 
 def label(name)
-  [ "app/*", "lib", "other" ].include?(name) ? "`#{name}`" : name
+  name.start_with?("app/") || [ "lib", "other" ].include?(name) ? "`#{name}`" : name
 end
 
 if ARGV.length == 1
@@ -106,6 +112,16 @@ if ARGV.length == 1
   pr[:groups].each do |name, data|
     puts "| #{label(name)} | #{format_percent(data)} | #{format_lines(data)} |"
   end
+  puts ""
+  puts "<details><summary>#{pr[:files].size} file(s)</summary>"
+  puts ""
+  puts "| File | Coverage | Lines |"
+  puts "|------|----------|-------|"
+  pr[:files].sort.each do |path, data|
+    puts "| `#{path}` | #{format_percent(data)} | #{format_lines(data)} |"
+  end
+  puts ""
+  puts "</details>"
 
   exit 0
 end
