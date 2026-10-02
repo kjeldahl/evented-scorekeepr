@@ -70,4 +70,5 @@ before user approval and the implementation after the architect
 (`.claude/agents/`), each in its own git worktree. Teams mode (default; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in
 `.claude/settings.json`) runs them as visible teammates (`teammateMode: auto` → split panes in tmux
 or iTerm2); `--subagents` falls back to hidden subagents (automatic in Claude Code
-cloud).
+cloud). Cloud sessions get prebuilt Ruby (mise) + gems from
+`.claude/hooks/session-start.sh`.

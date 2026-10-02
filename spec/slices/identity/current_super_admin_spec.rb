@@ -1,0 +1,33 @@
+require "rails_helper"
+
+RSpec.describe Identity::CurrentSuperAdmin do
+  def super_admin_granted(user_id)
+    DcbEventStore::Event.new(
+      type: "SuperAdminGranted",
+      data: { user_id: },
+      tags: [ "user:#{user_id}" ]
+    )
+  end
+
+  describe ".projection" do
+    subject(:projection) { described_class.projection }
+
+    it "starts with no super admin" do
+      expect(projection.initial_state).to be_nil
+    end
+
+    it "is the granted user once a SuperAdminGranted event is folded" do
+      expect(projection.fold([ super_admin_granted("user-1") ])).to eq("user-1")
+    end
+
+    it "keeps the first granted user" do
+      expect(projection.fold([ super_admin_granted("user-1"), super_admin_granted("user-2") ])).to eq("user-1")
+    end
+
+    it "queries every SuperAdminGranted event regardless of user" do
+      item = projection.query.items.sole
+      expect(item.event_types).to eq(%w[SuperAdminGranted])
+      expect(item.tags).to be_empty
+    end
+  end
+end

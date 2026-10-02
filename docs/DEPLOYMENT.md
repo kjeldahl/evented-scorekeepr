@@ -66,6 +66,25 @@ The app container's entrypoint runs `bin/rails event_store:prepare` on
 boot (idempotent: creates the database, events table and supporting
 functions if missing) - the no-ActiveRecord equivalent of `db:prepare`.
 
+## Continuous deployment (GitHub Actions)
+
+`.github/workflows/deploy.yml` runs `bin/kamal deploy` after CI passes on a
+push to `main` (skipped if `main` has since moved on), or on demand via
+*Actions → Deploy → Run workflow*. It replaces `.kamal/secrets` on the runner
+with values from GitHub secrets, so 1Password isn't needed there.
+
+One-time setup:
+
+1. Repo secrets (Settings → Secrets and variables → Actions, or on the
+   `production` environment):
+   - `SSH_PRIVATE_KEY` - a deploy key whose public half is in the server's
+     `/root/.ssh/authorized_keys`
+   - `RAILS_MASTER_KEY` - contents of `config/master.key`
+   - `POSTGRES_PASSWORD` - same value as in 1Password
+2. Registry auth uses the workflow's `GITHUB_TOKEN`. If the
+   `ghcr.io/kjeldahl/scorekeepr` package was first pushed with a PAT, grant
+   this repo write access under the package's *Manage Actions access*.
+
 ## Backups
 
 The `db-backup` accessory ([prodrigestivill/postgres-backup-local](https://github.com/prodrigestivill/docker-postgres-backup-local))
