@@ -93,6 +93,7 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
 
   it "ends the given impersonation in the same write" do
     hand_off(impersonation_id: "imp-1")
+    expect(types).to include("SuperAdminHandedOff")
     ended = EventStore.read(DcbEventStore::Query.new(DcbEventStore::QueryItem.new(event_types: "ImpersonationEnded"))).sole
     expect(ended.data).to eq(impersonation_id: "imp-1", super_admin_user_id: ids.fetch("root"))
   end
@@ -105,5 +106,33 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     end
     expect(hand_off).to eq(Result.success(ids.fetch("alice")))
     expect(calls).to eq(2)
+  end
+
+  it "keeps the impersonation end when retrying" do
+    calls = 0
+    allow(EventStore).to receive(:append).and_wrap_original do |original, *args|
+      calls += 1
+      calls == 1 ? raise(DcbEventStore::ConditionNotMet) : original.call(*args)
+    end
+    hand_off(impersonation_id: "imp-1")
+    expect(types).to include("ImpersonationEnded")
+  end
+
+  it "rejects when a concurrent handoff lands between decision and append" do
+    raced = false
+    allow(EventStore).to receive(:append).and_wrap_original do |original, *args|
+      unless raced
+        raced = true
+        original.call(Identity::Events.super_admin_handed_off(from_user_id: ids.fetch("root"), to_user_id: ids.fetch("bob")))
+      end
+      original.call(*args)
+    end
+    expect(hand_off).to eq(Result.failure(described_class::NOT_SUPER_ADMIN))
+    expect(current).to eq(ids.fetch("bob"))
+  end
+
+  it "reports a missing email as an unknown user" do
+    expect(described_class.call(from_user_id: ids.fetch("root"), password: "secret123", to_email: nil, impersonation_id: nil))
+      .to eq(Result.failure("the user was not found"))
   end
 end

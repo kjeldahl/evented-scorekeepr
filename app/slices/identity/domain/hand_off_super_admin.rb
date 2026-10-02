@@ -10,7 +10,7 @@ module Identity
   class HandOffSuperAdmin
     NOT_SUPER_ADMIN = "only the super admin can hand off super admin status"
 
-    def self.call(from_user_id:, password:, to_email:, impersonation_id: nil)
+    def self.call(from_user_id:, password:, to_email:, impersonation_id:)
       decision = EventStore.decide(
         super_admin: CurrentSuperAdmin.projection,
         recipient: Credentials.projection(to_email.to_s.strip.downcase)
