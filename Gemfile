@@ -9,9 +9,10 @@ gem "dcb_event_store", github: "Kjeldahl/ruby-dcb"
 gem "pg", "~> 1.5"
 gem "connection_pool", "~> 2.4"
 
-# Production-only: AppSignal logging (config/initializers/logging.rb)
+# Production-only APM, errors, logs and metrics. Must be required by Bundler
+# (not from an initializer) so its Railtie registers and starts the agent.
 group :production do
-  gem "appsignal", require: false
+  gem "appsignal"
 end
 
 gem "bcrypt", "~> 3.1.7"
