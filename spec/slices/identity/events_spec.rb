@@ -54,4 +54,14 @@ RSpec.describe Identity::Events do
       expect(event.tags).to eq([ "user:user-1" ])
     end
   end
+
+  describe ".super_admin_revoked" do
+    subject(:event) { described_class.super_admin_revoked(user_id: "user-1") }
+
+    it "has the SuperAdminRevoked type, user_id data and user tag" do
+      expect(event.type).to eq("SuperAdminRevoked")
+      expect(event.data).to eq(user_id: "user-1")
+      expect(event.tags).to eq([ "user:user-1" ])
+    end
+  end
 end

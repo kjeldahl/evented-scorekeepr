@@ -28,5 +28,13 @@ module Identity
         tags: [ "user:#{user_id}" ]
       )
     end
+
+    def super_admin_revoked(user_id:)
+      DcbEventStore::Event.new(
+        type: "SuperAdminRevoked",
+        data: { user_id: },
+        tags: [ "user:#{user_id}" ]
+      )
+    end
   end
 end
