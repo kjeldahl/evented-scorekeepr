@@ -1,24 +1,29 @@
 # Grants a user read-only super admin status (docs/DOMAIN.md § Super admin).
-# There is no web UI and no route — this command is invoked from cucumber
-# steps, the console or seed tasks only. It is idempotent: granting an
-# existing super admin succeeds without appending, and a lost race against a
-# concurrent identical grant is equally a success (the decision model's
-# query covers only this user's registration and grants, so nothing else can
-# trip the condition).
+# There is no web UI and no route - this command is invoked from cucumber
+# steps, the console or seed tasks only. At most one user is ever super
+# admin: the decision model reads the global `super_admin` tag, so a
+# different user is rejected and a concurrent grant of another user trips the
+# append condition. Re-granting the current super admin is an idempotent
+# success without appending.
 module Identity
   class GrantSuperAdmin
+    ONLY_ONE = "there can only be one super admin".freeze
+
     def self.call(user_id:)
       decision = EventStore.decide(
         user: UserExistence.projection(user_id:),
-        super_admin: SuperAdminStatus.projection(user_id:)
+        super_admin: SuperAdminStatus.projection
       )
       return Result.failure("the user was not found") unless decision.states.fetch(:user)
-      return Result.success(user_id) if decision.states.fetch(:super_admin)
+
+      current = decision.states.fetch(:super_admin)
+      return Result.success(user_id) if current == user_id
+      return Result.failure(ONLY_ONE) if current
 
       EventStore.append(Events.super_admin_granted(user_id:), decision.append_condition)
       Result.success(user_id)
     rescue DcbEventStore::ConditionNotMet
-      Result.success(user_id)
+      call(user_id:) # lost a race: re-decide against the winning grant
     end
   end
 end

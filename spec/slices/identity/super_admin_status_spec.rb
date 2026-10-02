@@ -2,28 +2,24 @@ require "rails_helper"
 
 RSpec.describe Identity::SuperAdminStatus do
   def super_admin_granted(user_id: "user-1")
-    DcbEventStore::Event.new(
-      type: "SuperAdminGranted",
-      data: { user_id: },
-      tags: [ "user:#{user_id}" ]
-    )
+    Identity::Events.super_admin_granted(user_id:)
   end
 
   describe ".projection" do
-    subject(:projection) { described_class.projection(user_id: "user-1") }
+    subject(:projection) { described_class.projection }
 
-    it "starts as not a super admin" do
-      expect(projection.initial_state).to be(false)
+    it "starts with nobody as super admin" do
+      expect(projection.initial_state).to be_nil
     end
 
-    it "is a super admin once a SuperAdminGranted event is folded" do
-      expect(projection.fold([ super_admin_granted ])).to be(true)
+    it "folds to the id of the granted user" do
+      expect(projection.fold([ super_admin_granted(user_id: "user-7") ])).to eq("user-7")
     end
 
-    it "queries SuperAdminGranted tagged with the user id" do
+    it "queries SuperAdminGranted by the global super_admin tag" do
       item = projection.query.items.sole
       expect(item.event_types).to eq(%w[SuperAdminGranted])
-      expect(item.tags).to eq([ "user:user-1" ])
+      expect(item.tags).to eq(%w[super_admin])
     end
   end
 end

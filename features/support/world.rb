@@ -43,6 +43,15 @@ module ScorekeeprWorld
     raise "could not grant super admin to #{name}: #{result.error}" if result.failure?
   end
 
+  def super_admin_grants
+    query = DcbEventStore::Query.new(DcbEventStore::QueryItem.new(event_types: %w[SuperAdminGranted]))
+    EventStore.read(query)
+  end
+
+  def super_admin_ids
+    super_admin_grants.map { |event| event.data.fetch(:user_id) }
+  end
+
   def sign_up(name, email:, password:)
     visit "/signup"
     fill_in "Name", with: name

@@ -1,17 +1,18 @@
-# Decision-model projection answering "is this user already a super admin?".
-# Super admin status is true iff at least one SuperAdminGranted event exists
-# for the user (docs/DOMAIN.md § Super admin) — revocation is deliberately
-# deferred, so the fold never returns to false.
+# Decision-model projection answering "who is the super admin?". There is at
+# most one (docs/DOMAIN.md § Super admin), so it queries the global
+# `super_admin` tag and folds to the granted user's id (nil while nobody is
+# super admin). Revocation is deliberately deferred, so the fold never
+# returns to nil.
 module Identity
   module SuperAdminStatus
     extend self
 
-    def projection(user_id:)
+    def projection
       DcbEventStore::Projection.new(
-        initial_state: false,
-        handlers: { "SuperAdminGranted" => ->(_state, _event) { true } },
+        initial_state: nil,
+        handlers: { "SuperAdminGranted" => ->(_state, event) { event.data.fetch(:user_id) } },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "SuperAdminGranted", tags: "user:#{user_id}")
+          DcbEventStore::QueryItem.new(event_types: "SuperAdminGranted", tags: "super_admin")
         )
       )
     end

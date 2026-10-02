@@ -25,7 +25,7 @@ module Identity
       DcbEventStore::Event.new(
         type: "SuperAdminGranted",
         data: { user_id: },
-        tags: [ "user:#{user_id}" ]
+        tags: [ "user:#{user_id}", "super_admin" ]
       )
     end
   end

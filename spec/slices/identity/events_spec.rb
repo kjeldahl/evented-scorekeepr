@@ -50,8 +50,8 @@ RSpec.describe Identity::Events do
       expect(event.data).to eq(user_id: "user-1")
     end
 
-    it "is tagged with the user id" do
-      expect(event.tags).to eq([ "user:user-1" ])
+    it "is tagged with the user id and the global super_admin tag" do
+      expect(event.tags).to eq([ "user:user-1", "super_admin" ])
     end
   end
 end

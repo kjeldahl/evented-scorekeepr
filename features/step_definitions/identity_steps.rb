@@ -14,8 +14,31 @@ Given("{string} is a registered user with email {string} and password {string}")
   register_user(name, email:, password:)
 end
 
+# Used both as a Given (establish the grant) and as a Then (assert it).
 Given("{string} is a super admin") do |name|
-  grant_super_admin(name)
+  grant_super_admin(name) unless super_admin_ids.include?(user_id_for(name))
+  expect(super_admin_ids).to include(user_id_for(name))
+end
+
+When("{string} is granted super admin") do |name|
+  @grant_result = Identity::GrantSuperAdmin.call(user_id: user_id_for(name))
+end
+
+Then("the grant is accepted") do
+  expect(@grant_result).to be_success
+end
+
+Then("the grant is rejected because {string}") do |reason|
+  expect(@grant_result).to be_failure
+  expect(@grant_result.error).to eq(reason)
+end
+
+Then("{string} is not a super admin") do |name|
+  expect(super_admin_ids).not_to include(user_id_for(name))
+end
+
+Then("no further super admin grant is recorded") do
+  expect(super_admin_grants.size).to eq(1)
 end
 
 When("someone signs up with name {string}, email {string} and password {string}") do |name, email, password|
