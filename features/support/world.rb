@@ -38,8 +38,16 @@ module ScorekeeprWorld
 
   # Granting has no web UI and no route (docs/DOMAIN.md § Super admin), so
   # the step calls the domain command directly, like register_user does.
+  def attempt_super_admin_grant(name)
+    Identity::GrantSuperAdmin.call(user_id: user_id_for(name))
+  end
+
+  def super_admin?(name)
+    EventStore.decide(super_admin: Identity::CurrentSuperAdmin.projection).states.fetch(:super_admin) == user_id_for(name)
+  end
+
   def grant_super_admin(name)
-    result = Identity::GrantSuperAdmin.call(user_id: user_id_for(name))
+    result = attempt_super_admin_grant(name)
     raise "could not grant super admin to #{name}: #{result.error}" if result.failure?
   end
 

@@ -256,10 +256,14 @@ privilege is strictly read-only:
 
 The fact is the `SuperAdminGranted` event (identity slice owns it; tag
 `user:{user_id}`); super admin status is `true` iff at least one
-`SuperAdminGranted` exists for the user. Granting is a domain-level command
+`SuperAdminGranted` exists for the user. **At most one user can ever be
+super admin**: granting a different user while one exists is rejected with
+"there is already a super admin" (the decision model reads every
+`SuperAdminGranted`, so concurrent grants are caught by the append
+condition). Pre-existing multi-admin data is not migrated. Granting is a domain-level command
 (`Identity::GrantSuperAdmin.call(user_id:)`) with **no web UI and no route**
 — it is invoked from cucumber steps, the console or seed tasks. The command
-is idempotent: granting an existing super admin succeeds without appending.
+is idempotent: granting the current super admin succeeds without appending.
 **Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
 yet because no behaviour requires it; when it is needed, add the event to
 the table above and the status fold becomes latest-wins (like

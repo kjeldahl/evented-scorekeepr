@@ -14,8 +14,33 @@ Given("{string} is a registered user with email {string} and password {string}")
   register_user(name, email:, password:)
 end
 
+# One phrase serves as precondition and assertion: before any grant attempt in
+# the scenario it grants; afterwards it asserts the current status.
 Given("{string} is a super admin") do |name|
+  if @grant_attempted
+    expect(super_admin?(name)).to be(true)
+  else
+    grant_super_admin(name)
+  end
+end
+
+When("{string} is made a super admin") do |name|
+  @grant_attempted = true
   grant_super_admin(name)
+end
+
+When("an attempt is made to make {string} a super admin") do |name|
+  @grant_attempted = true
+  @grant_result = attempt_super_admin_grant(name)
+end
+
+Then("the grant is rejected because {string}") do |reason|
+  expect(@grant_result).to be_failure
+  expect(@grant_result.error).to eq(reason)
+end
+
+Then("{string} is not a super admin") do |name|
+  expect(super_admin?(name)).to be(false)
 end
 
 When("someone signs up with name {string}, email {string} and password {string}") do |name, email, password|
