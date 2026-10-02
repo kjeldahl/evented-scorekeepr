@@ -16,7 +16,7 @@ Feature request: `$ARGUMENTS` (ask the user if empty).
 - **Teams mode** (default) when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
   (`echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`) — set in `.claude/settings.json`.
   Roles are named teammates, visible in their own panes
-  (`claude --teammate-mode tmux`), all started at once, handing off to each
+  (`teammateMode: auto` → tmux or iTerm2 split panes), all started at once, handing off to each
   other by message. The specifier talks to the user directly.
 - **Subagent mode** when teams are off or `--subagents` is passed. Roles run one
   at a time as hidden subagents; you relay user Q&A.

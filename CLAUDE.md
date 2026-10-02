@@ -67,5 +67,5 @@ the DCB event store (github.com/Kjeldahl/ruby-dcb).
 Use the `add-feature` skill (`.claude/skills/add-feature/SKILL.md`): specifier →
 coder → refactorer → architect (`.claude/agents/`), each in its own git
 worktree. Teams mode (default; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in
-`.claude/settings.json`) runs them as visible teammates — e.g.
-`claude --teammate-mode tmux`; `--subagents` falls back to hidden subagents.
+`.claude/settings.json`) runs them as visible teammates (`teammateMode: auto` → split panes in tmux
+or iTerm2); `--subagents` falls back to hidden subagents.
