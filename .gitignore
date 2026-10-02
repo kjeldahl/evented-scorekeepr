@@ -28,9 +28,8 @@
 
 # Mutant session cache
 /.mutant/
-/swarmforge/scripts
-.swarmforge/
-.worktrees/
+# Claude Code role worktrees (add-feature skill)
+/.claude/worktrees/
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
