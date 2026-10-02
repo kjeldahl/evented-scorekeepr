@@ -40,6 +40,7 @@ matcher:
     - Identity::ProfilesController*
     - Identity::RegistrationsController*
     - Identity::SessionsController*
+    - Identity::SuperAdminHandoffsController*
     - Accounts::AccountLeavingsController*
     - Accounts::AccountsController*
     - Accounts::BaseController*

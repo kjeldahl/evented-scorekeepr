@@ -17,7 +17,7 @@ module Identity
         initial_state: nil,
         handlers: {
           "SuperAdminGranted" => ->(state, event) { state || event.data.fetch(:user_id) },
-          "SuperAdminRevoked" => ->(state, event) { state == event.data.fetch(:user_id) ? nil : state }
+          "SuperAdminRevoked" => ->(state, event) { state unless state == event.data.fetch(:user_id) }
         },
         query: DcbEventStore::Query.new(
           DcbEventStore::QueryItem.new(event_types: %w[SuperAdminGranted SuperAdminRevoked])

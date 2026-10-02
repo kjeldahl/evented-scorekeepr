@@ -92,4 +92,17 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     expect(result.error).to eq("only the super admin can hand off the super admin status")
     expect(holder).to eq("bob")
   end
+
+  it "retries as the same actor after an unrelated lost race" do
+    raced = false
+    allow(EventStore).to receive(:append).and_wrap_original do |original, *args|
+      unless raced
+        raced = true
+        original.call(Identity::Events.super_admin_granted(user_id: "root")) # does not change the holder
+      end
+      original.call(*args)
+    end
+    expect(described_class.call(actor_user_id: "root", email: "alice@example.com")).to eq(Result.success("alice"))
+    expect(holder).to eq("alice")
+  end
 end
