@@ -90,8 +90,7 @@ Quality tooling:
 - SimpleCov (`config/coverage.rb`) merges the RSpec and Cucumber runs into
   one `coverage/` report. CI (postgres leg) posts a sticky PR comment with
   the coverage delta against the base branch (`script/coverage_report.rb`);
-  pushes to `main` publish the HTML report and a coverage-over-time chart
-  to GitHub Pages (`.github/workflows/pages.yml`).
+  the HTML report is kept as the `coverage-report-<sha>` run artifact.
 
 ## Development roles
 

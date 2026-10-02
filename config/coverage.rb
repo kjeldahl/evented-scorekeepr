@@ -4,7 +4,7 @@
 # spec/spec_helper.rb and features/support/env.rb, before Rails loads.
 # Both runs merge into one coverage/ result (command names "RSpec" and
 # "Cucumber Features"). On CI it also writes coverage/coverage.json for
-# script/coverage_report.rb (PR comment) and the Pages history.
+# script/coverage_report.rb (PR comment).
 #
 # Skipped when crap4r already started SimpleCov (it injects its own setup
 # via RUBYOPT) and under mutant, where coverage is only overhead.
