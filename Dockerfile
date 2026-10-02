@@ -5,7 +5,7 @@
 #   docker build -t scorekeepr .
 #   docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name scorekeepr scorekeepr
 
-ARG RUBY_VERSION=3.3.6
+ARG RUBY_VERSION=4.0.6
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 # Rails app lives here

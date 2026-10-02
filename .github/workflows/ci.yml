@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Rubocop
+        run: bin/rubocop -f github
+      - name: Brakeman
+        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+      - name: Bundler audit
+        run: bin/bundler-audit
+      - name: Packwerk (slice boundaries)
+        run: bundle exec packwerk check
+      - name: Zeitwerk
+        run: bin/rails zeitwerk:check
+
+  test:
+    name: Tests (${{ matrix.adapter }} store)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [ memory, postgres ]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: scorekeepr
+          POSTGRES_PASSWORD: scorekeepr
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      RAILS_ENV: test
+      EVENT_STORE_ADAPTER: ${{ matrix.adapter }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Prepare event store
+        if: matrix.adapter == 'postgres'
+        run: bin/rails event_store:prepare
+      - name: RSpec
+        run: bundle exec rspec
+      - name: Cucumber
+        run: bundle exec cucumber --publish-quiet
+
+  quality:
+    name: CRAP & duplication
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: crap4r (CRAP <= 8)
+        run: bundle exec crap4r app/slices lib
+      - name: dry4r (duplicate code report)
+        run: bundle exec dry4r
+
+  mutant:
+    name: Mutant (incremental)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      # PRs: subjects touched since the base branch. Pushes: since the previous
+      # head (falls back to the full suite when that commit is unknown).
+      - name: Mutant
+        env:
+          SINCE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: bin/rails quality:mutant

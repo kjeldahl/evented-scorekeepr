@@ -41,7 +41,7 @@ Read models, including the scoreboard, are folds over events.
 
 ## Getting started
 
-Requirements: Ruby >= 3.3, a running PostgreSQL server.
+Requirements: Ruby >= 4.0, a running PostgreSQL server.
 
 ```bash
 bin/setup
