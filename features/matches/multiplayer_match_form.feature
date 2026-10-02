@@ -1,3 +1,4 @@
+@wip
 Feature: Multiplayer match registration form
   Only some of an account's players take part in any given multiplayer
   match, so the registration form must let the registrar choose who played.

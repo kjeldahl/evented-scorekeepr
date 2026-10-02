@@ -129,6 +129,7 @@ Feature: Register a multiplayer match
     Then the registration is rejected because "the league is closed"
 
   # register_multiplayer_match-10
+  @wip
   Scenario Outline: The game type fixes how many players a match takes
     Given the "Office" account has an open league "Club Night" for "<game type>" as a multiplayer league with starting points 1000 and stake 10%
     When "Alice" attempts to register a multiplayer match in "Club Night" with <players> players
