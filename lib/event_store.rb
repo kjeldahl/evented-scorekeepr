@@ -46,13 +46,13 @@ module EventStore
     def with_store(&block)
       return block.call(memory_store) if memory?
 
-      pool.with { |conn| block.call(DcbEventStore::Store.new(conn)) }
+      pool.with { |conn| block.call(DcbEventStore::PostgresStore.new(conn)) }
     end
 
     def create_schema!
       return if memory?
 
-      pool.with { |conn| DcbEventStore::Schema.create!(conn) }
+      pool.with { |conn| DcbEventStore::PostgresStore::Schema.create!(conn) }
     end
 
     # Idempotent bootstrap: create the configured database if it is missing,
@@ -67,7 +67,7 @@ module EventStore
     def drop_schema!
       return if memory?
 
-      pool.with { |conn| DcbEventStore::Schema.drop!(conn) }
+      pool.with { |conn| DcbEventStore::PostgresStore::Schema.drop!(conn) }
     end
 
     # Test-only: the events table is append-only, so wiping it means swapping

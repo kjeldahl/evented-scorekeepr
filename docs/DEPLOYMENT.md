@@ -65,6 +65,11 @@ bin/kamal accessory logs db-backup   # check backup runs
 The app container's entrypoint runs `bin/rails event_store:prepare` on
 boot (idempotent: creates the database, events table and supporting
 functions if missing) - the no-ActiveRecord equivalent of `db:prepare`.
+It also upgrades an existing schema in place when the `dcb_event_store`
+gem adds to it (e.g. the `tx_id` column from 0.6: `ADD COLUMN IF NOT
+EXISTS`, no table rewrite, no row changed), so a gem bump needs no manual
+migration. Requires PostgreSQL >= 13. Older app containers keep working
+against the upgraded schema, so `bin/kamal rollback` stays safe.
 
 ## Continuous deployment (GitHub Actions)
 
@@ -114,7 +119,9 @@ zcat ~/scorekeepr-db-backup/backups/daily/scorekeepr_production-<date>.sql.gz | 
 zcat ~/scorekeepr-db-backup/backups/daily/scorekeepr_production-<date>.sql.gz | \
   docker exec -i scorekeepr-db psql -U scorekeepr scorekeepr_production
 
-# 3. Restart the app.
+# 3. Restart the app. Its boot runs event_store:prepare, which must run
+#    before the first append on a restored dump (moves new transaction
+#    ids past the restored rows' tx_id).
 bin/kamal app boot
 ```
 
