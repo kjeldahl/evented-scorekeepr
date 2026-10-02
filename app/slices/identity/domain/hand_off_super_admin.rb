@@ -2,9 +2,9 @@
 # user, identified by email (docs/DOMAIN.md § Super admin). Checks run in
 # order — sender is the super admin, password re-authenticates the sender,
 # recipient exists — and the first failure is reported. Handing off to oneself
-# succeeds without appending. When the sender is impersonating, the session's
-# ImpersonationEnded is appended in the same write, so the handoff and the end
-# of impersonation are atomic. The decision model covers the current super
+# appends no handoff event. When the sender is impersonating, the session's
+# ImpersonationEnded is appended in the same write (alone on a self-handoff),
+# so the handoff and the end of impersonation are atomic. The decision model covers the current super
 # admin and the recipient's registration, so a concurrent handoff is caught.
 module Identity
   class HandOffSuperAdmin
@@ -19,9 +19,8 @@ module Identity
       return failure if failure
 
       to_user_id = decision.states.fetch(:recipient).fetch(:user_id)
-      return Result.success(to_user_id) if to_user_id == from_user_id
-
-      EventStore.append(events(from_user_id:, to_user_id:, impersonation_id:), decision.append_condition)
+      to_append = events(from_user_id:, to_user_id:, impersonation_id:)
+      EventStore.append(to_append, decision.append_condition) unless to_append.empty?
       Result.success(to_user_id)
     rescue DcbEventStore::ConditionNotMet
       call(from_user_id:, password:, to_email:, impersonation_id:)
@@ -41,10 +40,10 @@ module Identity
     private_class_method :password_matches?
 
     def self.events(from_user_id:, to_user_id:, impersonation_id:)
-      handed_off = Events.super_admin_handed_off(from_user_id:, to_user_id:)
-      return handed_off unless impersonation_id
-
-      [ handed_off, ImpersonationSession.ended_event(super_admin_user_id: from_user_id, impersonation_id:) ]
+      list = []
+      list << Events.super_admin_handed_off(from_user_id:, to_user_id:) unless to_user_id == from_user_id
+      list << ImpersonationSession.ended_event(super_admin_user_id: from_user_id, impersonation_id:) if impersonation_id
+      list
     end
     private_class_method :events
   end

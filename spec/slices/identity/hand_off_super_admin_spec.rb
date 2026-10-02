@@ -81,6 +81,7 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
   end
 
   it "succeeds without appending when handing off to oneself" do
+    expect(EventStore).not_to receive(:append)
     expect(hand_off(to: "root")).to eq(Result.success(ids.fetch("root")))
     expect(handoffs).to be_empty
     expect(current).to eq(ids.fetch("root"))
@@ -106,6 +107,12 @@ RSpec.describe Identity::HandOffSuperAdmin, :event_store do
     end
     expect(hand_off).to eq(Result.success(ids.fetch("alice")))
     expect(calls).to eq(2)
+  end
+
+  it "still ends the impersonation on a self-handoff, without a handoff event" do
+    hand_off(to: "root", impersonation_id: "imp-1")
+    expect(types).to include("ImpersonationEnded")
+    expect(handoffs).to be_empty
   end
 
   it "keeps the impersonation end when retrying" do
