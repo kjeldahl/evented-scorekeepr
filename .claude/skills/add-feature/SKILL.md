@@ -13,13 +13,16 @@ the result. Project rules: `CLAUDE.md`.
 Feature request: `$ARGUMENTS` (ask the user if empty).
 
 ## Pick a mode
-- **Teams mode** (default) when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-  (`echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`) — set in `.claude/settings.json`.
+Check: `echo "teams=$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS remote=$CLAUDE_CODE_REMOTE"`.
+- **Teams mode** (default locally) when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+  and not in cloud — set in `.claude/settings.json`.
   Roles are named teammates, visible in their own panes
   (`teammateMode: auto` → tmux or iTerm2 split panes), all started at once, handing off to each
   other by message. The specifier talks to the user directly.
-- **Subagent mode** when teams are off or `--subagents` is passed. Roles run one
-  at a time as hidden subagents; you relay user Q&A.
+- **Subagent mode** when teams are off, `--subagents` is passed, or running in
+  Claude Code cloud (`CLAUDE_CODE_REMOTE=true` — no visible panes, the user
+  can't reach teammates). Roles run one at a time as hidden subagents; you
+  relay user Q&A. Say which mode you picked and why.
 
 ## Shared rules
 - Each role ends a step with a `HANDOFF` block (format in its agent file).
