@@ -6,6 +6,9 @@ Feature: Super admin handoff
   super admin's own profile page and is shown to nobody else. There is still
   never more than one super admin at any time. While impersonating, the
   super admin acts as the impersonated member and so cannot hand off.
+  While typing the recipient email, the super admin is offered suggestions:
+  the emails of all other registered users (every registered user counts as
+  active).
   Design basis: a handoff appends a super admin revocation for the previous
   holder and a grant for the recipient atomically, so super admin status
   becomes latest-wins per user.
@@ -94,3 +97,22 @@ Feature: Super admin handoff
     When "Root" hands the super admin status to "  ALICE@Example.com "
     Then "Alice" is the super admin
     And "Root" is not the super admin
+
+  # Super admin handoff 12
+  Scenario: The recipient field suggests the emails of all other registered users
+    Then "Root" is offered these recipient email suggestions on their profile page:
+      | email             |
+      | alice@example.com |
+      | bob@example.com   |
+
+  # Super admin handoff 13
+  Scenario: Suggestions follow the status
+    When "Root" hands the super admin status to "alice@example.com"
+    Then "Alice" is offered these recipient email suggestions on their profile page:
+      | email             |
+      | root@example.com  |
+      | bob@example.com   |
+
+  # Super admin handoff 14
+  Scenario: Ordinary users are offered no email suggestions
+    Then "Alice" is offered no recipient email suggestions on their profile page
