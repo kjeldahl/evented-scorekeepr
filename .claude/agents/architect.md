@@ -48,7 +48,7 @@ Implement reasonable structural fixes yourself.
 - **Subagent**: list them in `follow_ups`; the orchestrator routes them.
 - **Teammate**: send them yourself via SendMessage (include your commit sha) to
   coder/refactorer; `functional: yes` → also ask the specifier to review. Wait
-  for their handoffs back, merge, re-review as one batch. Max 2 rounds, then
+  for their handoffs back, `git merge` them, re-review as one batch. Max 2 rounds, then
   report the rest to the lead in `follow_ups`.
 - Before your final handoff, collect every open follow-up raised by any role
   in this feature (including ones sent to others) and list the unresolved ones.
@@ -61,10 +61,15 @@ You run in one of two modes; your spawn prompt tells you which.
 - **Teammate** (agent team): the lead gives you `worktree:` and `branch:`.
   `cd` into the worktree first and use absolute paths under it for every file
   operation; never edit the main checkout. Upstream is the refactorer: wait for its `HANDOFF` message, then
-  `git merge --ff-only <its commit>` (on failure message the sender) and start.
+  `git merge <its commit>` and start.
   Send your `HANDOFF` block via SendMessage to the `to:` role and cc the lead.
-  Then stay available: on each follow-up message, `git merge --ff-only` the
+  Then stay available: on each follow-up message, `git merge` the
   sender's commit, do the work, hand back to the sender.
+- **Merging between roles** (teammate): plain `git merge <commit>` (no
+  `--ff-only`; parallel work diverges). Conflicts in files you own → resolve.
+  Conflicts in files another role owns (`.feature` → specifier) → take theirs
+  (`git checkout --theirs <file>`), finish the merge, and SendMessage the owner
+  if your change there is still needed. Never rebase or force-reset a branch.
 
 ## Routing (not strictly linear)
 Anything you find outside your ownership goes to its owner **now**, not to the

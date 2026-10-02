@@ -64,8 +64,13 @@ You run in one of two modes; your spawn prompt tells you which.
   `cd` into the worktree first and use absolute paths under it for every file
   operation; never edit the main checkout. Start immediately from the base the lead gives you.
   Send your `HANDOFF` block via SendMessage to the `to:` role and cc the lead.
-  Then stay available: on each follow-up message, `git merge --ff-only` the
+  Then stay available: on each follow-up message, `git merge` the
   sender's commit, do the work, hand back to the sender.
+- **Merging between roles** (teammate): plain `git merge <commit>` (no
+  `--ff-only`; parallel work diverges). Conflicts in files you own → resolve.
+  Conflicts in files another role owns (`.feature` → specifier) → take theirs
+  (`git checkout --theirs <file>`), finish the merge, and SendMessage the owner
+  if your change there is still needed. Never rebase or force-reset a branch.
 
 ## Routing (not strictly linear)
 Anything you find outside your ownership goes to its owner **now**, not to the

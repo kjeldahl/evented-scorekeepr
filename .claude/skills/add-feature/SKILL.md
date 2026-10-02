@@ -75,8 +75,8 @@ Keep a list of every `follow_ups` item from handoffs and idle notifications.
 You step in when:
 - a follow-up reached you but not its owner → forward it to the owner;
 - a `BLOCKED` is cc'd to you and the roles can't resolve it → ask the user;
-- a ff-merge between role branches fails → tell the sender to merge the
-  receiver's tip and re-hand off;
+- a merge between role branches has a conflict neither role can resolve →
+  ask the user;
 - a role goes idle with no handoff → message it for status.
 
 ### T4. Integrate
@@ -84,7 +84,9 @@ On the architect's `HANDOFF` to you (`status: DONE`):
 ```bash
 git merge --ff-only <architect commit>   # in main checkout, on INT
 ```
-ff fails → ask the user (INT moved).
+Role branches merge with plain `git merge`; only this final step is
+`--ff-only`, so `INT` gets just the architect's finished, verified tip. ff fails
+→ ask the user (INT moved).
 
 ### T5. Follow-up gate
 **Never stop teammates or remove worktrees while any follow-up is open.**
