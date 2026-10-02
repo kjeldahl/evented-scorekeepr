@@ -12,19 +12,19 @@ Feature: Single super admin
   # Single super admin 1
   Scenario: The first user granted becomes the super admin
     When "Root" is made a super admin
-    Then "Root" is a super admin
+    Then "Root" is the super admin
 
   # Single super admin 2
   Scenario: A second user cannot be made a super admin
     Given "Root" is a super admin
     When an attempt is made to make "Alice" a super admin
     Then the grant is rejected because "there is already a super admin"
-    And "Alice" is not a super admin
-    And "Root" is a super admin
+    And "Alice" is not the super admin
+    And "Root" is the super admin
 
   # Single super admin 3
   Scenario: Granting the current super admin again succeeds
     Given "Root" is a super admin
     When "Root" is made a super admin
-    Then "Root" is a super admin
-    And "Alice" is not a super admin
+    Then "Root" is the super admin
+    And "Alice" is not the super admin
