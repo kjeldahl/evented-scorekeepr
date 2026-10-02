@@ -40,7 +40,7 @@ module Identity
     private_class_method :rejection
 
     def self.events(from_user_id:, to_user_id:, impersonation_id:)
-      list = [Events.super_admin_handed_off(from_user_id:, to_user_id:)]
+      list = [ Events.super_admin_handed_off(from_user_id:, to_user_id:) ]
       list << ImpersonationSession.ended_event(super_admin_user_id: from_user_id, impersonation_id:) if impersonation_id
       list
     end
