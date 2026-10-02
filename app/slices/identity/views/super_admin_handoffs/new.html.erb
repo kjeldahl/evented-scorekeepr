@@ -1,0 +1,18 @@
+<% content_for :title, "Hand off super admin — Scorekeepr" %>
+
+<div class="card">
+  <h1>Hand off super admin</h1>
+  <p class="muted">Passes super admin status to another registered user. You become an ordinary user.</p>
+
+  <%= form_with url: super_admin_handoff_path do |form| %>
+    <%= form.label :email, "Recipient email" %>
+    <%= form.email_field :email, value: params[:email] %>
+
+    <%= form.label :password, "Your password" %>
+    <%= form.password_field :password %>
+
+    <div class="actions">
+      <%= form.submit "Hand off" %>
+    </div>
+  <% end %>
+</div>

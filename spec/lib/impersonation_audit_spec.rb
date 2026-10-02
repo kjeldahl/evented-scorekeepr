@@ -24,6 +24,12 @@ RSpec.describe ImpersonationAudit do
   after { Current.reset }
 
   describe ".record", :event_store do
+    it "does not audit a super admin handoff made during impersonation" do
+      Current.impersonation = context
+      described_class.record([ DcbEventStore::Event.new(type: "SuperAdminHandedOff", data: {}, tags: [ "user:a" ]) ])
+      expect(recorded_events).to be_empty
+    end
+
     it "records nothing when no impersonation is in effect" do
       Current.impersonation = nil
       described_class.record([ match_event ])

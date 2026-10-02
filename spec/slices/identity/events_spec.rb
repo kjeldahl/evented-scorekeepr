@@ -54,4 +54,20 @@ RSpec.describe Identity::Events do
       expect(event.tags).to eq([ "user:user-1" ])
     end
   end
+
+  describe ".super_admin_handed_off" do
+    subject(:event) { described_class.super_admin_handed_off(from_user_id: "user-1", to_user_id: "user-2") }
+
+    it "has the SuperAdminHandedOff type" do
+      expect(event.type).to eq("SuperAdminHandedOff")
+    end
+
+    it "carries both user ids as data" do
+      expect(event.data).to eq(from_user_id: "user-1", to_user_id: "user-2")
+    end
+
+    it "is tagged with both users" do
+      expect(event.tags).to eq([ "user:user-1", "user:user-2" ])
+    end
+  end
 end

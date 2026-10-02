@@ -157,6 +157,7 @@ and `MultiplayerMatchDeleted` tagged `league:{id}`.
 | `UserRegistered` | user_id, name, email, password_digest | `user:{user_id}`, `user_email:{email}` |
 | `UserHandleSet` | user_id, handle | `user:{user_id}` |
 | `SuperAdminGranted` | user_id | `user:{user_id}` |
+| `SuperAdminHandedOff` | from_user_id, to_user_id | `user:{from_user_id}`, `user:{to_user_id}` |
 | `AccountCreated` | account_id, name, owner_user_id | `account:{account_id}`, `user:{owner_user_id}` |
 | `PlayerInvited` | invitation_id, account_id, email, invited_by_user_id | `invitation:{invitation_id}`, `account:{account_id}`, `invitee_email:{email}` |
 | `InvitationAccepted` | invitation_id, account_id, user_id | `invitation:{invitation_id}`, `account:{account_id}`, `user:{user_id}` |
@@ -254,20 +255,37 @@ privilege is strictly read-only:
 - A super admin who is *also* an ordinary member of some account behaves
   like any other member there.
 
-The fact is the `SuperAdminGranted` event (identity slice owns it; tag
-`user:{user_id}`); super admin status is `true` iff at least one
-`SuperAdminGranted` exists for the user. **At most one user can ever be
-super admin**: granting a different user while one exists is rejected with
-"there is already a super admin" (the decision model reads every
-`SuperAdminGranted`, so concurrent grants are caught by the append
-condition). Pre-existing multi-admin data is not migrated. Granting is a domain-level command
-(`Identity::GrantSuperAdmin.call(user_id:)`) with **no web UI and no route**
-— it is invoked from cucumber steps, the console or seed tasks. The command
-is idempotent: granting the current super admin succeeds without appending.
-**Revocation is deliberately deferred**: no `SuperAdminRevoked` event exists
-yet because no behaviour requires it; when it is needed, add the event to
-the table above and the status fold becomes latest-wins (like
-`MemberLeft` for membership).
+The facts are the `SuperAdminGranted` and `SuperAdminHandedOff` events
+(identity slice owns them; tagged `user:{user_id}`, the latter with both users).
+Super admin status is **latest-wins**: a user is super admin iff the latest
+such event tagged with them made them so (`SuperAdminGranted` grants;
+`SuperAdminHandedOff` makes the recipient super admin and the sender an
+ordinary user). **At most one user is super admin at a time**: granting a
+different user while one exists is rejected with "there is already a super
+admin" (the decision model reads every grant/handoff, so concurrent ones are
+caught by the append condition). Granting is a domain-level command
+(`Identity::GrantSuperAdmin.call(user_id:)`) with no web UI and no route
+(cucumber steps, console, seeds); it is idempotent for the current super admin.
+
+### Handoff
+
+The current super admin can hand status to any registered user, identified by
+email (`Identity::HandOffSuperAdmin`). The UI is a "Hand off super admin" link
+on the super admin's dashboard to a page with recipient email + the sender's
+own password (re-authentication on every handoff; verified by the web layer,
+which passes the command only whether the sender was re-authenticated).
+Checks, first failure wins:
+sender must be the super admin ("only the super admin can hand off super admin
+status"), password correct ("invalid credentials"), recipient registered
+("the user was not found"), recipient is someone else ("you are already the
+super admin"). Handing off to oneself is rejected, appends nothing and does not
+end an impersonation in effect.
+The sender acts as their real login even mid-impersonation; on success any
+impersonation they have in effect ends in the same append (`ImpersonationEnded`
+is appended with `SuperAdminHandedOff`). The handoff is not an impersonated
+action, so it is never audited as one. Ordinary and former super admins are
+redirected from the page with the sender-check message. **Revocation without a
+recipient remains deferred.**
 
 ### Impersonation
 
@@ -308,7 +326,7 @@ then act as that member:
 
 | Slice | Responsibility |
 |---|---|
-| `identity` | sign up, sign in / out, super admin grant |
+| `identity` | sign up, sign in / out, super admin grant + handoff |
 | `accounts` | create account, invite players, accept invitations, membership |
 | `leagues` | create / close leagues |
 | `matches` | register match results (optimised for fast input), correct and delete them |

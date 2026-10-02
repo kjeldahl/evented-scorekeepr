@@ -1,8 +1,8 @@
-# The accounts slice's own super admin fold: a user is a super admin iff at
-# least one SuperAdminGranted event (identity slice) is tagged with their
-# user id. Used only by the view gate — read access without membership;
-# commands never consult it. Other slices duplicate this fold over the same
-# event — events are the only cross-slice contract (docs/ARCHITECTURE.md).
+# This slice's own super admin fold: latest wins over the identity slice's
+# SuperAdminGranted (true) and SuperAdminHandedOff (true for the recipient,
+# false for the sender) events tagged with the user id. Used only by the view
+# gate; commands never consult it, bar impersonation start in accounts. Other
+# slices duplicate this fold — events are the only cross-slice contract.
 module Accounts
   module SuperAdmin
     extend self
@@ -14,9 +14,12 @@ module Accounts
     def projection(user_id:)
       DcbEventStore::Projection.new(
         initial_state: false,
-        handlers: { "SuperAdminGranted" => ->(_state, _event) { true } },
+        handlers: {
+          "SuperAdminGranted" => ->(_state, _event) { true },
+          "SuperAdminHandedOff" => ->(_state, event) { event.data.fetch(:to_user_id) == user_id }
+        },
         query: DcbEventStore::Query.new(
-          DcbEventStore::QueryItem.new(event_types: "SuperAdminGranted", tags: "user:#{user_id}")
+          DcbEventStore::QueryItem.new(event_types: %w[SuperAdminGranted SuperAdminHandedOff], tags: "user:#{user_id}")
         )
       )
     end

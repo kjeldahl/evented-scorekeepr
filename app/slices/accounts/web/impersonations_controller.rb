@@ -17,7 +17,9 @@ module Accounts
         start_session(result.value, params[:user_id])
         redirect_to account_path(params[:account_id]), notice: "You are now impersonating."
       else
-        redirect_to account_path(params[:account_id]), alert: result.error
+        # Root, not the account page: a refused actor (e.g. a former super
+        # admin) may not view the account, and its gate would hide the message.
+        redirect_to root_path, alert: result.error
       end
     end
 

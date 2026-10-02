@@ -121,3 +121,51 @@ end
 Then("the handle change is rejected because {string}") do |reason|
   expect(page).to have_css(".flash--alert", text: reason)
 end
+
+# Super admin handoff (features/identity/super_admin_handoff.feature). Success
+# steps drive the real form; attempts POST directly so the sender gate and the
+# command's own checks are both exercised without relying on the form being shown.
+When("{string} hands super admin status off to {string}") do |sender, recipient|
+  hand_off_via_form(sender, users.fetch(recipient).fetch(:email))
+end
+
+When("an attempt is made for {string} to hand super admin status off to {string}") do |sender, recipient|
+  attempt_hand_off(sender, users.fetch(recipient).fetch(:email))
+end
+
+When("an attempt is made for {string} to hand super admin status off to the email {string}") do |sender, email|
+  attempt_hand_off(sender, email)
+end
+
+When("an attempt is made for {string} to hand super admin status off to {string} with the password {string}") \
+do |sender, recipient, password|
+  attempt_hand_off(sender, users.fetch(recipient).fetch(:email), password:)
+end
+
+Then("the handoff is rejected because {string}") do |reason|
+  expect(page).to have_css(".flash--alert", text: reason)
+end
+
+Then("{string} sees a link to hand off super admin status on their dashboard") do |name|
+  sign_in(name)
+  visit "/"
+  expect(page).to have_link("Hand off super admin")
+end
+
+Then("{string} sees no link to hand off super admin status on their dashboard") do |name|
+  sign_in(name)
+  visit "/"
+  expect(page).to have_no_link("Hand off super admin")
+end
+
+Then("{string} is refused access to the handoff page") do |name|
+  sign_in(name)
+  visit "/super_admin_handoff/new"
+  expect(page).to have_css(".flash--alert", text: "only the super admin can hand off super admin status")
+end
+
+Then("{string} can open the handoff page") do |name|
+  sign_in(name)
+  visit "/super_admin_handoff/new"
+  expect(page).to have_button("Hand off")
+end
