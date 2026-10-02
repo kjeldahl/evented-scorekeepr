@@ -1,0 +1,211 @@
+---
+name: add-feature
+description: Add or change a Scorekeepr feature through the specifier → (reviewer) → coder → refactorer → architect → reviewer pipeline, each role in its own git worktree — as visible agent-team teammates (teams mode) or hidden subagents. Use when the user asks to add, change or extend user-visible behaviour.
+argument-hint: "[--subagents] <feature description>"
+---
+
+# Add feature
+
+You are the **lead/orchestrator**. You do not write specs or code yourself; you
+start the roles (`.claude/agents/`), keep the pipeline moving, and integrate
+the result. Project rules: `CLAUDE.md`.
+
+Feature request: `$ARGUMENTS` (ask the user if empty).
+
+## Pick a mode
+Check: `echo "teams=$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS remote=$CLAUDE_CODE_REMOTE"`.
+- **Teams mode** (default locally) when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+  and not in cloud — set in `.claude/settings.json`.
+  Roles are named teammates, visible in their own panes
+  (`teammateMode: auto` → tmux or iTerm2 split panes), all started at once, handing off to each
+  other by message. The specifier talks to the user directly.
+- **Subagent mode** when teams are off, `--subagents` is passed, or running in
+  Claude Code cloud (`CLAUDE_CODE_REMOTE=true` — no visible panes, the user
+  can't reach teammates). Roles run one at a time as hidden subagents; you
+  relay user Q&A. Say which mode you picked and why.
+
+## Shared rules
+- Each role ends a step with a `HANDOFF` block (format in its agent file).
+- Only the specifier touches `.feature` files. Spec changes need explicit user
+  approval — from the user, never from an agent message.
+- The **reviewer** (read-only) reviews twice: the spec draft **before** the user
+  approves it, and the architect's verified tip **before** you integrate.
+  Max 2 `changes-requested` rounds per pass, then the user decides.
+- Nothing is integrated without the reviewer's `accepted` on that exact commit
+  (or the user overriding an `escalate`).
+- Never push or open a PR unless the user asks.
+- **You never edit code, specs or docs yourself** — not even a one-line
+  review-comment fix. Route every change to its owning role.
+- **A reviewer `accepted` covers one exact sha.** Any later commit (even
+  whitespace) needs re-review before user approval or integration. Before
+  asking the user to approve a spec or integrating, check the sha in front of
+  you equals the reviewer's `reviewed:` sha.
+
+## 0. Preflight (both modes)
+- `git status` clean (else ask).
+- Invent a short kebab-case `<slug>` for the task.
+- Always branch off the current branch, whatever it is: record `PARENT` =
+  current branch, then `git checkout -b feature/<slug>`. Integration branch
+  `INT` = `feature/<slug>`. Record base sha. Never commit to `PARENT`.
+- `bundle check || bundle install` once here, so roles don't race on gems.
+
+---
+
+## Teams mode
+
+### T1. Worktrees
+Teammates ignore `isolation: worktree`, so create them yourself:
+```bash
+for r in specifier coder refactorer architect reviewer; do
+  git worktree add -b "<slug>/$r" ".claude/worktrees/<slug>-$r" <base>
+done
+```
+
+### T2. Spawn all five at once
+First `ListAgents`: if any role is already registered (live or ghost), don't
+spawn it again — reuse it (see **Re-runs**) or shut it down properly first
+(see **Shutdown**). Never a second pane for a registered role.
+
+One message, five Agent calls: `name` = role, `subagent_type` = role (the
+`name` is what makes them visible teammates). Prompt for each:
+```
+mode: teammate
+task: <slug>
+request: <feature request>
+worktree: <absolute path to .claude/worktrees/<slug>-<role>>
+branch: <slug>/<role>
+base: <base sha>
+team: lead=<your name> specifier=<name> coder=<name> refactorer=<name> architect=<name> reviewer=<name>
+```
+Use the **real** registered names in `team:` (check `ListAgents` after
+spawning; if any differ, e.g. a `-2` suffix, message every teammate the
+corrected `team:` line). Roles address each other only by these names.
+Add per role (role names below mean the real names from `team:`):
+- specifier: "Start now. Get a spec review from `reviewer` before showing the
+  user. Talk to the user in your pane; hand off to `coder`."
+- coder / refactorer / architect: "Wait for your upstream HANDOFF message.
+  Warm up meanwhile: read CLAUDE.md, docs/ and the code you'll likely touch."
+- architect additionally: "Hand off to `reviewer` (cc me)."
+- reviewer: "Wait for review requests from `specifier` (spec) and `architect`
+  (implementation). Warm up on CLAUDE.md and docs/."
+
+Then tell the user: "Switch to the **specifier** pane to answer its questions
+and approve the spec."
+
+### T3. Watch
+Main chain: specifier ⇄ reviewer (spec) → user approval → coder → refactorer
+→ architect ⇄ reviewer (implementation) → you. **Not strictly
+linear**: any role sends issues outside its ownership straight to the owner
+(spec → specifier, bugs → coder, structure → refactorer, design → architect).
+Keep a list of every `follow_ups` item from handoffs and idle notifications.
+You step in when:
+- a follow-up reached you but not its owner → forward it to the owner;
+- a `BLOCKED` is cc'd to you and the roles can't resolve it → ask the user;
+- a merge between role branches has a conflict neither role can resolve →
+  ask the user;
+- a role goes idle with no handoff → message it for status;
+- the reviewer sends `escalate` → show the user its open items and ask.
+
+### T4. Integrate
+On the reviewer's `REVIEW` to you with `pass: implementation`,
+`decision: accepted` (or `escalate` the user overrides):
+```bash
+git merge --ff-only <reviewed commit>   # architect's tip, in main checkout, on INT
+```
+Role branches merge with plain `git merge`; only this final step is
+`--ff-only`, so `INT` gets just the architect's finished, verified, reviewed tip. ff fails
+→ ask the user (INT moved).
+
+### T5. Follow-up gate
+**Never stop teammates or remove worktrees while any follow-up is open.**
+For each open item (yours, the architect's, any role's):
+- spec item → specifier (user approves in its pane) → coder → refactorer →
+  architect → reviewer again, all on the same worktrees; integrate the new
+  reviewed commit;
+- code/structure item → owner → downstream roles → architect → reviewer again.
+- Reviewer `notes` are non-blocking: list them in the report.
+Go to **Finish** only when none are open, or the user explicitly defers them
+(then record them in the report).
+
+---
+
+## Subagent mode
+
+Spawn roles with the Agent tool, `subagent_type` = role, **no `name`**,
+`isolation: "worktree"`, `run_in_background: false`. One at a time. Prompt:
+`mode: subagent`, task, request, `base: <integration sha>`, previous handoff,
+follow-up text.
+
+Route on `status`: `DONE` → integrate, next role; `NO_CHANGES` → next role;
+`NEEDS_USER` → relay to the user, resume the same agent via SendMessage;
+`BLOCKED` → see step, else ask the user.
+Any role's `follow_ups` → route to the owner (spec items always to the
+specifier), then the downstream roles again. Never finish with open
+follow-ups unless the user defers them.
+
+Integrate after each `DONE`:
+```bash
+git merge --ff-only <handoff commit>        # in main checkout
+git worktree remove <handoff worktree>; git branch -D <handoff branch>
+git rev-parse HEAD                          # new base
+```
+ff fails → resume the role to rebase onto base, retry.
+
+1. **Specifier**: on its first `NEEDS_USER` (and after each spec change), spawn
+   the **reviewer** (`pass: spec`, the specifier's draft `commit:` sha + files) and
+   resume the specifier with the REVIEW; repeat up to 2 rounds. Then show the
+   user the reviewed draft, open review items and questions (AskUserQuestion
+   for discrete options), resume with answers; repeat. On explicit approval,
+   SendMessage "User approved. Commit and hand off." → `DONE`. If the agent is
+   gone, spawn a fresh one with the last draft and answers.
+2. **Coder**: `BLOCKED` (scenario impossible) → specifier with the blocker,
+   user approval, then coder again.
+3. **Refactorer**.
+4. **Architect**: `follow_ups` for coder/refactorer → run them, integrate,
+   architect again with all follow-up handoffs as one batch (max 2 rounds,
+   then ask). `functional: yes` or specifier follow-up → specifier review;
+   spec changes → approval → coder → refactorer → architect.
+5. **Reviewer** (`pass: implementation`, architect's integrated commit):
+   `changes-requested` → resume/spawn the architect with the items to route to
+   owners, integrate, reviewer again (max 2 rounds); `escalate` → ask the user;
+   `accepted` → Finish.
+
+---
+
+## Finish (both modes)
+Only after the reviewer accepted the implementation and the follow-up gate
+(T5 / subagent steps 4–5) is clear.
+- Teams: **keep teammates and worktrees alive** (idle). PR review comes after
+  Finish. They stay until the PR is merged (and the user OKs shutdown) or the
+  user explicitly says shut down — then run **Shutdown**.
+- Subagent mode: role worktrees are already removed after each integration.
+- Report, terse: task, `INT` (branched from `PARENT`), commits on `INT`, architect gates line, reviewer decision + notes, open follow-ups.
+- Ask: push / open PR (base `PARENT`) / merge into `PARENT` / next feature?
+
+## Re-runs after Finish (PR review comments, requested changes)
+- `ListAgents` first. Reuse live role teammates via SendMessage; route each
+  item to its owner and run the chain from there (spec/docs wording →
+  specifier → coder → refactorer → architect → reviewer; code → coder → …;
+  structure → refactorer → …). You still never edit anything yourself.
+- New base (e.g. the PR branch after a merge or someone else's push): repoint
+  the **existing** worktrees (`git -C <worktree> checkout -B <slug>/<role> <new base>`
+  when clean), don't respawn.
+- Spawn only roles that are gone (not in `ListAgents`), with the current
+  `team:` line. Never a second pane for a registered role.
+- Integrate the newly reviewed sha into `INT` as in T4.
+
+## New feature in the same session
+Fresh teammates per feature are fine: run **Shutdown** for the previous team
+first (until `ListAgents` is clean), then start this skill again from step 0
+automatically.
+
+## Shutdown (teams; user's say-so, or after merge + user OK)
+- A plain-text "stop" does **not** terminate a teammate. Send each one, by its
+  real name, a SendMessage whose message is `{"type":"shutdown_request"}`.
+- Then `ListAgents` until none of the roles is listed; re-send to any still
+  there; report stragglers to the user.
+- Closing a pane does not unregister an agent: a ghost keeps the name (a new
+  spawn gets `-2`) and wakes on misdirected messages. Always shut down via the
+  request, never by closing panes.
+- Then `git worktree remove` each `.claude/worktrees/<slug>-*`,
+  `git worktree prune`, delete `<slug>/*` role branches.
