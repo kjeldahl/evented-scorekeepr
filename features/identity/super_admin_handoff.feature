@@ -41,14 +41,14 @@ Feature: Super admin handoff
     And "Bob" is not the super admin
 
   # Super admin handoff 5
-  Scenario: Handing off to oneself is a no-op
+  Scenario: Handing off to oneself keeps the super admin
     When "Root" hands super admin status off to "Root"
     Then "Root" is the super admin
 
   # Super admin handoff 6
   Scenario: Handing off to an unknown user is rejected
     When an attempt is made for "Root" to hand super admin status off to an unregistered user
-    Then the handoff is rejected because "user not found"
+    Then the handoff is rejected because "the user was not found"
     And "Root" is the super admin
 
   # Super admin handoff 7
@@ -57,3 +57,17 @@ Feature: Super admin handoff
     When "Root" hands super admin status off to "Bob"
     Then "Root" cannot see the "Office" account
     And "Bob" can see the "Office" account
+
+  # Super admin handoff 8
+  Scenario: The sender is checked before the recipient
+    When an attempt is made for "Alice" to hand super admin status off to an unregistered user
+    Then the handoff is rejected because "only the super admin can hand off super admin status"
+    And "Root" is the super admin
+
+  # Super admin handoff 9
+  Scenario: The previous super admin can no longer impersonate players
+    Given "Alice" owns the "Office" account
+    And "Bob" is a member of the "Office" account
+    And "Root" hands super admin status off to "Alice"
+    When "Root" attempts to impersonate the member "Bob" in the "Office" account
+    Then the impersonation is rejected because "only super admins can impersonate players"
