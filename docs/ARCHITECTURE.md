@@ -378,7 +378,7 @@ end
   call(user_id:)` (identity domain) is called from cucumber steps, console
   or seeds only. **Handoff** is the UI path: `Identity::HandOffSuperAdmin`
   (decision model: `Identity::CurrentSuperAdmin`, latest-wins over grants and
-  handoffs, plus the recipient's credentials) behind
+  handoffs, plus the recipient lookup) behind
   `Identity::SuperAdminHandoffsController`, which acts on `session[:user_id]`
   (the real login, not the impersonated member), re-authenticates the sender's
   own password in the controller layer (the command never sees the password;
