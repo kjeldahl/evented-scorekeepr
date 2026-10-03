@@ -39,6 +39,15 @@ registry:
 
 builder:
   arch: amd64 # Hetzner x86 (CX/CCX) servers; use arm64 for CAX (Ampere)
+  # Layer cache in the GitHub Actions cache (deploy workflow exposes the
+  # runtime token): apt + bundle install are reused unless Dockerfile or
+  # Gemfile.lock change. mode=max also caches the build stage's layers.
+  # Actions only; local deploys build uncached.
+<%- if ENV["GITHUB_ACTIONS"] -%>
+  cache:
+    type: gha
+    options: mode=max
+<%- end -%>
 
 env:
   clear:

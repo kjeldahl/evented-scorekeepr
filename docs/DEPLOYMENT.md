@@ -74,9 +74,15 @@ against the upgraded schema, so `bin/kamal rollback` stays safe.
 ## Continuous deployment (GitHub Actions)
 
 `.github/workflows/deploy.yml` runs `bin/kamal deploy` after CI passes on a
-push to `main` (skipped if `main` has since moved on), or on demand via
-*Actions → Deploy → Run workflow*. It replaces `.kamal/secrets` on the runner
-with values from GitHub secrets, so 1Password isn't needed there.
+push to `main`, or on demand via *Actions → Deploy → Run workflow* (always
+deploys). Automatic runs skip when `main` has since moved on, or when nothing
+deployable changed since the live version (`kamal app version`): diffs
+touching only docs, specs, features, `.github`, `.claude`, `script`,
+Markdown and lint/packwerk/mutant config don't deploy. It replaces
+`.kamal/secrets` on the runner with values from GitHub secrets, so 1Password
+isn't needed there. Image layers are cached in the GitHub Actions cache
+(`builder.cache`, Actions only), so apt and `bundle install` rerun only when
+the Dockerfile or `Gemfile.lock` change.
 
 One-time setup:
 

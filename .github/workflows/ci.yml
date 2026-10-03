@@ -67,8 +67,9 @@ jobs:
       - name: Cucumber
         run: bundle exec cucumber --publish-quiet
       # RSpec + Cucumber merge into one coverage/ result (config/coverage.rb).
+      # Memory leg, so the PR's base-branch run below needs no postgres.
       - name: Upload coverage report
-        if: always() && matrix.adapter == 'postgres'
+        if: always() && matrix.adapter == 'memory'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ github.sha }}
@@ -82,21 +83,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: scorekeepr
-          POSTGRES_PASSWORD: scorekeepr
-        ports: [ "5432:5432" ]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       RAILS_ENV: test
-      EVENT_STORE_ADAPTER: postgres
+      EVENT_STORE_ADAPTER: memory
     steps:
       - uses: actions/checkout@v7
 
@@ -116,7 +105,6 @@ jobs:
           git fetch origin ${{ github.base_ref }}
           git checkout origin/${{ github.base_ref }}
           bundle install
-          bin/rails event_store:prepare
           bundle exec rspec || true
           bundle exec cucumber --publish-quiet || true
           cp coverage/coverage.json /tmp/base_coverage.json || true
