@@ -78,7 +78,8 @@ push to `main`, or on demand via *Actions → Deploy → Run workflow* (always
 deploys). Automatic runs skip when `main` has since moved on, or when nothing
 deployable changed since the live version (`kamal app version`): diffs
 touching only docs, specs, features, `.github`, `.claude`, `script`,
-Markdown and lint/packwerk/mutant config don't deploy. It replaces
+Markdown and lint/packwerk/mutant config don't deploy, nor do Gemfile changes
+that leave the production gem set (`script/production_gems.rb`) unchanged. It replaces
 `.kamal/secrets` on the runner with values from GitHub secrets, so 1Password
 isn't needed there. Image layers are cached in the GitHub Actions cache
 (`builder.cache`, Actions only), so apt and `bundle install` rerun only when

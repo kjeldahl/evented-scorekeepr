@@ -72,14 +72,19 @@ jobs:
           EOF
 
       # Skip when nothing that ships in the image (or configures the deploy)
-      # changed since the live version. Unknown live version -> deploy.
+      # changed since the live version; Gemfile changes count only when the
+      # production gem set changes. Unknown live version -> deploy.
       - name: Skip if no deployable changes
         if: github.event_name == 'workflow_run' && env.SKIP != 'true'
         run: |
           live=$(bin/kamal app version -q 2>/dev/null | awk 'NF { print; exit }' || true)
           echo "live: ${live:-unknown}"
           if [ -n "$live" ] && git cat-file -e "$live^{commit}" 2>/dev/null &&
+             live_gems=$(ruby script/production_gems.rb "$live") &&
+             new_gems=$(ruby script/production_gems.rb "$DEPLOY_SHA") &&
+             [ "$live_gems" = "$new_gems" ] &&
              git diff --quiet "$live" "$DEPLOY_SHA" -- . \
+               ':(exclude)Gemfile' ':(exclude)Gemfile.lock' \
                ':(exclude).claude' ':(exclude).devcontainer' ':(exclude).github' \
                ':(exclude)docs' ':(exclude)features' ':(exclude)script' ':(exclude)spec' \
                ':(exclude,glob)**/*.md' ':(exclude,glob)**/package.yml' \
