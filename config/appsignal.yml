@@ -1,7 +1,7 @@
 default: &defaults
   active: true
   name: "Scorekeepr"
-  push_api_key: "840b6cdf-98ec-4a2e-b0f3-af9122981eab"
+  # push_api_key comes from APPSIGNAL_PUSH_API_KEY (Kamal secret in production).
 
 development:
   <<: *defaults
