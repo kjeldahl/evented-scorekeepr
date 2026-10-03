@@ -35,25 +35,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_SHA }}
+          fetch-depth: 0 # diff against the live version
 
       # CI runs can finish out of order; never roll main back to an older commit.
       - name: Skip if superseded
-        id: latest
         if: github.event_name == 'workflow_run'
         run: |
           head=$(git ls-remote origin refs/heads/main | cut -f1)
           if [ "$head" != "$DEPLOY_SHA" ]; then
             echo "main is at $head, not $DEPLOY_SHA - skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "SKIP=true" >> "$GITHUB_ENV"
           fi
 
       - uses: ruby/setup-ruby@v1
-        if: steps.latest.outputs.skip != 'true'
+        if: env.SKIP != 'true'
         with:
           bundler-cache: true
 
       - uses: webfactory/ssh-agent@v0.9.1
-        if: steps.latest.outputs.skip != 'true'
+        if: env.SKIP != 'true'
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
@@ -61,7 +61,7 @@ jobs:
       # values come from GitHub secrets instead. Kamal builds from a git clone,
       # so this working-tree change doesn't taint the image version.
       - name: Write CI secrets
-        if: steps.latest.outputs.skip != 'true'
+        if: env.SKIP != 'true'
         run: |
           cat > .kamal/secrets <<'EOF'
           KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
@@ -71,8 +71,37 @@ jobs:
           APPSIGNAL_PUSH_API_KEY=$APPSIGNAL_PUSH_API_KEY
           EOF
 
+      # Skip when nothing that ships in the image (or configures the deploy)
+      # changed since the live version; Gemfile changes count only when the
+      # production gem set changes. Unknown live version -> deploy.
+      - name: Skip if no deployable changes
+        if: github.event_name == 'workflow_run' && env.SKIP != 'true'
+        run: |
+          live=$(bin/kamal app version -q 2>/dev/null | awk 'NF { print; exit }' || true)
+          echo "live: ${live:-unknown}"
+          if [ -n "$live" ] && git cat-file -e "$live^{commit}" 2>/dev/null &&
+             live_gems=$(ruby script/production_gems.rb "$live") &&
+             new_gems=$(ruby script/production_gems.rb "$DEPLOY_SHA") &&
+             [ "$live_gems" = "$new_gems" ] &&
+             git diff --quiet "$live" "$DEPLOY_SHA" -- . \
+               ':(exclude)Gemfile' ':(exclude)Gemfile.lock' \
+               ':(exclude).claude' ':(exclude).devcontainer' ':(exclude).github' \
+               ':(exclude)docs' ':(exclude)features' ':(exclude)script' ':(exclude)spec' \
+               ':(exclude,glob)**/*.md' ':(exclude,glob)**/package.yml' \
+               ':(exclude)package_todo.yml' ':(exclude)packwerk.yml' \
+               ':(exclude).gitignore' ':(exclude).mutant.yml' ':(exclude).rspec' \
+               ':(exclude).rubocop.yml' ':(exclude)mise.toml'; then
+            echo "No deployable changes since $live - skipping"
+            echo "SKIP=true" >> "$GITHUB_ENV"
+          fi
+
+      # Exposes ACTIONS_RUNTIME_TOKEN/ACTIONS_RESULTS_URL so buildx can use the
+      # GitHub Actions layer cache (builder.cache in config/deploy.yml).
+      - uses: crazy-max/ghaction-github-runtime@v3
+        if: env.SKIP != 'true'
+
       - name: Deploy
-        if: steps.latest.outputs.skip != 'true'
+        if: env.SKIP != 'true'
         env:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
