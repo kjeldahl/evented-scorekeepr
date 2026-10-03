@@ -68,6 +68,7 @@ jobs:
           RAILS_MASTER_KEY=$RAILS_MASTER_KEY
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
           EVENT_STORE_PASSWORD=$POSTGRES_PASSWORD
+          APPSIGNAL_PUSH_API_KEY=$APPSIGNAL_PUSH_API_KEY
           EOF
 
       - name: Deploy
@@ -76,4 +77,5 @@ jobs:
           KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          APPSIGNAL_PUSH_API_KEY: ${{ secrets.APPSIGNAL_PUSH_API_KEY }}
         run: bin/kamal deploy
