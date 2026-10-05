@@ -94,6 +94,11 @@ RSpec.describe Matches::RegisterMultiplayerMatch do
         .to eq(Result.failure("at least 1 participant is required"))
     end
 
+    it "treats a missing player list (no players picked on the form) as empty" do
+      expect(call(player_ids: nil, player_scores: {}))
+        .to eq(Result.failure("at least 1 participant is required"))
+    end
+
     it "detects duplicates only after stripping" do
       expect(call(player_ids: [ "alice", " alice " ], player_scores: { "alice" => 10 }))
         .to eq(Result.failure("players must be distinct"))

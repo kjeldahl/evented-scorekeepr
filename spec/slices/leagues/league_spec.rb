@@ -1,11 +1,17 @@
 require "rails_helper"
 
 RSpec.describe Leagues::League do
-  def created(league_id: "league-1", starting_points: 1000, stake_percentage: 10)
+  def created(league_id: "league-1", starting_points: 1000, stake_percentage: 10, match_type: "match")
     Leagues::Events.league_created(
       league_id:, account_id: "acc-1", name: "Foosball Spring",
-      game_type: "Foosball", starting_points:, stake_percentage:
+      game_type: "Foosball", starting_points:, stake_percentage:, match_type:
     )
+  end
+
+  # A LeagueCreated appended before leagues had a match type.
+  def created_without_match_type
+    event = created
+    DcbEventStore::Event.new(type: event.type, data: event.data.except(:match_type), tags: event.tags)
   end
 
   def renamed(league_id: "league-1", name: "Foosball Summer")
@@ -29,6 +35,20 @@ RSpec.describe Leagues::League do
         id: "league-1", account_id: "acc-1", name: "Foosball Spring", game_type: "Foosball",
         starting_points: 1500, stake_percentage: 20, status: :open
       )
+    end
+
+    it "folds a multiplayer LeagueCreated into a multiplayer league" do
+      summary = projection.fold([ created(match_type: "multiplayer") ])
+      expect(summary).to have_attributes(match_type: "multiplayer", multiplayer_league?: true, match_league?: false)
+    end
+
+    it "folds a match LeagueCreated into a match league" do
+      summary = projection.fold([ created(match_type: "match") ])
+      expect(summary).to have_attributes(match_type: "match", match_league?: true, multiplayer_league?: false)
+    end
+
+    it "treats a LeagueCreated without a match type as a match league" do
+      expect(projection.fold([ created_without_match_type ]).match_type).to eq("match")
     end
 
     it "is open and not closed after creation" do

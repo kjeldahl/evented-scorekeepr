@@ -5,8 +5,6 @@
 #
 # Stored as integers so that **all arithmetic is integer only** — no floats,
 # no rounding drift, no loss or creation of points. Each row sums to 10000.
-# (This is a copy of Matches::Distribution so scoreboards can compute stakes
-# without referencing the matches slice — docs/ARCHITECTURE.md rule #3.)
 module Scoreboards
   module MultiplayerDistribution
     BASIS_POINT = {
@@ -22,7 +20,7 @@ module Scoreboards
     extend self
 
     def basis_point_for(player_count, position)
-      BASIS_POINT.fetch(player_count, [])[position] || 0
+      BASIS_POINT.fetch(player_count, []).fetch(position, 0)
     end
   end
 end

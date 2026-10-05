@@ -1,11 +1,12 @@
 require "rails_helper"
 
 RSpec.describe Scoreboards::LeagueOverview do
-  def league_created(league_id: "league-1", account_id: "acc-1", starting_points: 1015, stake_percentage: 20)
+  def league_created(league_id: "league-1", account_id: "acc-1", starting_points: 1015, stake_percentage: 20,
+                     **match_type)
     DcbEventStore::Event.new(
       type: "LeagueCreated",
       data: { league_id:, account_id:, name: "Foosball Spring", game_type: "Foosball",
-              starting_points:, stake_percentage: },
+              starting_points:, stake_percentage:, **match_type },
       tags: [ "league:#{league_id}", "account:#{account_id}" ]
     )
   end
@@ -40,6 +41,20 @@ RSpec.describe Scoreboards::LeagueOverview do
                                          starting_points: 1015, stake_percentage: 20)
       expect(summary).to be_open
       expect(summary).not_to be_closed
+    end
+
+    it "folds a multiplayer LeagueCreated into a multiplayer league" do
+      summary = projection.fold([ league_created(match_type: "multiplayer") ])
+      expect(summary).to have_attributes(match_type: "multiplayer", multiplayer_league?: true, match_league?: false)
+    end
+
+    it "folds a match LeagueCreated into a match league" do
+      summary = projection.fold([ league_created(match_type: "match") ])
+      expect(summary).to have_attributes(match_type: "match", match_league?: true, multiplayer_league?: false)
+    end
+
+    it "treats a LeagueCreated without a match type as a match league" do
+      expect(projection.fold([ league_created ]).match_type).to eq("match")
     end
 
     it "folds LeagueClosed into a closed summary that keeps the settings" do

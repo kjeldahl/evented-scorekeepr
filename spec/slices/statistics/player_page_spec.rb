@@ -32,20 +32,20 @@ RSpec.describe Statistics::PlayerPage, :event_store do
   end
 
   it "is nil when the league has no matches" do
-    expect(described_class.find(league:, player_id: "a")).to be_nil
+    expect(described_class.find(league:, player_id: "a", history_page: 1)).to be_nil
   end
 
   it "is nil for a player who never appeared in a league match" do
     EventStore.append(register_users +
       [ match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8) ])
-    expect(described_class.find(league:, player_id: "c")).to be_nil
+    expect(described_class.find(league:, player_id: "c", history_page: 1)).to be_nil
   end
 
   it "ignores the player's matches in other leagues" do
     EventStore.append(register_users +
       [ match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ],
                          home_score: 21, away_score: 8, league_id: "league-2") ])
-    expect(described_class.find(league:, player_id: "a")).to be_nil
+    expect(described_class.find(league:, player_id: "a", history_page: 1)).to be_nil
   end
 
   describe "an assembled page" do
@@ -60,7 +60,7 @@ RSpec.describe Statistics::PlayerPage, :event_store do
       ])
     end
 
-    subject(:page) { described_class.find(league:, player_id: "a") }
+    subject(:page) { described_class.find(league:, player_id: "a", history_page: 1) }
 
     it "carries the player's id and display name" do
       expect(page).to have_attributes(player_id: "a", name: "Alice")
@@ -71,13 +71,13 @@ RSpec.describe Statistics::PlayerPage, :event_store do
     end
 
     it "ranks every player, not just the requested one" do
-      expect(described_class.find(league:, player_id: "b")).to have_attributes(points: 1000, rank: 2)
-      expect(described_class.find(league:, player_id: "c")).to have_attributes(points: 810, rank: 3)
+      expect(described_class.find(league:, player_id: "b", history_page: 1)).to have_attributes(points: 1000, rank: 2)
+      expect(described_class.find(league:, player_id: "c", history_page: 1)).to have_attributes(points: 810, rank: 3)
     end
 
     it "joins the form tokens with spaces, most recent first" do
       expect(page.form).to eq("W W")
-      expect(described_class.find(league:, player_id: "c").form).to eq("L L")
+      expect(described_class.find(league:, player_id: "c", history_page: 1).form).to eq("L L")
     end
 
     it "lists head-to-head rows by most played, then name" do
@@ -107,8 +107,8 @@ RSpec.describe Statistics::PlayerPage, :event_store do
       end)
     end
 
-    it "shows the ten newest matches on the first page by default" do
-      page = described_class.find(league:, player_id: "a")
+    it "shows the ten newest matches on the first page" do
+      page = described_class.find(league:, player_id: "a", history_page: 1)
       expect(page).to have_attributes(history_page: 1, history_pages: 2)
       expect(page.history.size).to eq(10)
     end
@@ -129,14 +129,14 @@ RSpec.describe Statistics::PlayerPage, :event_store do
     EventStore.append(register_users +
       [ match_registered(match_id: "m-1", home: [ "a" ], away: [ "b" ], home_score: 21, away_score: 8) ])
     page = described_class.find(league: league.with(starting_points: 1015, stake_percentage: 20),
-                                player_id: "a")
+                                player_id: "a", history_page: 1)
     expect(page.points).to eq(1218)
   end
 
   it "falls back to the player id when no name is registered" do
     EventStore.append([ match_registered(match_id: "m-1", home: [ "ghost" ], away: [ "b" ],
                                          home_score: 21, away_score: 8) ])
-    page = described_class.find(league:, player_id: "ghost")
+    page = described_class.find(league:, player_id: "ghost", history_page: 1)
     expect(page.name).to eq("ghost")
     expect(page.history.sole.line).to eq("ghost beats b 21-8")
   end

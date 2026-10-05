@@ -46,7 +46,7 @@ module Scoreboards
     # Returns ranked rows, best first.
     def table(matches, names:)
       stats = matches.reduce({}) { |folded, match| apply(folded, match) }
-      rank(stats.reject { |_id, s| s.played.zero? }, names)
+      rank(stats, names)
     end
 
     private

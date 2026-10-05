@@ -20,72 +20,53 @@ module Scoreboards
 
     # points: { player_id => current_points } covering every player.
     # players: [{ id:, score: }] — every player in the match.
-    # => { player_id => points_after } for every player.
+    # => { player_id => points_after } for every player. A single player is
+    # the sole winner of an empty pot, so their points come back unchanged.
     def settle(points, players)
-      return points if players.one? # single player: no stakes, no gains
-
-      ranked = rank(players)
-      basis_points = compute_basis_points(ranked, players.size)
-      stakes = compute_stakes(ranked, basis_points, points)
-      pot = stakes.values.sum
-      award(points, stakes, pot, ranked, basis_points)
+      basis_points = compute_basis_points(rank(players), players.size)
+      award(points, compute_stakes(basis_points, points), basis_points)
     end
 
     private
 
     def rank(players)
-      config = Scoreboards::MultiplayerGameType.find(@game_type)
-      direction = config[:ranking]
+      direction = MultiplayerGameType.find(@game_type).fetch(:ranking)
       players
-        .sort_by { |p| p[:score] }
+        .sort_by { |p| p.fetch(:score) }
         .then { |s| direction == :desc ? s.reverse : s }
         .map.with_index { |p, i| p.merge(position: i) }
     end
 
     # Compute basis-points (×10000) per player with competition ranking and tie
-    # averaging.  Returns { player_id => basis_point }. Winners at position 0
-    # get basis_point 0.
+    # averaging. Returns { player_id => basis_point } in ranked order. Winners
+    # (everyone tied with position 0) get basis_point 0.
     def compute_basis_points(ranked, player_count)
-      # Assign each player a distinct sequential position (0-indexed).
-      positions = {}
-      ranked.each_with_index { |p, i| positions[p[:id]] = i }
-
-      positions.each_with_object({}) do |(id, _), acc|
-        score = ranked.find { |p| p[:id] == id }[:score]
-        tied_group = ranked.select { |p| p[:score] == score }
-
-        if tied_group.any? { |p| positions[p[:id]].zero? }
-          # This tie group includes 1st place: all are winners
-          acc[id] = 0
-        else
-          avg_bp = tied_group.sum { |p| Scoreboards::MultiplayerDistribution.basis_point_for(player_count, positions.fetch(p[:id])) } / tied_group.size
-          acc[id] = avg_bp
-        end
+      ranked.to_h do |player|
+        tied_group = ranked.select { |p| p.fetch(:score) == player.fetch(:score) }
+        [ player.fetch(:id), tied_basis_point(tied_group, player_count) ]
       end
     end
 
-    # stake = player_points * basis_points * stake_percentage / 1_000_000
-    #   (= float: points * (bp / 10000.0) * stake / 100, purely integer)
-    def compute_stakes(ranked, basis_points, points)
-      ranked.filter_map do |player|
-        id = player[:id]
-        bp = basis_points.fetch(id)
-        next nil if bp.zero? # winners pay nothing
+    def tied_basis_point(tied_group, player_count)
+      positions = tied_group.map { |p| p.fetch(:position) }
+      return 0 if positions.include?(0) # this tie group includes 1st place: all are winners
 
-        stake = points.fetch(id) * bp * @stake_percentage / 1_000_000
-        [ id, stake ]
-      end.to_h
+      positions.sum { |position| MultiplayerDistribution.basis_point_for(player_count, position) } / positions.size
     end
 
-    def award(points, stakes, pot, ranked, basis_points)
-      # Winners are those with basis_point 0
-      winners = basis_points.each_with_object([]) { |(id, bp), acc| acc << id if bp.zero? }
-      # Sort by ranked order for remainder distribution
-      winners.sort_by! { |id| ranked.index { |p| p[:id] == id } }
+    # stake = player_points * basis_points * stake_percentage / 1_000_000
+    #   (= float: points * (bp / 10000.0) * stake / 100, purely integer).
+    # Winners have basis_point 0, so they stake nothing.
+    def compute_stakes(basis_points, points)
+      basis_points.to_h { |id, bp| [ id, points.fetch(id) * bp * @stake_percentage / 1_000_000 ] }
+    end
 
-      collected = points.transform_values(&:to_i)
-                       .merge(stakes.transform_values(&:to_i)) { |_id, current, staked| current - staked }
-      share, remainder = pot.divmod(winners.size)
+    # Winners (basis_point 0) split the pot in ranked order: the remainder of
+    # the integer division goes one point at a time to the best-ranked winners.
+    def award(points, stakes, basis_points)
+      winners = basis_points.select { |_id, bp| bp.zero? }.keys
+      collected = points.merge(stakes) { |_id, current, staked| current - staked }
+      share, remainder = stakes.values.sum.divmod(winners.size)
       winners.each_with_index.reduce(collected) do |awarded, (winner, index)|
         bonus = index < remainder ? 1 : 0
         awarded.merge(winner => awarded.fetch(winner) + share + bonus)
