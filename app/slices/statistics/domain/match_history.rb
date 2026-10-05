@@ -13,11 +13,11 @@ module Statistics
 
     # entries: StakeLedger::Entry values in match order (oldest first).
     # number is clamped into range, so any integer is safe to pass.
-    def page(entries, player_id:, names:, number: 1)
+    def page(entries, player_id:, names:, number:)
       all = rows(entries, player_id:, names:)
       pages = [ (all.size.to_f / PER_PAGE).ceil, 1 ].max
       current = number.clamp(1, pages)
-      Page.new(rows: all[(current - 1) * PER_PAGE, PER_PAGE] || [], number: current, pages:)
+      Page.new(rows: all[(current - 1) * PER_PAGE, PER_PAGE], number: current, pages:)
     end
 
     # entries: StakeLedger::Entry values in match order (oldest first).

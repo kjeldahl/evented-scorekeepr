@@ -20,8 +20,7 @@ module Matches
 
     def valid_player_count?(game_type, count)
       config = find(game_type)
-      count = Integer(count) if count.respond_to?(:to_int)
-      (config[:min_players]..config[:max_players]).cover?(count)
+      (config.fetch(:min_players)..config.fetch(:max_players)).cover?(count)
     end
   end
 end

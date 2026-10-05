@@ -12,7 +12,7 @@ module Statistics
 
     # league: a LeagueConfig::Config. => a Page, or nil for an unknown player.
     # history_page selects the match-history page (clamped into range).
-    def find(league:, player_id:, history_page: 1)
+    def find(league:, player_id:, history_page:)
       matches = LeagueMatches.for_league(league.league_id)
       entries = ledger(league).entries(matches)
       points = entries.last&.points || {}

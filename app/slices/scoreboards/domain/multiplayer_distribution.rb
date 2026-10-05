@@ -22,7 +22,7 @@ module Scoreboards
     extend self
 
     def basis_point_for(player_count, position)
-      BASIS_POINT.fetch(player_count, [])[position] || 0
+      BASIS_POINT.fetch(player_count, []).fetch(position, 0)
     end
   end
 end

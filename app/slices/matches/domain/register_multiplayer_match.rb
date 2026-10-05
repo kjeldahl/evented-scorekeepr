@@ -27,9 +27,7 @@ module Matches
       return Result.failure("at least 1 participant is required") if player_ids.empty?
       return Result.failure("players must be distinct") unless player_ids.uniq.size == player_ids.size
 
-      score_rejection = MultiplayerMatchScore.rejection(player_scores)
-      return score_rejection if score_rejection
-      nil
+      MultiplayerMatchScore.rejection(player_scores)
     end
     private_class_method :invalid_input
 

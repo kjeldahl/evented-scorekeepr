@@ -214,6 +214,15 @@ RSpec.describe Scoreboards::MultiplayerScoringEngine do
       expect(settled).to eq({ "alice" => 1000, "bob" => 0 })
     end
 
+    it "floors a stake that falls just short of a whole point" do
+      # Bob 2nd of 2 (10000 basis) at 99%: 10101 * 10000 * 99 / 1_000_000 = 9999.99 -> 9999.
+      points = { "alice" => 1000, "bob" => 10_101 }
+      players = [ { id: "alice", score: 10 }, { id: "bob", score: 5 } ]
+
+      settled = engine(game_type: "Foosball", stake_percentage: 99).settle(points, players)
+      expect(settled).to eq({ "alice" => 10_999, "bob" => 102 })
+    end
+
     it "floors each stake rather than rounding it up" do
       # Bob 2nd of 3 (3750 basis): 1009 * 3750 * 10 / 1_000_000 = 37.8 -> 37.
       points = { "alice" => 1000, "bob" => 1009, "carol" => 1000 }
