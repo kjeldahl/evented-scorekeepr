@@ -61,10 +61,19 @@ env:
     # production must stay a single Puma process. Scale threads, not
     # workers; switch cable.yml to redis before raising this.
     WEB_CONCURRENCY: 1
+    # Host for links in emails (config/environments/production.rb).
+    APP_HOST: scorekeepr.kjeldahl.it
+    # Outgoing mail via AhaSend SMTP relay. Plain SMTP keeps the provider
+    # swappable: changing provider = these values + secrets + DNS.
+    SMTP_ADDRESS: send.ahasend.com
+    SMTP_PORT: 587
+    MAIL_FROM: "Scorekeepr <noreply@mail.scorekeepr.kjeldahl.it>"
   secret:
     - RAILS_MASTER_KEY
     - EVENT_STORE_PASSWORD
     - APPSIGNAL_PUSH_API_KEY
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
 
 aliases:
   console: app exec --interactive --reuse "bin/rails console"

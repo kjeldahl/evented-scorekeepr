@@ -69,6 +69,8 @@ jobs:
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
           EVENT_STORE_PASSWORD=$POSTGRES_PASSWORD
           APPSIGNAL_PUSH_API_KEY=$APPSIGNAL_PUSH_API_KEY
+          SMTP_USERNAME=$SMTP_USERNAME
+          SMTP_PASSWORD=$SMTP_PASSWORD
           EOF
 
       # Skip when nothing that ships in the image (or configures the deploy)
@@ -107,4 +109,6 @@ jobs:
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           APPSIGNAL_PUSH_API_KEY: ${{ secrets.APPSIGNAL_PUSH_API_KEY }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: bin/kamal deploy
