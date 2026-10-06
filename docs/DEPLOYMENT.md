@@ -51,6 +51,17 @@ from a teammate or your password manager). `POSTGRES_PASSWORD` initialises
 the database accessory and is handed to the app as `EVENT_STORE_PASSWORD`
 (see `config/event_store.yml`).
 
+Outgoing mail uses the AhaSend SMTP relay (port 587; Hetzner blocks 25/465).
+`SMTP_USERNAME` and `SMTP_PASSWORD` are fields on the same 1Password item
+(and GitHub secrets for the CI deploy). Non-secret mail settings
+(`SMTP_ADDRESS`, `SMTP_PORT`, `MAIL_FROM`, `APP_HOST`) are plain env in
+`config/deploy.yml`. Check the password reached the container without
+printing it:
+
+```bash
+bin/kamal app exec 'sh -c "test -n \"$SMTP_PASSWORD\" && echo set"'
+```
+
 ## First deploy and day-to-day commands
 
 ```bash
