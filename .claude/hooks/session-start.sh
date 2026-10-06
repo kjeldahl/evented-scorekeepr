@@ -32,8 +32,8 @@ RUBY_BIN="$(mise where "ruby@$RUBY_VERSION_WANTED")/bin"
 export PATH="$RUBY_BIN:$PATH"
 
 # Gems go into the mise Ruby (not vendor/) so role worktrees share them.
-# Skip groups not needed for dev work: web-console, kamal, appsignal.
-export BUNDLE_WITHOUT="development:deploy:production"
+# Skip groups not needed for dev work: web-console, appsignal.
+export BUNDLE_WITHOUT="development:production"
 gem list -i bundler >/dev/null 2>&1 || gem install -N bundler
 bundle install --jobs "$(nproc)" --retry 3
 

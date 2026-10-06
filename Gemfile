@@ -21,12 +21,6 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "thruster", require: false
 
-# Deploy as a Docker container to Hetzner via Kamal [https://kamal-deploy.org].
-# Deploy tooling only; excluded from the production image and cloud sessions.
-group :deploy do
-  gem "kamal", require: false
-end
-
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
   gem "bundler-audit", require: false

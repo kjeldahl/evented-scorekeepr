@@ -55,9 +55,9 @@ Rails.application.configure do
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "example.com"), protocol: "https" }
 
-  # Outgoing SMTP relay (AhaSend). Values come from env (config/deploy.yml,
-  # .kamal/secrets); plain SMTP keeps the provider swappable. ENV[] rather
-  # than fetch: the image build boots production without these set.
+  # Outgoing SMTP relay. Values come from env (see docs/DEPLOYMENT.md);
+  # plain SMTP keeps the provider swappable. ENV[] rather than fetch: the
+  # image build boots production without these set.
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address: ENV["SMTP_ADDRESS"],

@@ -151,6 +151,21 @@ jobs:
       - name: dry4r (duplicate code report)
         run: bundle exec dry4r
 
+  # Production deploys live in a private repo: a green push to main asks it
+  # to deploy this commit (repository_dispatch).
+  notify-deploy:
+    name: Notify deploy
+    needs: [ lint, test, coverage-report, quality, mutant ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Dispatch deploy
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+        run: |
+          gh api "repos/kjeldahl/scorekeepr-deploy/dispatches" \
+            -f event_type=deploy -f "client_payload[sha]=$GITHUB_SHA"
+
   mutant:
     name: Mutant (incremental)
     runs-on: ubuntu-26.04
