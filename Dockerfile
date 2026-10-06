@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# Production image for Kamal deploys (config/deploy.yml):
+# Production image (deployed with Kamal; see docs/DEPLOYMENT.md):
 #   docker build -t scorekeepr .
 #   docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name scorekeepr scorekeepr
 
@@ -21,7 +21,7 @@ RUN apt-get update -qq && \
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development:test:deploy"
+    BUNDLE_WITHOUT="development:test"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
