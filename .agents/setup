@@ -61,3 +61,24 @@ RAILS_ENV=test EVENT_STORE_ADAPTER=postgres bin/rails event_store:prepare
 # Stop cleanly so the snapshot holds a consistent data directory; resume starts it.
 sudo pg_ctlcluster "$pg_version" main stop
 done_step
+
+step "Orb agent notes"
+mkdir -p "$HOME/.config/amp"
+cat >"$HOME/.config/amp/AGENTS.md" <<'EOF'
+# Scorekeepr in an Amp orb (written by .agents/setup)
+
+- Ruby comes from mise and is on PATH in login shells; /usr/bin/ruby is the system Ruby 3.3.
+  If `bundle` is not found, run the command through `bash -lc '...'`.
+- Dev server: `amp orb services ensure` starts the `web` service from `.amp/services.yaml`
+  (`bin/dev` on `$PORT`, readiness on `/up`) and prints its portal URL. Logs:
+  `amp orb service logs web`; restart after Gemfile or config changes with
+  `amp orb service restart web`. Development allows the portal host from `$PUBLIC_URL`.
+- PostgreSQL runs locally (`.agents/resume` starts it; check with `pg_lsclusters`). Role and
+  password are `scorekeepr`; `scorekeepr_development` and `scorekeepr_test` are prepared.
+- Default tests use the in-memory store. Postgres suite:
+  `EVENT_STORE_ADAPTER=postgres bundle exec rspec` and
+  `EVENT_STORE_ADAPTER=postgres bundle exec cucumber --publish-quiet`.
+  Recreate the schema with `RAILS_ENV=test EVENT_STORE_ADAPTER=postgres bin/rails event_store:prepare`.
+  Run mutant with jobs 1 against Postgres.
+EOF
+done_step
