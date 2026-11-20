@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Amp orb setup: Ruby (mise, from .ruby-version), gems, and PostgreSQL with the
+# event store databases. Idempotent and fast on a warm snapshot.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+repo_root="$PWD"
+
+step() { printf '\n== %s ==\n' "$*"; step_started=$SECONDS; }
+done_step() { printf '   (%ss)\n' "$((SECONDS - step_started))"; }
+
+step "System packages"
+missing=()
+for pkg in libpq-dev postgresql postgresql-contrib; do
+  dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+done
+if ((${#missing[@]})); then
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" >/dev/null
+fi
+done_step
+
+step "mise + Ruby"
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+export MISE_YES=1 MISE_RUBY_COMPILE=false # prebuilt Ruby
+command -v mise >/dev/null 2>&1 || curl -fsSL https://mise.run | sh
+mise trust --quiet "$repo_root/mise.toml"
+mise install
+mise reshim
+done_step
+
+profile_marker="# evented-scorekeepr: mise Ruby"
+if ! grep -Fqx "$profile_marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >>"$HOME/.bash_profile" <<'EOF'
+
+# evented-scorekeepr: mise Ruby
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+export BUNDLE_WITHOUT="production"
+EOF
+fi
+
+step "Gems"
+export BUNDLE_WITHOUT="production"
+gem list -i bundler >/dev/null 2>&1 || gem install -N bundler
+bundle check >/dev/null 2>&1 || bundle install --jobs "$(nproc)" --retry 3
+done_step
+
+step "PostgreSQL"
+pg_version="$(ls /usr/lib/postgresql | sort -n | tail -1)"
+conf_dir="/etc/postgresql/$pg_version/main/conf.d"
+if [ ! -f "$conf_dir/orb.conf" ]; then
+  # Ephemeral sandbox: speed over durability.
+  printf 'fsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' |
+    sudo tee "$conf_dir/orb.conf" >/dev/null
+fi
+pg_lsclusters -h | grep -q online || sudo pg_ctlcluster "$pg_version" main start
+sudo -u postgres psql -X -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'scorekeepr'" | grep -q 1 ||
+  sudo -u postgres psql -X -d postgres -c "CREATE ROLE scorekeepr LOGIN CREATEDB PASSWORD 'scorekeepr';"
+bin/rails event_store:prepare
+RAILS_ENV=test EVENT_STORE_ADAPTER=postgres bin/rails event_store:prepare
+# Stop cleanly so the snapshot holds a consistent data directory; resume starts it.
+sudo pg_ctlcluster "$pg_version" main stop
+done_step

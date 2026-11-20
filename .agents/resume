@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Amp orb resume: make sure PostgreSQL (event store) is running.
+set -euo pipefail
+
+pg_lsclusters -h | grep -q online && exit 0
+pg_version="$(ls /usr/lib/postgresql | sort -n | tail -1)"
+sudo pg_ctlcluster "$pg_version" main start
